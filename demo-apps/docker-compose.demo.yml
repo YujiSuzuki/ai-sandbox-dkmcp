@@ -1,0 +1,61 @@
+services:
+  # Reverse proxy for custom domain routing
+  # カスタムドメインルーティング用リバースプロキシ
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: securenote-proxy
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      securenote-api:
+        condition: service_healthy
+      securenote-web:
+        condition: service_started
+    networks:
+      - demo-network
+
+  securenote-api:
+    build: ./securenote-api
+    container_name: securenote-api
+    # Internal port only (accessed via nginx-proxy)
+    # 内部ポートのみ（nginx-proxy経由でアクセス）
+    expose:
+      - "8080"
+    volumes:
+      # Mount real secrets (container has access)
+      - ./securenote-api/secrets:/app/secrets:ro
+      - ./securenote-api/.env:/app/.env:ro
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - demo-network
+
+  securenote-web:
+    build:
+      context: ./securenote-web
+      args:
+        # API URL for custom domain setup
+        # カスタムドメイン用API URL
+        VITE_API_URL: http://api.securenote.test:8000/api
+    container_name: securenote-web
+    # Internal port only (accessed via nginx-proxy)
+    # 内部ポートのみ（nginx-proxy経由でアクセス）
+    expose:
+      - "80"
+    depends_on:
+      securenote-api:
+        condition: service_healthy
+    networks:
+      - demo-network
+
+networks:
+  demo-network:
+    driver: bridge

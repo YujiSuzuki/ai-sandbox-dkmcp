@@ -1,0 +1,60 @@
+services:
+  cli-sandbox:
+    build:
+      context: .
+      dockerfile: .sandbox/Dockerfile
+    working_dir: /workspace
+    env_file:
+      # Load shared API keys etc. from parent directory
+      # 共通のAPIキーなどを親ディレクトリから読み込む
+      - .env.sandbox
+
+      # Load environment-specific settings if needed (env vars injected into container)
+      # この環境固有の設定があればここから読み込む（コンテナ内への環境変数注入）
+      - ./cli_sandbox/.env
+    volumes:
+      - .:/workspace
+      # Persist home directory for authentication (.claude.json, .claude/)
+      # Each AI tool gets its own volume due to COMPOSE_PROJECT_NAME separation
+      # 認証情報の永続化（.claude.json, .claude/）
+      # COMPOSE_PROJECT_NAME で分離されるため、各AIツールごとに独立したボリュームが作成される
+      - cli-sandbox-home:/home/node
+
+      # Hide demo app secret files
+      # Demo アプリの秘匿情報を隠蔽
+      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      # Hide iOS app Firebase config file
+      # iOS アプリの Firebase 設定ファイルを隠蔽
+      - /dev/null:/workspace/demo-apps-ios/SecureNote/GoogleService-Info.plist:ro
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1g
+      # Make demo app secret directory empty
+      # Demo アプリの秘匿情報ディレクトリを空にする
+      - /workspace/demo-apps/securenote-api/secrets:ro
+      # Make iOS app config directory empty
+      # iOS アプリの設定ディレクトリを空にする
+      - /workspace/demo-apps-ios/SecureNote/Config:ro
+
+    stdin_open: true
+    tty: true
+
+    # security_opt:
+    #   - no-new-privileges:true
+    # Note: Enabling no-new-privileges completely disables sudo
+    # 注意: no-new-privileges を有効にすると sudo が完全に無効化される
+    # Using Dockerfile sudoers configuration instead (apt-get, npm, pip3 only)
+    # 代わりに Dockerfile の sudoers 設定（apt-get, npm, pip3 のみ許可）で制限する方針
+
+    # Resource limits to prevent sandbox from crashing the host
+    # 必要に応じてリソース制限（Sandboxが暴走してホストを落とさないため）
+    deploy:
+      resources:
+        limits:
+          memory: ${SANDBOX_MEMORY_LIMIT:-4gb}
+          # CPU limit (number of CPUs or fraction, e.g., "2" or "1.5")
+          # CPU制限（CPUの数または割合、例: "2"または"1.5"）
+          cpus: "${SANDBOX_CPU_LIMIT:-2}"
+
+volumes:
+  cli-sandbox-home:

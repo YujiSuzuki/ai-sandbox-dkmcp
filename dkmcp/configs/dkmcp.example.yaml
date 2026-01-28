@@ -1,0 +1,432 @@
+# DockMCP Configuration Example
+# Copy this file to dkmcp.yaml and customize for your environment
+# DockMCP設定ファイルのサンプル
+# このファイルをdkmcp.yamlにコピーして、環境に合わせてカスタマイズしてください
+
+server:
+  # Port for MCP server (HTTP/SSE)
+  # MCPサーバーのポート番号（HTTP/SSE）
+  port: 8080
+
+  # Host to bind to
+  # バインドするホスト
+  #
+  # ⚠️ SECURITY WARNING / セキュリティ警告:
+  # "0.0.0.0" exposes the server to ALL network interfaces, allowing access from
+  # other machines on the same network. This may leak container logs and allow
+  # command execution from unauthorized sources.
+  #
+  # 「0.0.0.0」は全ネットワークインターフェースにサーバーを公開し、同一ネットワーク上の
+  # 他のマシンからのアクセスを許可します。コンテナログの漏洩や、不正なソースからの
+  # コマンド実行が可能になる可能性があります。
+  #
+  # RECOMMENDED / 推奨設定:
+  # - "127.0.0.1": Localhost only (most secure, for local DevContainer use)
+  #                ローカルホストのみ（最も安全、ローカルDevContainer用）
+  # - "0.0.0.0":   All interfaces (only if remote access is required)
+  #                全インターフェース（リモートアクセスが必要な場合のみ）
+  #
+  host: "127.0.0.1"
+
+security:
+  # Security mode: strict, moderate, permissive
+  # - strict: Only read operations (logs, inspect, stats)
+  # - moderate: Read + whitelisted exec commands (default)
+  # - permissive: All operations allowed (use with caution!)
+  # セキュリティモード: strict, moderate, permissive
+  # - strict: 読み取り操作のみ（ログ、検査、統計）
+  # - moderate: 読み取り + ホワイトリスト登録されたexecコマンド (default)
+  # - permissive: すべての操作を許可（注意して使用！）
+  mode: "moderate"
+
+  # Containers that can be accessed (supports wildcards)
+  # Empty list means all containers are accessible
+  # アクセス可能なコンテナ（ワイルドカード対応）
+  # 空リストの場合、すべてのコンテナにアクセス可能
+  allowed_containers:
+    - "demo-*"
+    - "securenote-*"
+
+  # Whitelist of allowed exec commands per container
+  # Format: "container-name": ["command1", "command2", ...]
+  # Use "*" as container name for default commands available to all containers
+  # コンテナごとの許可されたexecコマンドのホワイトリスト
+  # 形式: "コンテナ名": ["コマンド1", "コマンド2", ...]
+  # "*"をコンテナ名として使用すると、全コンテナで利用可能なデフォルトコマンドになります
+  exec_whitelist:
+    "securenote-api":
+      - "npm test"
+      - "npm run lint"
+      - "node --version"
+      - "npm --version"
+
+    # Default commands available to all containers
+    # 全コンテナで利用可能なデフォルトコマンド
+    #
+    # ⚠️ SECURITY WARNING / セキュリティ警告:
+    # DO NOT add "env", "printenv", or "echo *" here!
+    # - "env" / "printenv": Expose ALL environment variables including secrets
+    # - "echo *": Allows "echo $ANY_SECRET" and command substitution like "echo $(cat .env)"
+    #
+    # 「env」「printenv」「echo *」をここに追加しないでください！
+    # - "env" / "printenv": 全ての環境変数（シークレット含む）を露出させます
+    # - "echo *": 「echo $任意のシークレット」やコマンド置換「echo $(cat .env)」を許可してしまいます
+    #
+    # Only allow specific, safe commands:
+    # 特定の安全なコマンドのみを許可してください:
+    #
+    "*":
+      - "pwd"
+      - "whoami"
+      - "date"
+      - "echo $NODE_ENV"
+      - "echo $PATH"
+      - "echo $HOME"
+
+  # Dangerous mode commands (requires dangerously=true parameter in exec_command)
+  # 危険モードコマンド（exec_commandでdangerously=trueパラメータが必要）
+  #
+  # When exec_command is called with dangerously=true:
+  # 1. Base command must be in this list (container-specific or "*" for all)
+  # 2. File paths in the command are checked against blocked_paths
+  # 3. Pipes (|) and redirects (>, <) are NOT allowed
+  # 4. Path traversal (..) is NOT allowed
+  #
+  # exec_command が dangerously=true で呼ばれた場合:
+  # 1. ベースコマンドがこのリストに含まれている必要があります（コンテナ固有または"*"で全コンテナ）
+  # 2. コマンド内のファイルパスは blocked_paths に対してチェックされます
+  # 3. パイプ (|) やリダイレクト (>, <) は許可されません
+  # 4. パストラバーサル (..) は許可されません
+  #
+  # This is useful for debugging when you need to read log files like /var/log/*
+  # that are not captured by Docker logs (stdout/stderr).
+  # これは、Dockerログ（stdout/stderr）でキャプチャされない/var/log/*のような
+  # ログファイルを読む必要があるデバッグ時に便利です。
+  #
+  # CLI options:
+  #   dkmcp serve --dangerously=api,web     # Enable for specific containers
+  #   dkmcp serve --dangerously-all         # Enable for all containers
+  #
+  # CLIオプション:
+  #   dkmcp serve --dangerously=api,web     # 特定のコンテナに対して有効化
+  #   dkmcp serve --dangerously-all         # 全コンテナに対して有効化
+  #
+  exec_dangerously:
+    enabled: false  # Set to true to enable dangerous mode / true で危険モードを有効化
+
+    # Commands allowed in dangerous mode per container
+    # Use "*" for commands available to all containers
+    # コンテナごとの危険モードで許可されるコマンド
+    # "*"を使用すると全コンテナで利用可能なコマンドになります
+    commands:
+      "securenote-api":
+        - "tail"
+        - "head"
+        - "cat"
+        - "grep"
+      "*":
+        - "tail"
+        - "ls"
+
+  # Basic operation permissions
+  # 基本操作の権限設定
+  permissions:
+    logs: true      # Allow log retrieval / ログ取得を許可
+    inspect: true   # Allow container inspection / コンテナ検査を許可
+    stats: true     # Allow resource stats / リソース統計を許可
+    exec: true      # Allow exec (subject to whitelist) / exec実行を許可（ホワイトリスト対象）
+
+  # Blocked file paths configuration
+  # ブロックするファイルパスの設定
+  blocked_paths:
+    # Manually blocked paths per container
+    # コンテナごとに手動でブロックするパス
+    manual:
+      "securenote-api":
+        - "/.env"
+        - "/secrets/*"
+        - "*.key"
+        - "*.pem"
+
+    # Auto-import settings for DevContainer configurations
+    # DevContainer設定からの自動インポート設定
+    auto_import:
+      # Enable auto-import (default: false)
+      # Note: Disabling this will also disable claude_code_settings below
+      # 自動インポートを有効化（デフォルト: false）
+      # 注意: これを無効にすると、claude_code_settings も無効になります
+      enabled: true
+
+      # Workspace root directory (default: current directory)
+      # Use "." for current directory, or specify absolute path
+      # ワークスペースのルートディレクトリ（デフォルト: カレントディレクトリ）
+      workspace_root: "."
+
+      # Files to scan for blocked paths
+      # ブロックパスをスキャンするファイル
+      scan_files:
+        - ".devcontainer/docker-compose.yml"
+        - ".devcontainer/devcontainer.json"
+        - "cli_sandbox/docker-compose.yml"
+
+      # Global blocked file patterns (applied to all containers)
+      # These patterns are always blocked regardless of container
+      # グローバルなブロックファイルパターン（全コンテナに適用）
+      global_patterns:
+        - ".env"
+        - "*.key"
+        - "*.pem"
+        - "secrets/*"
+        - "*.secret"
+
+      # Import blocked paths from Claude Code settings files
+      # Claude Code設定ファイルからブロックパスをインポート
+      claude_code_settings:
+        # Enable import from Claude Code settings (default: true)
+        # Claude Code設定からのインポートを有効化（デフォルト: true）
+        enabled: true
+
+        # Maximum depth to scan for settings files (default: 0)
+        # 0 = workspace_root only, 1 = one level deep, 2 = two levels deep
+        # 設定ファイルをスキャンする最大深度（デフォルト: 0）
+        # 0 = workspace_root のみ, 1 = 1階層下まで, 2 = 2階層下まで
+        # Example with max_depth: 1:
+        #   workspace/                      <- dkmcp serve 起動位置
+        #   ├── .claude/settings.json       <- ✅ scanned (depth 0)
+        #   ├── demo-apps/
+        #   │   └── .claude/settings.json   <- ✅ scanned (depth 1)
+        #   └── demo-apps/subproject/
+        #       └── .claude/settings.json   <- ❌ not scanned (depth 2)
+        max_depth: 1
+
+        # Settings files to scan (relative to workspace root or subdirectories)
+        # スキャンする設定ファイル（ワークスペースルートまたはサブディレクトリからの相対パス）
+        # These files contain "permissions.deny" with patterns like:
+        #   "Read(./.env)", "Read(./secrets/**)", "Read(**/*.key)"
+        # これらのファイルには以下のような "permissions.deny" パターンが含まれます
+        settings_files:
+          - ".claude/settings.json"
+          - ".claude/settings.local.json"
+
+      # Import blocked paths from Gemini Code Assist exclusion files
+      # Gemini Code Assist除外ファイルからブロックパスをインポート
+      gemini_settings:
+        # Enable import from Gemini exclusion files (default: true)
+        # Gemini除外ファイルからのインポートを有効化（デフォルト: true）
+        enabled: true
+
+        # Maximum depth to scan for exclusion files (default: 0)
+        # 0 = workspace_root only, 1 = one level deep, 2 = two levels deep
+        # 除外ファイルをスキャンする最大深度（デフォルト: 0）
+        # 0 = workspace_root のみ, 1 = 1階層下まで, 2 = 2階層下まで
+        max_depth: 1
+
+        # Exclusion files to scan (uses gitignore-style syntax)
+        # スキャンする除外ファイル（gitignore形式の構文を使用）
+        # .aiexclude: Gemini Code Assist (VS Code/JetBrains)
+        # .geminiignore: Gemini CLI
+        settings_files:
+          - ".aiexclude"
+          - ".geminiignore"
+
+  # Output masking configuration
+  # Masks sensitive data (passwords, API keys, tokens) in tool output
+  # before returning to AI assistants.
+  #
+  # 出力マスキング設定
+  # AIアシスタントに返す前に、ツール出力内の機密データ
+  # （パスワード、APIキー、トークン）をマスクします。
+  output_masking:
+    # Enable output masking globally
+    # 出力マスキングをグローバルに有効化
+    enabled: true
+
+    # Replacement string for masked content
+    # マスクされた内容の置換文字列
+    replacement: "[MASKED]"
+
+    # Regex patterns to match sensitive data
+    # Each pattern will be replaced with the replacement string
+    # 機密データにマッチする正規表現パターン
+    # 各パターンは置換文字列に置き換えられます
+    #
+    # ⚠️ SECURITY NOTE / セキュリティ注意:
+    # These default patterns cover common secret formats.
+    # Add custom patterns for your specific secret formats.
+    # これらのデフォルトパターンは一般的なシークレット形式をカバーします。
+    # 独自のシークレット形式には、カスタムパターンを追加してください。
+    patterns:
+      # Password patterns (password=xxx, passwd: xxx, pwd='xxx')
+      # パスワードパターン
+      - '(?i)(password|passwd|pwd)\s*[=:]\s*["'']?[^\s"''\n]+["'']?'
+
+      # API key patterns (api_key=xxx, apikey: xxx, secret_key=xxx)
+      # APIキーパターン
+      - '(?i)(api[_-]?key|apikey|secret[_-]?key)\s*[=:]\s*["'']?[^\s"''\n]+["'']?'
+
+      # Encryption key patterns (encryption_key=xxx, Encryption Key: xxx)
+      # 暗号化キーパターン
+      - '(?i)encryption[\s_-]?key\s*[=:]\s*["'']?[^\s"''\n]+["'']?'
+
+      # Generic secret patterns (secret=xxx, token=xxx, credential=xxx)
+      # 一般的なシークレットパターン
+      - '(?i)(secret|token|credential)\s*[=:]\s*["'']?[^\s"''\n]+["'']?'
+
+      # Bearer tokens (Authorization: Bearer xxx)
+      # Bearerトークン
+      - '(?i)bearer\s+[a-zA-Z0-9._-]+'
+
+      # OpenAI API keys (sk-xxxxxxxx)
+      # OpenAI APIキー
+      - 'sk-[a-zA-Z0-9]{20,}'
+
+      # AWS access keys and secret keys
+      # AWSアクセスキーとシークレットキー
+      - '(?i)(aws[_-]?access[_-]?key[_-]?id|aws[_-]?secret[_-]?access[_-]?key)\s*[=:]\s*["'']?[A-Z0-9/+=]+["'']?'
+
+      # Database connection strings with passwords
+      # パスワード付きデータベース接続文字列
+      - '(?i)(postgres|mysql|mongodb|redis)://[^:]+:[^@]+@'
+
+    # Which tool outputs to apply masking to
+    # マスキングを適用するツール出力
+    apply_to:
+      logs: true      # get_logs, search_logs output / ログ出力
+      exec: true      # exec_command output / コマンド実行出力
+      inspect: true   # inspect_container output (env vars) / コンテナ検査出力（環境変数）
+
+  # Host path masking configuration
+  # Masks host OS paths (e.g., /Users/username/) in MCP tool output
+  # to prevent AI assistants from seeing the host user's name.
+  #
+  # ホストパスマスキング設定
+  # MCPツール出力内のホストOSパス（例：/Users/username/）をマスクして、
+  # AIアシスタントがホストユーザー名を見れないようにします。
+  host_path_masking:
+    # Enable host path masking (default: true)
+    # ホストパスマスキングを有効化（デフォルト: true）
+    enabled: true
+
+    # Replacement string for masked paths
+    # マスクされたパスの置換文字列
+    #
+    # Example results:
+    #   /Users/john/workspace/project → [HOST_PATH]/workspace/project
+    #   /home/developer/app → [HOST_PATH]/app
+    #   C:\Users\admin\documents → [HOST_PATH]\documents
+    #
+    # 結果の例:
+    #   /Users/john/workspace/project → [HOST_PATH]/workspace/project
+    #   /home/developer/app → [HOST_PATH]/app
+    #   C:\Users\admin\documents → [HOST_PATH]\documents
+    replacement: "[HOST_PATH]"
+
+# Logging
+# ロギング設定
+#
+# Use command-line flags for logging configuration:
+# ログ設定はコマンドラインフラグを使用してください:
+#   --log-level debug|info|warn|error
+#   --log-file /path/to/logfile.log
+#   --log-also-stdout (output to both file and stdout)
+#
+# Example / 例:
+#   dkmcp serve --config dkmcp.yaml --log-level debug --log-file server.log
+#
+logging:
+  # Log level: debug, info, warn, error
+  # ログレベル: debug, info, warn, error
+  level: "info"
+
+# Audit Logging
+# 監査ログ設定
+#
+# Audit logs record security-relevant events for monitoring and compliance.
+# All audit events are structured JSON for easy parsing by log analysis tools.
+# 監査ログはセキュリティ関連イベントを記録し、監視とコンプライアンスに使用します。
+# すべての監査イベントは構造化JSONで、ログ分析ツールで簡単に解析できます。
+#
+# Example audit log entry / 監査ログエントリの例:
+# {
+#   "time": "2024-01-15T10:30:45.123Z",
+#   "level": "INFO",
+#   "msg": "audit_event",
+#   "event_type": "tool_call",
+#   "tool": "exec_command",
+#   "container": "securenote-api",
+#   "result": "success",
+#   "details": {"command": "npm test", "duration_ms": 1234}
+# }
+#
+audit:
+  # Enable audit logging (default: false)
+  # 監査ログを有効化（デフォルト: false）
+  enabled: false
+
+  # File path for audit logs (optional)
+  # If not specified, audit logs are written to stdout with regular logs
+  # 監査ログのファイルパス（オプション）
+  # 指定しない場合、監査ログは通常のログと共にstdoutに出力されます
+  # file: "/var/log/dkmcp/audit.log"
+
+  # Events to log
+  # ログ記録するイベント
+  events:
+    # Log all MCP tool invocations (exec_command, get_logs, read_file, etc.)
+    # すべてのMCPツール呼び出しをログ記録
+    tool_calls: true
+
+    # Log all access denials (blocked paths, disallowed commands, permission errors)
+    # すべてのアクセス拒否をログ記録（ブロックパス、不許可コマンド、権限エラー）
+    access_denied: true
+
+    # Log client connection/disconnection events
+    # クライアント接続/切断イベントをログ記録
+    client_connections: true
+
+    # Log when security policy is queried (get_security_policy, get_blocked_paths)
+    # セキュリティポリシー照会時をログ記録（get_security_policy、get_blocked_paths）
+    security_policy: false
+
+# CLI
+# CLI設定
+#
+# These settings control CLI-specific features for human convenience.
+# これらの設定はユーザーの利便性のためのCLI固有機能を制御します。
+cli:
+  # Current container feature
+  # カレントコンテナ機能
+  #
+  # This allows users to set a default container for CLI commands like logs, stats, exec.
+  # これにより、ユーザーはlogs、stats、execなどのCLIコマンドのデフォルトコンテナを設定できます。
+  #
+  # Usage:
+  #   dkmcp use securenote-api    # Set current container
+  #   dkmcp logs                  # Logs from current container
+  #   dkmcp stats                 # Stats from current container
+  #   dkmcp exec "npm test"       # Execute in current container
+  #   dkmcp use --clear           # Clear current container
+  #
+  # 使用方法:
+  #   dkmcp use securenote-api    # カレントコンテナを設定
+  #   dkmcp logs                  # カレントコンテナのログを取得
+  #   dkmcp stats                 # カレントコンテナの統計を取得
+  #   dkmcp exec "npm test"       # カレントコンテナでコマンドを実行
+  #   dkmcp use --clear           # カレントコンテナをクリア
+  current_container:
+    # Enable current container feature
+    # カレントコンテナ機能を有効化
+    #
+    # Default: true (recommended for sandbox environments)
+    # デフォルト: true（サンドボックス環境で推奨）
+    #
+    # ⚠️ WARNING for non-sandboxed environments:
+    # If AI assistants can directly use CLI commands on the host OS
+    # (not through MCP), they might use the current container feature,
+    # leading to unintended behavior. In such cases, set to false.
+    #
+    # ⚠️ サンドボックスなし環境での警告:
+    # AIアシスタントがホストOS上で直接CLIコマンドを使用できる場合
+    # （MCPを経由せずに）、カレントコンテナ機能を使用する可能性があり、
+    # 予期しない動作につながる可能性があります。そのような場合はfalseに設定してください。
+    enabled: true

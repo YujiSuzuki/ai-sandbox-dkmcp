@@ -1,0 +1,16 @@
+// Debug.xcconfig - Build Configuration (DEMO SECRET FILE)
+// このファイルは秘匿情報のデモ用サンプルです
+
+// API Configuration
+API_BASE_URL = http://localhost:8080
+API_KEY = sk-demo-api-key-12345-FAKE
+
+// Firebase
+FIREBASE_API_KEY = AIzaSyDEMO-fake-key-for-testing
+
+// App Store Connect
+APP_STORE_CONNECT_KEY_ID = ABC123FAKE
+APP_STORE_CONNECT_ISSUER_ID = 12345678-fake-uuid
+
+// Bundle Configuration
+PRODUCT_BUNDLE_IDENTIFIER = com.example.securenote.debug

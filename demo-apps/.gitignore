@@ -1,0 +1,22 @@
+# Claude Code local settings (not to be committed)
+.claude/settings.local.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Secrets
+*.key
+*.pem
+*.secret
+
+secrets/*
+!secrets/
+
+# Node
+node_modules/
+
+# Build artifacts
+dist/
+build/

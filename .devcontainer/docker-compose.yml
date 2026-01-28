@@ -1,0 +1,73 @@
+services:
+  ai-sandbox:
+    build:
+      context: ..
+      dockerfile: .sandbox/Dockerfile
+    env_file:
+      # Load shared API keys etc. from parent directory
+      # 共通のAPIキーなどを親ディレクトリから読み込む
+      - ../.env.sandbox
+
+      # # Load environment-specific settings if needed (env vars injected into container)
+      # # この環境固有の設定があればここから読み込む（コンテナ内への環境変数注入）
+      # - .env
+    environment:
+      - SANDBOX_ENV=devcontainer
+
+    volumes:
+      # Mount entire project code
+      # プロジェクト全体のコードをマウント
+      - ..:/workspace:cached
+
+      # Persist AI credentials (no re-login after restart)
+      # To share across multiple instances, switch to bind mounts
+      # See: README.md / README.ja.md "Running Multiple DevContainer Instances"
+      # AI認証情報の永続化（再起動してもログイン不要）
+      # 複数インスタンスで共有したい場合はバインドマウントに変更可能
+      # 詳細: README.md / README.ja.md「複数の DevContainer を起動する場合」
+      - claude-home-vol:/home/node
+      - gcloud-config-vol:/home/node/.config/gcloud
+
+      # Temporary directory for experiments (data lost on container removal)
+      # 実験用の一時ディレクトリ（コンテナ破棄で消えてもいいデータ用）
+      - /tmp/ai-cache
+
+      # Hide demo app secret files
+      # Demo アプリの秘匿情報を隠蔽
+      - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+      # Hide iOS app Firebase config file
+      # iOS アプリの Firebase 設定ファイルを隠蔽
+      - /dev/null:/workspace/demo-apps-ios/SecureNote/GoogleService-Info.plist:ro
+
+    tmpfs:
+      # Make demo app secret directory empty
+      # Demo アプリの秘匿情報ディレクトリを空にする
+      - /workspace/demo-apps/securenote-api/secrets:ro
+      # Make iOS app config directory empty
+      # iOS アプリの設定ディレクトリを空にする
+      - /workspace/demo-apps-ios/SecureNote/Config:ro
+
+    # Keep container alive for long-running AI computations
+    # AIの長時間の計算や待機を考慮
+    tty: true
+    stdin_open: true
+
+    # Custom domain resolution for demo apps (points to host)
+    # デモアプリ用カスタムドメイン解決（ホストを指す）
+    extra_hosts:
+      - "securenote.test:host-gateway"
+      - "api.securenote.test:host-gateway"
+
+    # Resource limits to prevent sandbox from crashing the host
+    # 必要に応じてリソース制限（Sandboxが暴走してホストを落とさないため）
+    deploy:
+      resources:
+        limits:
+          memory: ${SANDBOX_MEMORY_LIMIT:-4gb}
+          # CPU limit (number of CPUs or fraction, e.g., "2" or "1.5")
+          # CPU制限（CPUの数または割合、例: "2"または"1.5"）
+          cpus: "${SANDBOX_CPU_LIMIT:-2}"
+
+volumes:
+  claude-home-vol:
+  gcloud-config-vol:

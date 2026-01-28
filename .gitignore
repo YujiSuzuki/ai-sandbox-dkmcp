@@ -1,0 +1,96 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code
+# settings.json is user-specific (e.g., remote.autoForwardPorts affects all DevContainers)
+# settings.json はユーザー固有（例: remote.autoForwardPorts は全 DevContainer に影響）
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# DevContainer
+.env
+# Exclude env files, but allow samples
+# 環境変数ファイルは除外するが、サンプルは許可する
+.env.*
+!.env.example
+!.env.*.sample
+!.env.*.example
+
+docker-compose.yml.backup.*
+
+
+# Secrets and sensitive data
+# Demo secrets (demo-apps/securenote-api/secrets/) are tracked with `git add -f`
+# デモ用 secrets (demo-apps/securenote-api/secrets/) は `git add -f` で追加済み
+secrets/
+*.key
+*.pem
+
+# Claude Code
+# https://docs.anthropic.com/en/docs/claude-code/settings
+#
+# Personal settings go in .claude/settings.local.json, personal commands in ~/.claude/commands/
+# See docs/samples/ for custom command samples
+#
+# To share .claude/settings.json or .claude/commands/ with your team,
+# comment out the line below and exclude only .claude/settings.local.json instead:
+#   .claude/settings.local.json
+#
+# 個人設定は .claude/settings.local.json に、個人用コマンドは ~/.claude/commands/ に配置
+# カスタムコマンドのサンプルは docs/samples/ を参照
+#
+# チームで .claude/settings.json や .claude/commands/ を共有したい場合は、
+# 下の行をコメントアウトし、代わりに .claude/settings.local.json のみ除外してください:
+#   .claude/settings.local.json
+#
+# Demo app settings (demo-apps/.claude/, demo-apps-ios/.claude/) are tracked with `git add -f`
+# デモアプリの設定 (demo-apps/.claude/, demo-apps-ios/.claude/) は `git add -f` で追加済み
+.claude/
+.claude.json
+.claude.json.backup
+
+# MCP server configuration (use .mcp.json.example as template)
+# MCP サーバー設定（.mcp.json.example をテンプレートとして使用）
+.mcp.json
+
+# Google Cloud
+.config/gcloud/
+
+# Docker volumes
+*.volume
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Test artifacts (from .sandbox/scripts/test-*.sh)
+.test-secrets-*
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini

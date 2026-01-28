@@ -1,0 +1,37 @@
+# .aiexclude - Gemini Code Assist exclusion file
+# .aiexclude - Gemini Code Assist 除外ファイル
+#
+# This file tells Gemini Code Assist which files to exclude from AI access.
+# このファイルは Gemini Code Assist に対してAIアクセスから除外するファイルを指定します。
+#
+# Syntax: gitignore-style patterns
+# 構文: gitignore形式のパターン
+#
+# See: https://docs.cloud.google.com/gemini/docs/codeassist/create-aiexclude-file
+# 参照: https://docs.cloud.google.com/gemini/docs/codeassist/create-aiexclude-file?hl=ja
+
+# Environment files / 環境変数ファイル
+.env
+.env.*
+.env.local
+.env.production
+
+# Secret files / 秘密鍵・証明書ファイル
+*.key
+*.pem
+*.secret
+*.p12
+*.pfx
+
+# Secrets directories / シークレットディレクトリ
+secrets/
+**/secrets/
+
+# Credentials / 認証情報
+credentials.json
+service-account*.json
+*-credentials.json
+
+# API keys / APIキー
+api-keys/
+**/api-keys/

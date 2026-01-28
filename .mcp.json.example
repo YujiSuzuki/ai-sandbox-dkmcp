@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dkmcp": {
+      "type": "sse",
+      "url": "http://host.docker.internal:8080/sse"
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "name": "AI Sandbox Environment",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "ai-sandbox",
+  "workspaceFolder": "/workspace",
+
+  // Optional: Go environment for DockMCP development
+  // Comment out the "features" block below if you want a smaller image
+  // オプション：DockMCP ビルド用のGo環境
+  // イメージサイズを小さくしたい場合は下記の features ブロックをコメントアウトしてください
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.24"
+    }
+  },
+
+  // Environment variables for DevContainer
+  // DevContainer内で使用する環境変数
+  "containerEnv": {
+    "DEVCONTAINER": "true"
+  },
+
+  // Port forwarding settings
+  // ポート関連の設定
+  //
+  // VS Code (and the underlying Dev Containers spec) automatically forwards ports
+  // from DevContainer to the host OS. This can interfere with direct DevContainer→Host
+  // HTTP/SSE connections, so we disable auto port forwarding.
+  // VS Code（およびその基盤となる Development Containers 仕様）の標準的な挙動は、
+  // DevContainer からホストOSへポートの自動転送を行おうとします。
+  // このポートフォワーディングがDevContainer→ホスト HTTP/SSE接続に干渉することがあるため
+  // ポートフォワーディングを無効にします。
+  // Dev Containers spec: https://containers.dev/implementors/spec/
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  // This setting enables direct connection from DevContainer to host (host.docker.internal),
+  // allowing access to the DockMCP server running on the host OS.
+  // If you need port forwarding for this DevContainer, explicitly configure the ports as shown below.
+  // 上記の設定により、DevContainer からホストへの直接接続(host.docker.internal)を可能にして、
+  // ホストOS上の DockMCP サーバーポートへアクセスできる様に自動フォワーディングを無効化していますが、もし
+  // この DevContainer のポート転送が必要な場合、下記の例の様に明示的に転送したいポートを設定してください。
+  //
+  // Example: Explicitly forward ports 3210 and 3211 from this DevContainer
+  // 例：この DevContainer のポート 3210, 3211 を明示的に転送する
+  // "forwardPorts": [3210, 3211],
+  // "portsAttributes": {
+  //   "3210": {
+  //     "label": "Application Server",
+  //     "onAutoForward": "notify"  // Notify when port is forwarded / ポート転送時に通知
+  //   },
+  //   "3211": {
+  //     "label": "DB Server",
+  //     "onAutoForward": "silent"  // Forward silently / 通知なしで転送
+  //   }
+  // },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // JavaScript/TypeScript linting and formatting (for demo apps)
+        // JavaScript/TypeScript用リンター・フォーマッター（デモアプリ用）
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        // Uncomment the following extensions as needed
+        // 以下は必要に応じてコメントを外してください
+        // "golang.go",              // Go (for DockMCP development)
+        // "eamodio.gitlens",        // Git history visualization
+
+        // AI Assistant extensions
+        // Comment out to disable if not needed
+        // AIアシスタント拡張機能
+        // 拡張機能版が不要な場合はコメントアウトして無効にしてください
+        "anthropic.claude-code",        // Claude Code
+        // "googlecloudtools.cloudcode",   // Google Cloud Code
+        "Google.geminicodeassist"       // Gemini Code Assist
+      ],
+      "settings": {
+        // Use bash as default terminal (change to "zsh" if preferred)
+        // デフォルトのターミナルをbashに設定（zsh派の方は "zsh" に変更）
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  // RECOMMENDED: Manage secret hiding in docker-compose.yml, as it's easier to maintain
+  // the same format across DevContainer and CLI Sandbox environments.
+  // 秘匿設定は docker-compose.yml で管理する事が推奨されます。なぜなら、DevContainer と
+  // CLI Sandbox で同じフォーマットである方が管理しやすいからです。
+  //
+  // If not using docker-compose.yml, configure authentication persistence and secret file exclusion as follows:
+  // もし、docker-compose.yml を使用しない場合、認証情報の永続化や秘匿情報のファイルの除外は下記の様に設定する
+  // "mounts": [
+  //   // Persist home directory for authentication (.claude.json, .claude/)
+  //   // 認証情報の永続化（.claude.json, .claude/）
+  //   "source=devcontainer-claude-home,target=/home/node,type=volume",
+
+  //   // Gemini/Google Cloud の認証用
+  //   "source=devcontainer-gcloud-config,target=/home/node/.config/gcloud,type=volume",
+
+  //   // Make secret directory empty
+  //   // 秘匿情報のディレクトリを空のディレクトリにする
+  //   "type=volume,target=/workspace/project_A/secret_dir",
+  //   // Disable secret file
+  //   // 秘匿情報のファイルを除外
+  //   "source=/dev/null,target=/workspace/project_A/secret_file,type=bind,readonly"
+  // ],
+
+  // Before container build: auto-create env files from .example templates (first-time setup)
+  // コンテナビルド前: .example テンプレートから環境変数ファイルを自動生成（初回セットアップ）
+  "initializeCommand": ".sandbox/scripts/init-env-files.sh .",
+
+  // On startup: merge Claude settings, compare configs, validate secrets, and check secret sync
+  // Run low-failure scripts first to ensure essential setup completes even if validation fails
+  // Compare config consistency before validation so root cause (config mismatch) is reported first
+  // 起動時: Claude設定マージ、設定整合性チェック、シークレット検証、シークレット同期チェック
+  // 失敗しにくいスクリプトを先に実行し、検証が失敗しても必須のセットアップが完了するようにする
+  // 検証より先に設定整合性を比較し、根本原因（設定の不一致）を先に報告する
+  "postStartCommand": "/workspace/.sandbox/scripts/merge-claude-settings.sh && /workspace/.sandbox/scripts/compare-secret-config.sh && /workspace/.sandbox/scripts/validate-secrets.sh && /workspace/.sandbox/scripts/check-secret-sync.sh",
+
+  "remoteUser": "node"
+}

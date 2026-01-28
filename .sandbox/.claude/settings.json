@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/*.cer)",
+      "Read(**/*.key)",
+      "Read(**/*.mobileprovision)",
+      "Read(**/*.p12)",
+      "Read(**/*.pem)",
+      "Read(**/*.sql)",
+      "Read(**/*.tfstate*)",
+      "Read(**/*.xcconfig)",
+      "Read(**/.aws/credentials)",
+      "Read(**/.env)",
+      "Read(**/.history/**)",
+      "Read(**/.kube/config)",
+      "Read(**/.npmrc)",
+      "Read(**/AuthKey_*.p8)",
+      "Read(**/GoogleService-Info.plist)"
+    ],
+    "allow": []
+  }
+}

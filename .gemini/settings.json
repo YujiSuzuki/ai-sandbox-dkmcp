@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dkmcp": {
+      "url": "http://host.docker.internal:8080/sse",
+      "timeout": 30000
+    }
+  }
+}

@@ -1,0 +1,116 @@
+# AI Sandbox Environment - Cursor Rules
+
+## Project Overview
+
+This is an AI sandbox environment with DockMCP for safe, multi-project AI development.
+
+## Key Rules
+
+### Security Constraints
+
+1. **You are running inside a DevContainer sandbox**
+2. **Secret files are hidden from you:**
+   - `demo-apps/securenote-api/.env` → appears empty
+   - `demo-apps/securenote-api/secrets/` → appears empty
+   - This is intentional security, not an error
+
+3. **You cannot run Docker commands:**
+   - No access to `docker` or `docker-compose`
+   - No access to Docker socket
+   - Tell users to run these on host OS
+
+### Cross-Container Access
+
+Use DockMCP MCP tools to interact with other containers:
+- `list_containers` - List accessible containers
+- `get_logs` - Get container logs
+- `get_stats` - Get resource stats
+- `exec_command` - Run whitelisted commands (e.g., `npm test`)
+- `inspect_container` - Get container details
+
+### Troubleshooting: DockMCP Connection Issues
+
+If MCP tools are not available, diagnose with:
+
+```bash
+dkmcp client list --url http://host.docker.internal:8080
+```
+
+| Result | Symptom | Cause | Solution |
+|--------|---------|-------|----------|
+| ✅ Success | Container list displayed | MCP connection not established | Restart VS Code (Cmd+Q / Alt+F4) |
+| ❌ Failure | Timeout / No response | Port forwarding interference | Stop port 8080 in VS Code Ports panel, restart |
+
+### Fallback: DockMCP Client Commands
+
+If MCP tools are unavailable, use `dkmcp client` directly:
+
+```bash
+dkmcp client list --url http://host.docker.internal:8080
+dkmcp client logs --url http://host.docker.internal:8080 securenote-api
+dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm test"
+```
+
+If `dkmcp` not found, tell user to run: `cd /workspace/dkmcp && make install`
+
+### Project Structure
+
+```
+/workspace/
+├── .devcontainer/      # DevContainer config (secret hiding here)
+├── cli_sandbox/         # CLI backup environment
+├── dkmcp/            # MCP Server (Go)
+├── demo-apps/          # API + Web demo
+└── demo-apps-ios/      # iOS demo app
+```
+
+### Important Files
+
+- `.devcontainer/docker-compose.yml` - Secret hiding config
+- `cli_sandbox/docker-compose.yml` - Same for CLI
+- `dkmcp/configs/dkmcp.example.yaml` - Container access policy
+- `.devcontainer/devcontainer.json` - VS Code settings
+
+### When Users Ask About...
+
+**Starting demo apps:**
+→ Tell them to run on host OS: `cd demo-apps && docker-compose -f docker-compose.demo.yml up -d`
+
+**Reading .env or secrets:**
+→ Explain files are hidden for security. The API container has access, but AI doesn't.
+
+**Checking logs:**
+→ Use DockMCP `get_logs` tool
+
+**Running tests:**
+→ Use DockMCP `exec_command` with `npm test`
+
+### Development Approach: TDD
+
+When fixing bugs or implementing features, follow TDD (Test-Driven Development):
+
+1. **Write test first** - Before implementing or fixing, write a test that detects the bug or verifies expected behavior
+2. **Verify test fails** - Confirm the test fails (proves the bug exists)
+3. **Implement/Fix** - Write the code to make the test pass
+4. **Verify test passes** - Confirm the fix works
+5. **Run all tests** - Ensure no regressions
+
+Always write tests before fixing bugs to prove the bug exists and the fix works.
+
+**Writing meaningful tests:**
+- Tests must call actual code, not duplicate logic
+- If unsure whether a test is meaningful, ask the user first
+
+### Code Style
+
+- Node.js/JavaScript for demo-apps
+- Go for DockMCP
+- SwiftUI for iOS app
+- Follow existing patterns in the codebase
+
+### Do NOT
+
+- Try to bypass secret hiding
+- Suggest removing security configurations
+- Run docker commands (they will fail)
+- Modify security files without user approval

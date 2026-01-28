@@ -1,0 +1,24 @@
+# Patterns to ignore when checking secret sync
+# シークレット同期チェック時に無視するパターン
+#
+# These patterns follow gitignore-like syntax:
+# gitignore風の構文に従います:
+#
+#   **/*.example  - Match .example files recursively
+#   *.sample      - Match .sample files in any directory
+#   /path/to/file - Match specific path from workspace root
+#   # comment     - Lines starting with # are comments
+#
+# Files matching these patterns will NOT trigger warnings
+# when blocked in .claude/settings.json but not hidden in docker-compose.yml.
+# これらのパターンにマッチするファイルは、.claude/settings.json でブロックされているが
+# docker-compose.yml で隠蔽されていなくても警告を出しません。
+
+# Example and sample files (contain placeholder values, not real secrets)
+# サンプルファイル（実際の秘密情報ではなくプレースホルダー値を含む）
+**/*.example
+**/*.sample
+
+# Template files
+# テンプレートファイル
+**/*.template

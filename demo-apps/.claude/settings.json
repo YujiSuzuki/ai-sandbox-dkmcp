@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(securenote-api/.env)",
+      "Read(securenote-api/.env.*)",
+      "Read(securenote-api/secrets/**)",
+      "Read(**/.env)",
+      "Read(**/*.key)",
+      "Read(**/*.pem)",
+      "Read(**/*.secret)"
+    ]
+  }
+}

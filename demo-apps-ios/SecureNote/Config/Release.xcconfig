@@ -1,0 +1,17 @@
+// Release.xcconfig - Production Build Configuration (DEMO SECRET FILE)
+// このファイルは秘匿情報のデモ用サンプルです
+
+// API Configuration
+API_BASE_URL = https://api.securenote.example.com
+API_KEY = sk-prod-api-key-67890-FAKE-PRODUCTION
+
+// Firebase Production
+FIREBASE_API_KEY = AIzaSyPROD-fake-production-key
+
+// App Store Connect (Production)
+APP_STORE_CONNECT_KEY_ID = PROD789FAKE
+APP_STORE_CONNECT_ISSUER_ID = 98765432-fake-prod-uuid
+
+// Bundle Configuration
+PRODUCT_BUNDLE_IDENTIFIER = com.example.securenote
+CODE_SIGN_IDENTITY = Apple Distribution
