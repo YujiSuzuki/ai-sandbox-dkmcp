@@ -30,8 +30,9 @@ This solves the common problem: "My API is in a separate container, how can AI h
 /workspace/
 ├── .sandbox/               # Shared sandbox infrastructure
 │   ├── Dockerfile          # Node.js base with limited sudo
+│   ├── backups/            # Backup files from sync scripts (gitignored)
 │   ├── config/             # Startup configuration
-│   │   ├── startup.conf    # Verbosity settings, README URLs
+│   │   ├── startup.conf    # Verbosity settings, README URLs, backup retention
 │   │   └── sync-ignore     # Patterns to exclude from sync warnings
 │   └── scripts/            # Shared scripts (run: .sandbox/scripts/help.sh)
 │       ├── help.sh                   # Show this script list with descriptions
@@ -230,7 +231,7 @@ The CLI Sandbox accepts verbosity flags that control startup output:
 The `STARTUP_VERBOSITY` environment variable can also be set (`quiet`, `summary`, `verbose`).
 
 Configuration files in `.sandbox/config/`:
-- `startup.conf` - Default verbosity, README URLs for locale-aware messages
+- `startup.conf` - Default verbosity, README URLs for locale-aware messages, backup retention (`BACKUP_KEEP_COUNT`)
 - `sync-ignore` - gitignore-style patterns to exclude from sync warnings (e.g., `**/*.example`)
 
 ### AI Settings Files for Secret Sync

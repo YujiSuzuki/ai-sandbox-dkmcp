@@ -345,19 +345,23 @@ add_to_missing_composes() {
     fi
 }
 
-# Create backups for all compose files
-# 全 compose ファイルのバックアップを作成
+# Create backups for all compose files in .sandbox/backups/
+# 全 compose ファイルのバックアップを .sandbox/backups/ に作成
 create_backups() {
-    local timestamp
-    timestamp=$(date +%Y%m%d%H%M%S)
     echo ""
-    for compose_file in "${COMPOSE_FILES[@]}"; do
-        local backup_file="${compose_file}.backup.${timestamp}"
-        cp "$compose_file" "$backup_file"
+    for i in "${!COMPOSE_FILES[@]}"; do
+        local compose_file="${COMPOSE_FILES[$i]}"
         local label
         label=$(get_compose_label "$compose_file")
+        # Use lowercase label without spaces as backup prefix
+        # スペースなしの小文字ラベルをバックアッププレフィックスに使用
+        local backup_label
+        backup_label=$(echo "$label" | tr '[:upper:] ' '[:lower:]_')
+        local backup_path
+        backup_path=$(backup_file "$compose_file" "$backup_label")
         echo "$MSG_BACKUP $label"
-        echo "   $backup_file"
+        echo "   $backup_path"
+        cleanup_backups "${backup_label}.docker-compose.yml.*"
     done
     echo ""
 }

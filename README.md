@@ -830,6 +830,19 @@ STARTUP_VERBOSITY="verbose"
 # README URL for "See README for details" messages
 README_URL="README.md"
 README_URL_JA="README.ja.md"  # Used when LANG=ja_JP*
+
+# Number of backup files to keep per label (0 = unlimited)
+BACKUP_KEEP_COUNT=0
+```
+
+Backups created by sync scripts are saved to `.sandbox/backups/`. To limit the number of retained backups:
+
+```bash
+# Keep only the most recent 10 backups per label
+BACKUP_KEEP_COUNT=10
+
+# Or override via environment variable
+BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.sh
 ```
 
 ### Excluding Files from Sync Warnings
@@ -958,8 +971,17 @@ Since template-derived repositories don't automatically receive upstream updates
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 Update available: v0.1.0 → v0.2.0
-   https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases
+📦 Update Check
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Current version:  v0.1.0
+  Latest version:   v0.2.0
+
+  How to update:
+    1. Check release notes for changes
+    2. Manually apply relevant updates
+
+  Release notes:
+    https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

@@ -24,7 +24,9 @@
 !.env.*.sample
 !.env.*.example
 
-docker-compose.yml.backup.*
+# Backup files created by sync scripts
+# sync スクリプトが作成するバックアップファイル
+.sandbox/backups/
 
 
 # Secrets and sensitive data

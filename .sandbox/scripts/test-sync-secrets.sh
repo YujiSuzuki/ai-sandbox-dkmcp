@@ -256,11 +256,11 @@ test_add_all_files() {
     cleanup
 }
 
-# Test 5: Creates backup
-# テスト5: バックアップを作成
+# Test 5: Creates backup in .sandbox/backups/
+# テスト5: バックアップを .sandbox/backups/ に作成
 test_creates_backup() {
     echo ""
-    echo "=== Test: Creates backup ==="
+    echo "=== Test: Creates backup in .sandbox/backups/ ==="
 
     setup
 
@@ -271,14 +271,14 @@ test_creates_backup() {
     local output
     output=$(echo "1" | WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" 2>&1) || true
 
-    # Check if backup file was created
-    # バックアップファイルが作成されたか確認
-    if ls "$TEST_WORKSPACE/.devcontainer/docker-compose.yml.backup."* 1>/dev/null 2>&1; then
-        pass "Script creates backup file"
+    # Check if backup file was created in .sandbox/backups/
+    # .sandbox/backups/ にバックアップファイルが作成されたか確認
+    if ls "$TEST_WORKSPACE/.sandbox/backups/"*.docker-compose.yml.* 1>/dev/null 2>&1; then
+        pass "Script creates backup file in .sandbox/backups/"
     else
-        fail "Script should create backup file"
-        echo "Files in .devcontainer:"
-        ls -la "$TEST_WORKSPACE/.devcontainer/"
+        fail "Script should create backup file in .sandbox/backups/"
+        echo "Files in .sandbox/backups/:"
+        ls -la "$TEST_WORKSPACE/.sandbox/backups/" 2>/dev/null || echo "(directory not found)"
     fi
 
     cleanup
@@ -542,11 +542,11 @@ test_dual_file_adds_only_where_missing() {
     cleanup
 }
 
-# Test 14: Dual-file - backups created for both
-# テスト14: 両ファイル - 両方のバックアップが作成される
+# Test 14: Dual-file - backups created for both in .sandbox/backups/
+# テスト14: 両ファイル - 両方のバックアップが .sandbox/backups/ に作成される
 test_dual_file_backups() {
     echo ""
-    echo "=== Test: Dual-file - backups created for both ==="
+    echo "=== Test: Dual-file - backups created for both in .sandbox/backups/ ==="
 
     setup
 
@@ -560,13 +560,13 @@ test_dual_file_backups() {
 
     local dc_backup=false
     local cli_backup=false
-    ls "$TEST_WORKSPACE/.devcontainer/docker-compose.yml.backup."* 1>/dev/null 2>&1 && dc_backup=true
-    ls "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml.backup."* 1>/dev/null 2>&1 && cli_backup=true
+    ls "$TEST_WORKSPACE/.sandbox/backups/devcontainer."* 1>/dev/null 2>&1 && dc_backup=true
+    ls "$TEST_WORKSPACE/.sandbox/backups/cli_sandbox."* 1>/dev/null 2>&1 && cli_backup=true
 
     if [ "$dc_backup" = true ] && [ "$cli_backup" = true ]; then
-        pass "Script creates backups for both compose files"
+        pass "Script creates backups for both compose files in .sandbox/backups/"
     else
-        fail "Script should create backups for both (DC=$dc_backup, CLI=$cli_backup)"
+        fail "Script should create backups for both in .sandbox/backups/ (DC=$dc_backup, CLI=$cli_backup)"
     fi
 
     cleanup

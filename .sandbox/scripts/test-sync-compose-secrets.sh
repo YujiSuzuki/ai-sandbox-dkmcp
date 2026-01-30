@@ -290,11 +290,11 @@ test_sync_tmpfs_to_dc() {
     cleanup
 }
 
-# Test 7: Backups are created
-# テスト7: バックアップが作成される
+# Test 7: Backups are created in .sandbox/backups/
+# テスト7: バックアップが .sandbox/backups/ に作成される
 test_backup_creation() {
     echo ""
-    echo "=== Test: Backups are created ==="
+    echo "=== Test: Backups are created in .sandbox/backups/ ==="
 
     setup
     create_dc_extra_volume
@@ -302,14 +302,102 @@ test_backup_creation() {
     # Run with "sync all" option (1)
     echo "1" | WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1 || true
 
-    # Check that backup files exist
-    local dc_backup=$(ls "$TEST_WORKSPACE/.devcontainer/docker-compose.yml.backup."* 2>/dev/null | head -1)
-    local cli_backup=$(ls "$TEST_WORKSPACE/cli_sandbox/docker-compose.yml.backup."* 2>/dev/null | head -1)
+    # Check that backup files exist in .sandbox/backups/
+    local dc_backup=$(ls "$TEST_WORKSPACE/.sandbox/backups/devcontainer.docker-compose.yml."* 2>/dev/null | head -1)
+    local cli_backup=$(ls "$TEST_WORKSPACE/.sandbox/backups/cli_sandbox.docker-compose.yml."* 2>/dev/null | head -1)
 
     if [ -n "$dc_backup" ] && [ -n "$cli_backup" ]; then
-        pass "Backup files created"
+        pass "Backup files created in .sandbox/backups/"
     else
-        fail "Backup files should be created"
+        fail "Backup files should be created in .sandbox/backups/"
+    fi
+
+    cleanup
+}
+
+# Test 7b: BACKUP_KEEP_COUNT limits number of backups
+# テスト7b: BACKUP_KEEP_COUNT がバックアップ数を制限する
+test_backup_keep_count() {
+    echo ""
+    echo "=== Test: BACKUP_KEEP_COUNT limits backups ==="
+
+    setup
+    create_dc_extra_volume
+
+    # Run sync 5 times to create 5 backups, keeping only 2
+    for i in 1 2 3 4 5; do
+        create_dc_extra_volume  # Reset files for each run
+        echo "1" | BACKUP_KEEP_COUNT=2 WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1 || true
+        sleep 1  # Ensure different timestamps
+    done
+
+    # Count backup files for each label
+    local dc_count=$(ls "$TEST_WORKSPACE/.sandbox/backups/devcontainer.docker-compose.yml."* 2>/dev/null | wc -l)
+    local cli_count=$(ls "$TEST_WORKSPACE/.sandbox/backups/cli_sandbox.docker-compose.yml."* 2>/dev/null | wc -l)
+
+    if [ "$dc_count" -le 2 ] && [ "$cli_count" -le 2 ]; then
+        pass "BACKUP_KEEP_COUNT limits backups (dc=$dc_count, cli=$cli_count)"
+    else
+        fail "Should keep at most 2 backups (dc=$dc_count, cli=$cli_count)"
+    fi
+
+    cleanup
+}
+
+# Test 7c: BACKUP_KEEP_COUNT=0 keeps all backups (unlimited)
+# テスト7c: BACKUP_KEEP_COUNT=0 で全バックアップを保持（無制限）
+test_backup_keep_unlimited() {
+    echo ""
+    echo "=== Test: BACKUP_KEEP_COUNT=0 keeps all backups ==="
+
+    setup
+    create_dc_extra_volume
+
+    # Run sync 3 times with unlimited
+    for i in 1 2 3; do
+        create_dc_extra_volume
+        echo "1" | BACKUP_KEEP_COUNT=0 WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1 || true
+        sleep 1
+    done
+
+    local dc_count=$(ls "$TEST_WORKSPACE/.sandbox/backups/devcontainer.docker-compose.yml."* 2>/dev/null | wc -l)
+
+    if [ "$dc_count" -ge 3 ]; then
+        pass "BACKUP_KEEP_COUNT=0 keeps all backups ($dc_count files)"
+    else
+        fail "BACKUP_KEEP_COUNT=0 should keep all backups (found $dc_count)"
+    fi
+
+    cleanup
+}
+
+# Test 7d: Reducing BACKUP_KEEP_COUNT cleans up excess on next run
+# テスト7d: BACKUP_KEEP_COUNT を減らすと次回実行時に超過分が削除される
+test_backup_reduce_count() {
+    echo ""
+    echo "=== Test: Reducing BACKUP_KEEP_COUNT cleans up excess ==="
+
+    setup
+
+    # Create 5 backups with unlimited retention
+    for i in 1 2 3 4 5; do
+        create_dc_extra_volume
+        echo "1" | BACKUP_KEEP_COUNT=0 WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1 || true
+        sleep 1
+    done
+
+    local before_count=$(ls "$TEST_WORKSPACE/.sandbox/backups/devcontainer.docker-compose.yml."* 2>/dev/null | wc -l)
+
+    # Now run once more with keep=2
+    create_dc_extra_volume
+    echo "1" | BACKUP_KEEP_COUNT=2 WORKSPACE="$TEST_WORKSPACE" "$SCRIPT" > /dev/null 2>&1 || true
+
+    local after_count=$(ls "$TEST_WORKSPACE/.sandbox/backups/devcontainer.docker-compose.yml."* 2>/dev/null | wc -l)
+
+    if [ "$before_count" -ge 5 ] && [ "$after_count" -le 2 ]; then
+        pass "Reducing BACKUP_KEEP_COUNT cleans up excess (before=$before_count, after=$after_count)"
+    else
+        fail "Should clean up to 2 backups (before=$before_count, after=$after_count)"
     fi
 
     cleanup
@@ -706,6 +794,9 @@ main() {
     test_sync_volume_to_cli
     test_sync_tmpfs_to_dc
     test_backup_creation
+    test_backup_keep_count
+    test_backup_keep_unlimited
+    test_backup_reduce_count
     test_missing_dc_config
     test_missing_cli_config
     test_skip_sync

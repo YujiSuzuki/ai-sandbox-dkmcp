@@ -30,6 +30,12 @@ if [[ -z "${SANDBOX_ENV:-}" ]] && [[ ! -f "/.dockerenv" ]]; then
 fi
 
 WORKSPACE="${WORKSPACE:-/workspace}"
+
+# Source common functions (backup utilities, etc.)
+# 共通関数を読み込み（バックアップユーティリティなど）
+# shellcheck source=/dev/null
+source "${WORKSPACE}/.sandbox/scripts/_startup_common.sh"
+
 DEVCONTAINER_COMPOSE="$WORKSPACE/.devcontainer/docker-compose.yml"
 CLI_SANDBOX_COMPOSE="$WORKSPACE/cli_sandbox/docker-compose.yml"
 
@@ -200,21 +206,22 @@ add_tmpfs_mount() {
     fi
 }
 
-# Create backups
-# バックアップを作成
+# Create backups in .sandbox/backups/ and clean up old ones
+# .sandbox/backups/ にバックアップを作成し、古いものを整理
 create_backups() {
-    local timestamp
-    timestamp=$(date +%Y%m%d%H%M%S)
     echo ""
     echo "$MSG_BACKUP"
 
-    local backup_dc="${DEVCONTAINER_COMPOSE}.backup.${timestamp}"
-    cp "$DEVCONTAINER_COMPOSE" "$backup_dc"
-    echo "   $DEVCONTAINER_COMPOSE_SHORT → ${backup_dc##*/}"
+    local backup_dc
+    backup_dc=$(backup_file "$DEVCONTAINER_COMPOSE" "devcontainer")
+    echo "   $DEVCONTAINER_COMPOSE_SHORT → ${backup_dc}"
+    cleanup_backups "devcontainer.docker-compose.yml.*"
 
-    local backup_cli="${CLI_SANDBOX_COMPOSE}.backup.${timestamp}"
-    cp "$CLI_SANDBOX_COMPOSE" "$backup_cli"
-    echo "   $CLI_SANDBOX_COMPOSE_SHORT → ${backup_cli##*/}"
+    local backup_cli
+    backup_cli=$(backup_file "$CLI_SANDBOX_COMPOSE" "cli_sandbox")
+    echo "   $CLI_SANDBOX_COMPOSE_SHORT → ${backup_cli}"
+    cleanup_backups "cli_sandbox.docker-compose.yml.*"
+
     echo ""
 }
 

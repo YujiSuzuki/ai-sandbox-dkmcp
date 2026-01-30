@@ -22,6 +22,7 @@ load_startup_config() {
     local env_verbosity="${STARTUP_VERBOSITY:-}"
     local env_readme_url="${SANDBOX_README_URL:-}"
     local env_readme_url_ja="${SANDBOX_README_URL_JA:-}"
+    local env_backup_keep="${BACKUP_KEEP_COUNT:-}"
 
     # Load config file if exists
     # 設定ファイルが存在すれば読み込み
@@ -35,8 +36,9 @@ load_startup_config() {
     README_URL="${env_readme_url:-${README_URL:-README.md}}"
     README_URL_JA="${env_readme_url_ja:-${README_URL_JA:-README.ja.md}}"
     STARTUP_VERBOSITY="${env_verbosity:-${STARTUP_VERBOSITY:-verbose}}"
+    BACKUP_KEEP_COUNT="${env_backup_keep:-${BACKUP_KEEP_COUNT:-0}}"
 
-    export README_URL README_URL_JA STARTUP_VERBOSITY
+    export README_URL README_URL_JA STARTUP_VERBOSITY BACKUP_KEEP_COUNT
 }
 
 # ============================================================
@@ -203,6 +205,72 @@ matches_sync_ignore() {
     done < <(load_sync_ignore_patterns)
 
     return 1
+}
+
+# ============================================================
+# Backup Utility Functions / バックアップユーティリティ関数
+# ============================================================
+
+# Backup directory
+# バックアップ保存先ディレクトリ
+BACKUP_DIR="${WORKSPACE}/.sandbox/backups"
+
+# Create a backup of a file in .sandbox/backups/
+# .sandbox/backups/ にファイルのバックアップを作成
+#
+# Usage: backup_file "/path/to/file" "label"
+# Example: backup_file "$COMPOSE_FILE" "devcontainer"
+#   -> .sandbox/backups/devcontainer.docker-compose.yml.20260130123456
+#
+# Returns: backup file path via stdout
+backup_file() {
+    local file="$1"
+    local label="${2:-}"
+    local timestamp
+    timestamp=$(date +%Y%m%d%H%M%S)
+
+    mkdir -p "$BACKUP_DIR"
+
+    local file_basename
+    file_basename=$(basename "$file")
+    local backup_name
+    if [ -n "$label" ]; then
+        backup_name="${label}.${file_basename}.${timestamp}"
+    else
+        backup_name="${file_basename}.${timestamp}"
+    fi
+
+    local backup_path="${BACKUP_DIR}/${backup_name}"
+    cp "$file" "$backup_path"
+    echo "$backup_path"
+}
+
+# Clean up old backups, keeping only the most recent N
+# 古いバックアップを削除し、直近 N 件のみ保持
+#
+# Usage: cleanup_backups "label.docker-compose.yml.*" [count]
+#   count defaults to BACKUP_KEEP_COUNT (0 = unlimited, no cleanup)
+cleanup_backups() {
+    local pattern="$1"
+    local keep="${2:-$BACKUP_KEEP_COUNT}"
+
+    # 0 or non-numeric means unlimited
+    # 0 または数値以外は無制限
+    if ! [[ "$keep" =~ ^[0-9]+$ ]] || [ "$keep" -le 0 ]; then
+        return 0
+    fi
+    [ ! -d "$BACKUP_DIR" ] && return 0
+
+    # List matching files sorted by modification time (newest first)
+    # 更新日時の降順でマッチするファイルを一覧
+    local count=0
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        count=$((count + 1))
+        if [ "$count" -gt "$keep" ]; then
+            rm -f "$f"
+        fi
+    done < <(ls -1t "${BACKUP_DIR}"/${pattern} 2>/dev/null)
 }
 
 # ============================================================

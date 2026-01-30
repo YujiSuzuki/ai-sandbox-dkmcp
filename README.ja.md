@@ -832,6 +832,19 @@ STARTUP_VERBOSITY="verbose"
 # "詳細はREADMEを参照"メッセージで使用するURL
 README_URL="README.md"
 README_URL_JA="README.ja.md"  # LANG=ja_JP* の場合に使用
+
+# ラベルごとのバックアップ保持件数（0 = 無制限）
+BACKUP_KEEP_COUNT=0
+```
+
+sync スクリプトが作成するバックアップは `.sandbox/backups/` に保存されます。保持件数を制限するには：
+
+```bash
+# 直近10件のみ保持
+BACKUP_KEEP_COUNT=10
+
+# 環境変数で一時的に上書きも可能
+BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.sh
 ```
 
 ### 同期警告からのファイル除外
@@ -960,8 +973,17 @@ cd your-new-repo
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 更新があります: v0.1.0 → v0.2.0
-   https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases
+📦 更新チェック
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  現在のバージョン:  v0.1.0
+  最新バージョン:   v0.2.0
+
+  更新方法:
+    1. リリースノートで変更内容を確認
+    2. 必要な変更を手動で適用
+
+  リリースノート:
+    https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
