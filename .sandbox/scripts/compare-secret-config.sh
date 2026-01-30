@@ -151,9 +151,9 @@ if is_quiet; then
 fi
 
 # ============================================================
-# Default mode: show differences + action required
+# Summary mode: show differences + action required
 # ============================================================
-if is_default; then
+if is_summary; then
     if [ "$has_mismatch" = true ]; then
         echo ""
         echo "$MSG_MISMATCH"

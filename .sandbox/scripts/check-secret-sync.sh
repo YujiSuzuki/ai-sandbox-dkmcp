@@ -303,9 +303,9 @@ if is_quiet; then
 fi
 
 # ============================================================
-# Default mode: problem explanation + action required
+# Summary mode: problem explanation + action required
 # ============================================================
-if is_default; then
+if is_summary; then
     if [ ${#missing_files[@]} -gt 0 ]; then
         echo ""
         echo "$MSG_MISSING_HEADER"

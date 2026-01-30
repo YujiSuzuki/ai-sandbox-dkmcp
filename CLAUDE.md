@@ -223,11 +223,11 @@ The CLI Sandbox accepts verbosity flags that control startup output:
 
 ```bash
 ./cli_sandbox/ai_sandbox.sh --quiet    # Warnings/errors only (minimal)
-./cli_sandbox/ai_sandbox.sh            # Default: problem explanation + action required
-./cli_sandbox/ai_sandbox.sh --verbose  # Full detailed output with decorations
+./cli_sandbox/ai_sandbox.sh --summary  # Condensed summary
+./cli_sandbox/ai_sandbox.sh            # Default: full detailed output
 ```
 
-The `STARTUP_VERBOSITY` environment variable can also be set (`quiet`, `default`, `verbose`).
+The `STARTUP_VERBOSITY` environment variable can also be set (`quiet`, `summary`, `verbose`).
 
 Configuration files in `.sandbox/config/`:
 - `startup.conf` - Default verbosity, README URLs for locale-aware messages

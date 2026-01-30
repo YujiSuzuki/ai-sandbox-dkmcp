@@ -346,9 +346,9 @@ show_update_notification() {
     fi
 
     # ============================================================
-    # Default mode: summary with URL
+    # Summary mode: summary with URL
     # ============================================================
-    if is_default; then
+    if is_summary; then
         print_title "$MSG_TITLE"
 
         if [ -n "$previous" ]; then

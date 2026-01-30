@@ -34,7 +34,7 @@ load_startup_config() {
     # 環境変数は設定ファイルより優先
     README_URL="${env_readme_url:-${README_URL:-README.md}}"
     README_URL_JA="${env_readme_url_ja:-${README_URL_JA:-README.ja.md}}"
-    STARTUP_VERBOSITY="${env_verbosity:-${STARTUP_VERBOSITY:-default}}"
+    STARTUP_VERBOSITY="${env_verbosity:-${STARTUP_VERBOSITY:-verbose}}"
 
     export README_URL README_URL_JA STARTUP_VERBOSITY
 }
@@ -73,7 +73,7 @@ get_readme_reference_message() {
 # 詳細度レベルをチェック
 is_quiet() { [[ "$STARTUP_VERBOSITY" == "quiet" ]]; }
 is_verbose() { [[ "$STARTUP_VERBOSITY" == "verbose" ]]; }
-is_default() { [[ "$STARTUP_VERBOSITY" == "default" || -z "$STARTUP_VERBOSITY" ]]; }
+is_summary() { [[ "$STARTUP_VERBOSITY" == "summary" ]]; }
 
 # Print script title (thick separator)
 # スクリプトタイトルを出力（太線セパレータ）
@@ -94,8 +94,8 @@ print_footer() {
     echo ""
 }
 
-# Print summary line (for default mode)
-# サマリー行を出力（デフォルトモード用）
+# Print summary line (for summary mode)
+# サマリー行を出力（summary モード用）
 # Usage: print_summary "emoji" "message" "OK|WARN|ERR"
 print_summary() {
     local emoji="$1" msg="$2" result="$3"

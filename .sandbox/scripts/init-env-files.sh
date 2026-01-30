@@ -45,6 +45,7 @@ done
 
 created=0
 SELECTED_LANG=""
+SELECTED_TZ=""
 
 # Interactive language selection / 対話式の言語選択
 select_language() {
@@ -58,6 +59,10 @@ select_language() {
         2)
             SELECTED_LANG="ja_JP.UTF-8"
             echo "→ 日本語 (ja_JP.UTF-8) を選択しました"
+            echo ""
+            # Prompt for timezone when Japanese is selected
+            # 日本語選択時にタイムゾーンを確認
+            select_timezone_for_japanese
             ;;
         *)
             SELECTED_LANG="C.UTF-8"
@@ -65,6 +70,24 @@ select_language() {
             ;;
     esac
     echo ""
+}
+
+# Interactive timezone selection for Japanese users / 日本語ユーザー向けタイムゾーン選択
+select_timezone_for_japanese() {
+    echo "タイムゾーンを Asia/Tokyo に設定しますか?"
+    echo "  1) はい (default)"
+    echo "  2) いいえ"
+    echo ""
+    read -r -p "1 または 2 を入力 [1]: " tz_choice
+    case "$tz_choice" in
+        2)
+            echo "→ タイムゾーンは変更しません"
+            ;;
+        *)
+            SELECTED_TZ="Asia/Tokyo"
+            echo "→ TZ=Asia/Tokyo を設定します"
+            ;;
+    esac
 }
 
 # Apply language setting to .env.sandbox / .env.sandbox に言語設定を適用
@@ -80,6 +103,29 @@ apply_language_setting() {
             mv "$tmp_file" "$env_file"
         else
             echo "LANG=$SELECTED_LANG" >> "$env_file"
+        fi
+    fi
+}
+
+# Apply timezone setting to .env.sandbox / .env.sandbox にタイムゾーン設定を適用
+apply_timezone_setting() {
+    local env_file="$1"
+    if [ -n "$SELECTED_TZ" ] && [ -f "$env_file" ]; then
+        if grep -q "^# *TZ=" "$env_file"; then
+            # Uncomment and set TZ line / コメントアウトされた TZ 行を有効化
+            local tmp_file
+            tmp_file=$(mktemp)
+            sed "s|^# *TZ=.*|TZ=$SELECTED_TZ|" "$env_file" > "$tmp_file"
+            mv "$tmp_file" "$env_file"
+        elif grep -q "^TZ=" "$env_file"; then
+            # Replace existing TZ line / 既存の TZ 行を置換
+            local tmp_file
+            tmp_file=$(mktemp)
+            sed "s|^TZ=.*|TZ=$SELECTED_TZ|" "$env_file" > "$tmp_file"
+            mv "$tmp_file" "$env_file"
+        else
+            # Append TZ line / TZ 行を追加
+            echo "TZ=$SELECTED_TZ" >> "$env_file"
         fi
     fi
 }
@@ -119,6 +165,12 @@ if [ "$env_sandbox_created" = true ] && [ -n "$SELECTED_LANG" ]; then
     apply_language_setting "$PROJECT_ROOT/.env.sandbox"
     echo "  Language set to: $SELECTED_LANG"
     echo "  言語を設定しました: $SELECTED_LANG"
+fi
+# Apply timezone setting if selected / タイムゾーン設定を適用
+if [ "$env_sandbox_created" = true ] && [ -n "$SELECTED_TZ" ]; then
+    apply_timezone_setting "$PROJECT_ROOT/.env.sandbox"
+    echo "  Timezone set to: $SELECTED_TZ"
+    echo "  タイムゾーンを設定しました: $SELECTED_TZ"
 fi
 if [ "$env_sandbox_created" = true ]; then
     echo "  Edit .env.sandbox to customize. / 設定変更は .env.sandbox を編集してください。"

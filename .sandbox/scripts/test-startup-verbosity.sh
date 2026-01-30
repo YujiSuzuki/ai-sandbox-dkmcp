@@ -34,16 +34,16 @@ test_startup_common() {
     # shellcheck source=/dev/null
     source "$WORKSPACE/.sandbox/scripts/_startup_common.sh"
 
-    # Test 1: load_startup_config loads defaults
+    # Test 1: load_startup_config loads verbose as default
     unset STARTUP_VERBOSITY
     load_startup_config
-    if [ "$STARTUP_VERBOSITY" = "default" ]; then
-        pass "load_startup_config sets default verbosity"
+    if [ "$STARTUP_VERBOSITY" = "verbose" ]; then
+        pass "load_startup_config sets verbose as default verbosity"
     else
-        fail "load_startup_config should set STARTUP_VERBOSITY to 'default', got '$STARTUP_VERBOSITY'"
+        fail "load_startup_config should set STARTUP_VERBOSITY to 'verbose', got '$STARTUP_VERBOSITY'"
     fi
 
-    # Test 2: is_quiet/is_verbose/is_default functions
+    # Test 2: is_quiet/is_verbose/is_summary functions
     STARTUP_VERBOSITY="quiet"
     if is_quiet; then
         pass "is_quiet returns true when STARTUP_VERBOSITY=quiet"
@@ -58,11 +58,19 @@ test_startup_common() {
         fail "is_verbose should return true when STARTUP_VERBOSITY=verbose"
     fi
 
-    STARTUP_VERBOSITY="default"
-    if is_default; then
-        pass "is_default returns true when STARTUP_VERBOSITY=default"
+    STARTUP_VERBOSITY="summary"
+    if is_summary; then
+        pass "is_summary returns true when STARTUP_VERBOSITY=summary"
     else
-        fail "is_default should return true when STARTUP_VERBOSITY=default"
+        fail "is_summary should return true when STARTUP_VERBOSITY=summary"
+    fi
+
+    # Test 2b: is_summary returns false for other values
+    STARTUP_VERBOSITY="verbose"
+    if is_summary; then
+        fail "is_summary should return false when STARTUP_VERBOSITY=verbose"
+    else
+        pass "is_summary returns false when STARTUP_VERBOSITY=verbose"
     fi
 
     # Test 3: get_readme_url returns correct URL based on locale
@@ -117,16 +125,25 @@ test_verbosity_output() {
         fail "print_default should produce no output in quiet mode, got '$output'"
     fi
 
-    # Test default mode output
-    STARTUP_VERBOSITY="default"
+    # Test summary mode output
+    STARTUP_VERBOSITY="summary"
     output=$(print_default "test message")
     if [ "$output" = "test message" ]; then
-        pass "print_default produces output in default mode"
+        pass "print_default produces output in summary mode"
     else
-        fail "print_default should produce 'test message' in default mode, got '$output'"
+        fail "print_default should produce 'test message' in summary mode, got '$output'"
     fi
 
-    # Test verbose mode output
+    # Test verbose mode output (print_default)
+    STARTUP_VERBOSITY="verbose"
+    output=$(print_default "test message")
+    if [ "$output" = "test message" ]; then
+        pass "print_default produces output in verbose mode"
+    else
+        fail "print_default should produce 'test message' in verbose mode, got '$output'"
+    fi
+
+    # Test verbose mode output (print_detail)
     STARTUP_VERBOSITY="verbose"
     output=$(print_detail "test detail")
     if [ "$output" = "test detail" ]; then
@@ -135,13 +152,13 @@ test_verbosity_output() {
         fail "print_detail should produce 'test detail' in verbose mode, got '$output'"
     fi
 
-    # Test default mode doesn't show details
-    STARTUP_VERBOSITY="default"
+    # Test summary mode doesn't show details
+    STARTUP_VERBOSITY="summary"
     output=$(print_detail "test detail")
     if [ -z "$output" ]; then
-        pass "print_detail produces no output in default mode"
+        pass "print_detail produces no output in summary mode"
     else
-        fail "print_detail should produce no output in default mode, got '$output'"
+        fail "print_detail should produce no output in summary mode, got '$output'"
     fi
 }
 

@@ -806,28 +806,28 @@ DevContainer と CLI Sandbox は起動時に検証スクリプトを実行しま
 | モード | フラグ | 出力内容 |
 |--------|--------|----------|
 | Quiet | `--quiet` または `-q` | 警告とエラーのみ（最小限） |
-| Default | (なし) | 問題の説明と対処方法 |
-| Verbose | `--verbose` または `-v` | 罫線装飾付きの詳細出力 |
+| Summary | `--summary` または `-s` | 簡潔なサマリー |
+| Verbose | (なし、デフォルト) | 罫線装飾付きの詳細出力 |
 
 **CLI Sandbox の例：**
 ```bash
 # 最小限の出力（警告のみ）
 ./cli_sandbox/ai_sandbox.sh --quiet
 
-# 詳細出力（トラブルシューティング時に便利）
-./cli_sandbox/ai_sandbox.sh --verbose
+# 簡潔なサマリー
+./cli_sandbox/ai_sandbox.sh --summary
 ```
 
 **環境変数：**
 ```bash
 # デフォルトの詳細度を設定
-export STARTUP_VERBOSITY=quiet  # または: default, verbose
+export STARTUP_VERBOSITY=quiet  # または: summary, verbose
 ```
 
 **設定ファイル:** `.sandbox/config/startup.conf`
 ```bash
 # 全起動スクリプトのデフォルト詳細度
-STARTUP_VERBOSITY="default"
+STARTUP_VERBOSITY="verbose"
 
 # "詳細はREADMEを参照"メッセージで使用するURL
 README_URL="README.md"

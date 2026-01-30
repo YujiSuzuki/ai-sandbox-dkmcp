@@ -804,28 +804,28 @@ The DevContainer and CLI Sandbox run validation scripts at startup. You can cont
 | Mode | Flag | Output |
 |------|------|--------|
 | Quiet | `--quiet` or `-q` | Warnings and errors only (minimal) |
-| Default | (none) | Problem explanation + action required |
-| Verbose | `--verbose` or `-v` | Full detailed output with decorations |
+| Summary | `--summary` or `-s` | Condensed summary |
+| Verbose | (none, default) | Full detailed output with decorations |
 
 **CLI Sandbox example:**
 ```bash
 # Minimal output (warnings only)
 ./cli_sandbox/ai_sandbox.sh --quiet
 
-# Full details (useful for troubleshooting)
-./cli_sandbox/ai_sandbox.sh --verbose
+# Condensed summary
+./cli_sandbox/ai_sandbox.sh --summary
 ```
 
 **Environment variable:**
 ```bash
 # Set default verbosity
-export STARTUP_VERBOSITY=quiet  # or: default, verbose
+export STARTUP_VERBOSITY=quiet  # or: summary, verbose
 ```
 
 **Configuration file:** `.sandbox/config/startup.conf`
 ```bash
 # Default verbosity for all startup scripts
-STARTUP_VERBOSITY="default"
+STARTUP_VERBOSITY="verbose"
 
 # README URL for "See README for details" messages
 README_URL="README.md"

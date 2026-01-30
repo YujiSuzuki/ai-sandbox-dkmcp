@@ -53,8 +53,8 @@ export SANDBOX_ENV
 #
 # Options:
 #   --quiet, -q   : Only show warnings and errors
-#   --verbose, -v : Show full detailed output
-#   (default)     : Show condensed summary
+#   --summary, -s : Show condensed summary
+#   --verbose, -v : Show full detailed output (default)
 #
 parse_startup_verbosity() {
     REMAINING_ARGS=()
@@ -64,12 +64,15 @@ parse_startup_verbosity() {
         # shellcheck source=/dev/null
         source ".sandbox/config/startup.conf"
     fi
-    STARTUP_VERBOSITY="${STARTUP_VERBOSITY:-default}"
+    STARTUP_VERBOSITY="${STARTUP_VERBOSITY:-verbose}"
 
     for arg in "$@"; do
         case "$arg" in
             --quiet|-q)
                 STARTUP_VERBOSITY="quiet"
+                ;;
+            --summary|-s)
+                STARTUP_VERBOSITY="summary"
                 ;;
             --verbose|-v)
                 STARTUP_VERBOSITY="verbose"

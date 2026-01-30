@@ -579,59 +579,59 @@ test_show_update_notification() {
         fail "Quiet mode should output 1 line, got $line_count"
     fi
 
-    # Test 3: Default mode — includes current version, latest version, and URL on separate lines
-    STARTUP_VERBOSITY="default"
+    # Test 3: Summary mode — includes current version, latest version, and URL on separate lines
+    STARTUP_VERBOSITY="summary"
     output=$(show_update_notification "v0.1.0" "v0.2.0" "https://example.com/releases")
     if echo "$output" | grep -q "v0.1.0" && echo "$output" | grep -q "v0.2.0" && echo "$output" | grep -q "https://example.com/releases"; then
-        pass "Default mode shows current version, latest version, and URL"
+        pass "Summary mode shows current version, latest version, and URL"
     else
-        fail "Default mode should show both versions and URL, got: '$output'"
+        fail "Summary mode should show both versions and URL, got: '$output'"
     fi
 
-    # Test 4: Default mode — includes separator lines
+    # Test 4: Summary mode — includes separator lines
     if echo "$output" | grep -q "━━━━"; then
-        pass "Default mode includes separator lines"
+        pass "Summary mode includes separator lines"
     else
-        fail "Default mode should include separator lines"
+        fail "Summary mode should include separator lines"
     fi
 
-    # Test 5a: Default mode — shows current and latest on separate lines (like verbose)
+    # Test 5a: Summary mode — shows current and latest on separate lines (like verbose)
     if echo "$output" | grep -q "$MSG_CURRENT" && echo "$output" | grep -q "$MSG_LATEST"; then
-        pass "Default mode shows current/latest labels on separate lines"
+        pass "Summary mode shows current/latest labels on separate lines"
     else
-        fail "Default mode should show current/latest labels, got: '$output'"
+        fail "Summary mode should show current/latest labels, got: '$output'"
     fi
 
-    # Test 5b: Default mode — output has enough lines (title + content + footer, not truncated by set -e)
-    local default_line_count
-    default_line_count=$(echo "$output" | grep -c . || true)
-    if [ "$default_line_count" -ge 6 ]; then
-        pass "Default mode outputs at least 6 non-empty lines (not truncated)"
+    # Test 5b: Summary mode — output has enough lines (title + content + footer, not truncated by set -e)
+    local summary_line_count
+    summary_line_count=$(echo "$output" | grep -c . || true)
+    if [ "$summary_line_count" -ge 6 ]; then
+        pass "Summary mode outputs at least 6 non-empty lines (not truncated)"
     else
-        fail "Default mode should have at least 6 non-empty lines, got $default_line_count: '$output'"
+        fail "Summary mode should have at least 6 non-empty lines, got $summary_line_count: '$output'"
     fi
 
-    # Test 5c: Default mode — has release notes URL line
+    # Test 5c: Summary mode — has release notes URL line
     if echo "$output" | grep -q "$MSG_RELEASE_NOTES"; then
-        pass "Default mode shows release notes label"
+        pass "Summary mode shows release notes label"
     else
-        fail "Default mode should show release notes label, got: '$output'"
+        fail "Summary mode should show release notes label, got: '$output'"
     fi
 
-    # Test 5d: Default mode — has footer separator (not just title separator)
+    # Test 5d: Summary mode — has footer separator (not just title separator)
     local separator_count
     separator_count=$(echo "$output" | grep -c "━━━━" || true)
     if [ "$separator_count" -ge 3 ]; then
-        pass "Default mode has title + footer separators (at least 3 separator lines)"
+        pass "Summary mode has title + footer separators (at least 3 separator lines)"
     else
-        fail "Default mode should have at least 3 separator lines, got $separator_count"
+        fail "Summary mode should have at least 3 separator lines, got $separator_count"
     fi
 
-    # Test 5e: Default mode — does NOT include how-to-update (that's verbose only)
+    # Test 5e: Summary mode — does NOT include how-to-update (that's verbose only)
     if echo "$output" | grep -q "$MSG_HOW_TO_UPDATE:"; then
-        fail "Default mode should NOT show how-to-update section"
+        fail "Summary mode should NOT show how-to-update section"
     else
-        pass "Default mode omits how-to-update section (verbose only)"
+        pass "Summary mode omits how-to-update section (verbose only)"
     fi
 
     # Test 5: Verbose mode — includes how-to-update instructions

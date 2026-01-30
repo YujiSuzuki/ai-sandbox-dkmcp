@@ -264,9 +264,9 @@ if is_quiet; then
 fi
 
 # ============================================================
-# Default mode: show errors + action required
+# Summary mode: show errors + action required
 # ============================================================
-if is_default; then
+if is_summary; then
     if [ ${#ERRORS[@]} -gt 0 ]; then
         echo ""
         echo "❌ $MSG_HAS_ERRORS (${#ERRORS[@]}/${total_secrets})"

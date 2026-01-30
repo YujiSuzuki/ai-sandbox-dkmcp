@@ -358,8 +358,8 @@ NODE_ENV=development
 LANG=C.UTF-8
 EOF
 
-    # Run with interactive mode, select Japanese (2)
-    echo "2" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    # Run with interactive mode, select Japanese (2), decline TZ (2)
+    echo -e "2\n2" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
 
     if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
         if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
@@ -414,8 +414,8 @@ test_interactive_update_existing() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run with interactive mode, select Japanese (2), confirm update (y)
-    echo -e "2\ny" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    # Run with interactive mode, select Japanese (2), decline TZ (2), confirm update (y)
+    echo -e "2\n2\ny" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^LANG=ja_JP.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode updates language when confirmed"
@@ -437,13 +437,129 @@ test_interactive_decline_update() {
     # Create existing .env.sandbox with English
     echo "LANG=C.UTF-8" > "$TEST_PROJECT/.env.sandbox"
 
-    # Run with interactive mode, select Japanese (2), decline update (n)
-    echo -e "2\nn" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+    # Run with interactive mode, select Japanese (2), decline TZ (2), decline update (n)
+    echo -e "2\n2\nn" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
 
     if grep -q "^LANG=C.UTF-8" "$TEST_PROJECT/.env.sandbox"; then
         pass "Interactive mode preserves language when declined"
     else
         fail "LANG should remain C.UTF-8"
+    fi
+
+    cleanup
+}
+
+# Test 16: Japanese selection + accept TZ sets Asia/Tokyo
+# テスト16: 日本語選択 + TZ 承認で Asia/Tokyo が設定される
+test_interactive_japanese_with_tz() {
+    echo ""
+    echo "=== Test: Japanese selection + accept TZ sets Asia/Tokyo ==="
+
+    setup
+
+    cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
+NODE_ENV=development
+LANG=C.UTF-8
+# TZ=Asia/Tokyo
+EOF
+
+    # Select Japanese (2), accept TZ (1 = default)
+    echo -e "2\n1" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+
+    if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
+        if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
+            pass "Japanese + accept TZ sets TZ=Asia/Tokyo"
+        else
+            fail "TZ should be Asia/Tokyo, got: $(grep 'TZ' "$TEST_PROJECT/.env.sandbox" || echo '(not found)')"
+        fi
+    else
+        fail ".env.sandbox was not created"
+    fi
+
+    cleanup
+}
+
+# Test 17: Japanese selection + decline TZ keeps TZ commented
+# テスト17: 日本語選択 + TZ 拒否でコメントアウトのまま
+test_interactive_japanese_decline_tz() {
+    echo ""
+    echo "=== Test: Japanese selection + decline TZ keeps TZ commented ==="
+
+    setup
+
+    cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
+NODE_ENV=development
+LANG=C.UTF-8
+# TZ=Asia/Tokyo
+EOF
+
+    # Select Japanese (2), decline TZ (2)
+    echo -e "2\n2" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+
+    if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
+        if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
+            pass "Japanese + decline TZ keeps TZ commented out"
+        else
+            fail "TZ should remain commented, got: $(grep 'TZ' "$TEST_PROJECT/.env.sandbox" || echo '(not found)')"
+        fi
+    else
+        fail ".env.sandbox was not created"
+    fi
+
+    cleanup
+}
+
+# Test 18: English selection does not prompt for TZ
+# テスト18: 英語選択時は TZ の質問が出ない
+test_interactive_english_no_tz_prompt() {
+    echo ""
+    echo "=== Test: English selection does not change TZ ==="
+
+    setup
+
+    cat > "$TEST_PROJECT/.env.sandbox.example" << 'EOF'
+NODE_ENV=development
+LANG=C.UTF-8
+# TZ=Asia/Tokyo
+EOF
+
+    # Select English (1) — no TZ prompt should appear
+    echo "1" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+
+    if [ -f "$TEST_PROJECT/.env.sandbox" ]; then
+        if grep -q "^# TZ=" "$TEST_PROJECT/.env.sandbox" && ! grep -q "^TZ=" "$TEST_PROJECT/.env.sandbox"; then
+            pass "English selection keeps TZ commented (no TZ prompt)"
+        else
+            fail "TZ should remain commented for English selection"
+        fi
+    else
+        fail ".env.sandbox was not created"
+    fi
+
+    cleanup
+}
+
+# Test 19: Japanese + TZ on existing file updates TZ
+# テスト19: 既存ファイルで日本語 + TZ 更新
+test_interactive_tz_update_existing() {
+    echo ""
+    echo "=== Test: Japanese + TZ on existing file updates TZ ==="
+
+    setup
+
+    # Create existing .env.sandbox without TZ
+    cat > "$TEST_PROJECT/.env.sandbox" << 'EOF'
+NODE_ENV=development
+LANG=C.UTF-8
+EOF
+
+    # Select Japanese (2), accept TZ (1), confirm update (y)
+    echo -e "2\n1\ny" | bash "$SCRIPT" -i "$TEST_PROJECT" > /dev/null 2>&1
+
+    if grep -q "^TZ=Asia/Tokyo" "$TEST_PROJECT/.env.sandbox"; then
+        pass "TZ=Asia/Tokyo added to existing file"
+    else
+        fail "TZ should be added, got: $(grep 'TZ' "$TEST_PROJECT/.env.sandbox" || echo '(not found)')"
     fi
 
     cleanup
@@ -472,6 +588,10 @@ main() {
     test_interactive_english_new_file
     test_interactive_update_existing
     test_interactive_decline_update
+    test_interactive_japanese_with_tz
+    test_interactive_japanese_decline_tz
+    test_interactive_english_no_tz_prompt
+    test_interactive_tz_update_existing
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
