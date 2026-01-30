@@ -11,6 +11,10 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Sandbox runtime state (update check, etc.)
+# サンドボックス実行時の状態ファイル（更新チェックなど）
+.sandbox/.state/
+
 # DevContainer
 .env
 # Exclude env files, but allow samples

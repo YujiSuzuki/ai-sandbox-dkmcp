@@ -110,13 +110,15 @@
   // コンテナビルド前: .example テンプレートから環境変数ファイルを自動生成（初回セットアップ）
   "initializeCommand": ".sandbox/scripts/init-env-files.sh .",
 
-  // On startup: merge Claude settings, compare configs, validate secrets, and check secret sync
+  // On startup: merge Claude settings, compare configs, validate secrets, check secret sync, and check for template updates
   // Run low-failure scripts first to ensure essential setup completes even if validation fails
   // Compare config consistency before validation so root cause (config mismatch) is reported first
-  // 起動時: Claude設定マージ、設定整合性チェック、シークレット検証、シークレット同期チェック
+  // Update check runs last as it's informational only
+  // 起動時: Claude設定マージ、設定整合性チェック、シークレット検証、シークレット同期チェック、テンプレート更新チェック
   // 失敗しにくいスクリプトを先に実行し、検証が失敗しても必須のセットアップが完了するようにする
   // 検証より先に設定整合性を比較し、根本原因（設定の不一致）を先に報告する
-  "postStartCommand": "/workspace/.sandbox/scripts/merge-claude-settings.sh && /workspace/.sandbox/scripts/compare-secret-config.sh && /workspace/.sandbox/scripts/validate-secrets.sh && /workspace/.sandbox/scripts/check-secret-sync.sh",
+  // 更新チェックは情報提供のみなので最後に実行
+  "postStartCommand": "/workspace/.sandbox/scripts/merge-claude-settings.sh && /workspace/.sandbox/scripts/compare-secret-config.sh && /workspace/.sandbox/scripts/validate-secrets.sh && /workspace/.sandbox/scripts/check-secret-sync.sh && /workspace/.sandbox/scripts/check-upstream-updates.sh",
 
   "remoteUser": "node"
 }

@@ -103,12 +103,14 @@ fi
 
 # Run startup scripts
 # 起動時スクリプトを実行
-# On startup: merge Claude settings, compare configs, validate secrets, and check secret sync
+# On startup: merge Claude settings, compare configs, validate secrets, check secret sync, and check for template updates
 # Run low-failure scripts first to ensure essential setup completes even if validation fails
 # Compare config consistency before validation so root cause (config mismatch) is reported first
-# 起動時: Claude設定マージ、設定整合性チェック、シークレット検証、シークレット同期チェック
+# Update check runs last as it's informational only
+# 起動時: Claude設定マージ、設定整合性チェック、シークレット検証、シークレット同期チェック、テンプレート更新チェック
 # 失敗しにくいスクリプトを先に実行し、検証が失敗しても必須のセットアップが完了するようにする
 # 検証より先に設定整合性を比較し、根本原因（設定の不一致）を先に報告する
+# 更新チェックは情報提供のみなので最後に実行
 #
 # Sets HAS_WARNINGS=true if any warnings (⚠️) are detected in output
 # 出力に警告（⚠️）が含まれる場合、HAS_WARNINGS=true を設定
@@ -119,7 +121,7 @@ run_startup_scripts() {
     output=$(docker-compose -f ./cli_sandbox/docker-compose.yml --project-directory . run --rm \
         -e SANDBOX_ENV -e STARTUP_VERBOSITY \
         --entrypoint bash cli-sandbox \
-        -c "/workspace/.sandbox/scripts/merge-claude-settings.sh && /workspace/.sandbox/scripts/compare-secret-config.sh && /workspace/.sandbox/scripts/validate-secrets.sh && /workspace/.sandbox/scripts/check-secret-sync.sh" 2>&1)
+        -c "/workspace/.sandbox/scripts/merge-claude-settings.sh && /workspace/.sandbox/scripts/compare-secret-config.sh && /workspace/.sandbox/scripts/validate-secrets.sh && /workspace/.sandbox/scripts/check-secret-sync.sh && /workspace/.sandbox/scripts/check-upstream-updates.sh" 2>&1)
     exit_code=$?
 
     # Show output

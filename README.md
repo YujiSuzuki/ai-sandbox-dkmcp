@@ -35,6 +35,9 @@ This project is intended for local development environments and is not designed 
 - [Two Environments](#two-environments)
 - [Advanced Usage](#advanced-usage)
 - [Adapting to Your Own Project](#adapting-to-your-own-project)
+  - [Using as a Template](#using-as-a-template)
+    - [Checking for Updates](#checking-for-updates)
+  - [Alternative: Clone Directly](#alternative-clone-directly)
 - [Supported AI Tools](#supported-ai-tools)
 - [FAQ](#faq)
 - [Documentation](#documentation)
@@ -923,16 +926,83 @@ Use cases:
 
 # Adapting to Your Own Project
 
-Here's how to use this repository as a template for your own project.
+This repository is designed as a **GitHub Template Repository**. You can create your own project based on this template.
 
-### Step 1: Clone the Repository
+### Using as a Template
+
+#### Step 1: Create from Template
+
+On GitHub, click **"Use this template"** → **"Create a new repository"**.
+
+This creates a fresh repository with:
+- All template files (no commit history from this repo)
+- Your own Git history starting fresh
+- Independence from upstream (no automatic sync)
+
+#### Step 2: Clone Your New Repository
 
 ```bash
-git clone https://github.com/your-username/ai-sandbox-environment.git
-cd ai-sandbox-environment
+git clone https://github.com/your-username/your-new-repo.git
+cd your-new-repo
 ```
 
-### Step 2: Replace demo-apps with Your Projects
+#### Checking for Updates
+
+Since template-derived repositories don't automatically receive upstream updates, this project includes an **update notification feature**.
+
+**How it works:**
+- On DevContainer startup, the system checks GitHub for new releases
+- By default, **all releases including pre-releases** are checked, so you can receive bug fixes and improvements quickly
+- On the first startup, the latest version is recorded silently (no notification)
+- From the second check onward, if a newer version is found, you'll see a notification like:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 Update available: v0.1.0 → v0.2.0
+   https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Applying updates:**
+1. Check the [release notes](https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases) for changes
+2. Manually apply relevant updates to your project
+
+**Configuration:** `.sandbox/config/template-source.conf`
+```bash
+TEMPLATE_REPO="YujiSuzuki/ai-sandbox-dkmcp"
+CHECK_CHANNEL="all"            # "all" = include pre-releases, "stable" = official only
+CHECK_UPDATES="true"           # Set to "false" to disable
+CHECK_INTERVAL_HOURS="24"      # How often to check (0 = every time)
+```
+
+| `CHECK_CHANNEL` | Behavior | Use case |
+|---|---|---|
+| `"all"` (default) | Checks all releases including pre-releases | Receive bug fixes and improvements early |
+| `"stable"` | Checks official releases only | Only track stable milestones |
+
+**Debugging:** To see what the update check is doing internally, use `--debug`:
+```bash
+.sandbox/scripts/check-upstream-updates.sh --debug
+```
+
+---
+
+### Alternative: Clone Directly
+
+If you prefer to track upstream changes via Git (e.g., for contributing back):
+
+```bash
+git clone https://github.com/YujiSuzuki/ai-sandbox-dkmcp.git
+cd ai-sandbox-dkmcp
+```
+
+---
+
+### Customizing Your Project
+
+Whether you used the template or cloned directly, follow these steps to adapt the environment to your project.
+
+#### Replace demo-apps with Your Projects
 
 ```bash
 # Remove demo apps (or keep them for reference)
@@ -943,7 +1013,7 @@ git clone https://github.com/your-org/your-api.git
 git clone https://github.com/your-org/your-web.git
 ```
 
-### Step 3: Configure Secret File Hiding
+#### Configure Secret File Hiding
 
 Edit both **`.devcontainer/docker-compose.yml`** and **`cli_sandbox/docker-compose.yml`**:
 
@@ -996,7 +1066,7 @@ Detection rules:
 - `volumes` entries with `/dev/null:/workspace/...` → secret files
 - `tmpfs` entries with `/workspace/...:ro` → secret directories
 
-### Step 4: DockMCP Configuration
+#### DockMCP Configuration
 
 Copy and edit **`dkmcp/configs/dkmcp.example.yaml`**:
 
@@ -1024,14 +1094,14 @@ security:
       - "psql -c 'SELECT 1'"
 ```
 
-### Step 5: Rebuild DevContainer
+#### Rebuild DevContainer
 
 ```bash
 # Open Command Palette in VS Code (Cmd/Ctrl + Shift + P)
 # Run "Dev Containers: Rebuild Container"
 ```
 
-### Step 6: Verify
+#### Verify
 
 ```bash
 # Confirm secret files are hidden inside DevContainer
@@ -1043,7 +1113,7 @@ cat your-api/.env
 # Ask Claude Code "Show me the logs for your-api"
 ```
 
-### Checklist
+#### Checklist
 
 - [ ] Configure secret files in `.devcontainer/docker-compose.yml`
 - [ ] Apply the same configuration in `cli_sandbox/docker-compose.yml`

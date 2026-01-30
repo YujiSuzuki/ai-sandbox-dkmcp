@@ -35,6 +35,9 @@
 - [2つの環境](#2つの環境)
 - [高度な使い方](#高度な使い方)
 - [自分のプロジェクトへの適用](#自分のプロジェクトへの適用)
+  - [テンプレートとして使う](#テンプレートとして使う)
+    - [更新をチェック](#更新をチェック)
+  - [または、直接クローン](#別の方法-直接クローン)
 - [対応AIツール](#対応aiツール)
 - [よくある質問](#よくある質問)
 - [ドキュメント](#ドキュメント)
@@ -925,16 +928,83 @@ volumes:
 
 # 自分のプロジェクトへの適用
 
-このリポジトリをテンプレートとして、あなたのプロジェクトに適用する手順です。
+このリポジトリは **GitHub テンプレートリポジトリ** として設計されています。テンプレートから自分のプロジェクトを作成できます。
 
-### Step 1: リポジトリをクローン
+### テンプレートとして使う
+
+#### Step 1: テンプレートから作成
+
+GitHub で **「Use this template」** → **「Create a new repository」** をクリック。
+
+作成されるリポジトリの特徴：
+- テンプレートの全ファイル（このリポジトリのコミット履歴なし）
+- 新しいGit履歴からスタート
+- アップストリームとは独立（自動同期なし）
+
+#### Step 2: 新しいリポジトリをクローン
 
 ```bash
-git clone https://github.com/your-username/ai-sandbox-environment.git
-cd ai-sandbox-environment
+git clone https://github.com/your-username/your-new-repo.git
+cd your-new-repo
 ```
 
-### Step 2: demo-apps を自分のプロジェクトに置き換え
+#### 更新をチェック
+
+テンプレートから作成したリポジトリはアップストリームの更新を自動で受け取れないため、**更新通知機能** を搭載しています。
+
+**仕組み:**
+- DevContainer 起動時に GitHub の新しいリリースをチェック
+- デフォルトでは **プレリリースを含む全リリース** をチェックするため、バグ修正や改善をすぐに受け取れます
+- 初回起動時は最新バージョンを記録するだけで、通知は表示されません
+- 2回目以降のチェックで新バージョンが見つかると、以下のような通知が表示されます：
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 更新があります: v0.1.0 → v0.2.0
+   https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**更新の適用方法:**
+1. [リリースノート](https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases) で変更内容を確認
+2. 必要な変更を手動でプロジェクトに適用
+
+**設定ファイル:** `.sandbox/config/template-source.conf`
+```bash
+TEMPLATE_REPO="YujiSuzuki/ai-sandbox-dkmcp"
+CHECK_CHANNEL="all"            # "all" = プレリリース含む, "stable" = 正式リリースのみ
+CHECK_UPDATES="true"           # "false" で無効化
+CHECK_INTERVAL_HOURS="24"      # チェック間隔（0 = 毎回）
+```
+
+| `CHECK_CHANNEL` | 動作 | ユースケース |
+|---|---|---|
+| `"all"`（デフォルト） | プレリリースを含む全リリースをチェック | バグ修正や改善をすぐに受け取りたい |
+| `"stable"` | 正式リリースのみチェック | 安定版マイルストーンだけ追いたい |
+
+**デバッグ:** 更新チェックの内部動作を確認するには `--debug` を使います：
+```bash
+.sandbox/scripts/check-upstream-updates.sh --debug
+```
+
+---
+
+### 別の方法: 直接クローン
+
+Git で上流の変更を追跡したい場合（コントリビュート目的など）：
+
+```bash
+git clone https://github.com/YujiSuzuki/ai-sandbox-dkmcp.git
+cd ai-sandbox-dkmcp
+```
+
+---
+
+### プロジェクトのカスタマイズ
+
+テンプレートを使用した場合も直接クローンした場合も、以下の手順で環境をカスタマイズします。
+
+#### demo-apps を自分のプロジェクトに置き換え
 
 ```bash
 # デモアプリを削除（または参考用に残す）
@@ -945,7 +1015,7 @@ git clone https://github.com/your-org/your-api.git
 git clone https://github.com/your-org/your-web.git
 ```
 
-### Step 3: 秘匿ファイルの隠蔽設定
+#### 秘匿ファイルの隠蔽設定
 
 **`.devcontainer/docker-compose.yml`** と **`cli_sandbox/docker-compose.yml`** の両方を編集：
 
@@ -998,7 +1068,7 @@ exit
 - `/dev/null:/workspace/...` の volumes → 秘匿ファイル
 - `/workspace/...:ro` の tmpfs → 秘匿ディレクトリ
 
-### Step 4: DockMCP設定
+#### DockMCP設定
 
 **`dkmcp/configs/dkmcp.example.yaml`** をコピーして編集：
 
@@ -1026,14 +1096,14 @@ security:
       - "psql -c 'SELECT 1'"
 ```
 
-### Step 5: DevContainerをリビルド
+#### DevContainerをリビルド
 
 ```bash
 # VS Code で Command Palette を開く (Cmd/Ctrl + Shift + P)
 # "Dev Containers: Rebuild Container" を実行
 ```
 
-### Step 6: 動作確認
+#### 動作確認
 
 ```bash
 # DevContainer内で秘匿ファイルが隠されていることを確認
@@ -1045,7 +1115,7 @@ cat your-api/.env
 # Claude Code に "your-apiのログを見せて" と聞く
 ```
 
-### チェックリスト
+#### チェックリスト
 
 - [ ] `.devcontainer/docker-compose.yml` で秘匿ファイルを設定
 - [ ] `cli_sandbox/docker-compose.yml` で同じ設定を適用

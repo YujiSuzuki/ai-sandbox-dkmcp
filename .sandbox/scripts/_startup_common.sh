@@ -83,7 +83,7 @@ print_title() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "$1"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    is_verbose && echo ""
+    is_verbose && echo "" || true
 }
 
 # Print script footer (thick separator)
