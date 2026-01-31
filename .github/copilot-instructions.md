@@ -2,7 +2,7 @@
 
 ## Project Context
 
-This is an AI sandbox environment with DockMCP for safe, multi-project AI development. You are running inside a DevContainer with security restrictions.
+This is an AI sandbox environment with DockMCP for safe, multi-project AI development. You are running inside an AI Sandbox with security restrictions.
 
 ## Security Constraints
 

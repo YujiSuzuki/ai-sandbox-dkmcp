@@ -118,7 +118,7 @@ AI understands both and assists with migration.
 - All of the above, plus:
 - **DockMCP** - Install via one of these methods:
   - Download a pre-built binary from [GitHub Releases](https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases)
-  - Build from source (can be built inside DevContainer)
+  - Build from source (can be built inside AI Sandbox)
 - An MCP-compatible AI assistant CLI (e.g., `claude` CLI, Gemini in Agent mode)
 
 ## Architecture Overview
@@ -131,7 +131,7 @@ Host OS
 │   └── Container access gateway
 │
 └── Docker Engine
-    ├── DevContainer (AI environment)
+    ├── AI Sandbox (AI environment)
     │   ├── Claude Code / Gemini
     │   └── secrets/ → empty (hidden)
     │
@@ -141,17 +141,17 @@ Host OS
     └── Web Container
 ```
 
-**Data flow:** AI (DevContainer) → DockMCP (:8080) → Other containers
+**Data flow:** AI (AI Sandbox) → DockMCP (:8080) → Other containers
 
 ### How Secret File Hiding Works
 
-**Key insight:** Because AI runs inside a DevContainer, Docker volume mounts can hide secret files.
+**Key insight:** Because AI runs inside an AI Sandbox, Docker volume mounts can hide secret files.
 
 ```
 Host OS
 ├── demo-apps/securenote-api/.env  ← actual file
 │
-├── DevContainer (AI execution environment)
+├── AI Sandbox (AI execution environment)
 │   └── AI tries to read .env
 │       → mounted from /dev/null, so it appears empty
 │
@@ -165,9 +165,9 @@ Host OS
 - Applications can read secret files (functionality preserved)
 - AI can still check logs and run tests via DockMCP
 
-### Benefits of DevContainer Isolation
+### Benefits of AI Sandbox Isolation
 
-Running AI inside a DevContainer also restricts access to host OS files.
+Running AI inside an AI Sandbox also restricts access to host OS files.
 
 ```
 Host OS
@@ -177,7 +177,7 @@ Host OS
 ├── ~/other-project/ ← inaccessible to AI
 ├── ~/secret-memo/   ← inaccessible to AI
 │
-└── DevContainer
+└── AI Sandbox
     └── /workspace/   ← only this is visible
         ├── demo-apps/
         ├── dkmcp/
@@ -190,7 +190,7 @@ Host OS
 - Cannot access SSH keys or credentials (`~/.ssh/`)
 - No risk of accidentally modifying the host OS
 
-> **Git warning:** Inside the DevContainer, hidden files (`.env`, files in `secrets/`) appear as "deleted." Running `git commit -a` or `git add .` could accidentally commit file deletions. Perform git operations on the host, or explicitly specify files with `git add` inside the DevContainer.
+> **Git warning:** Inside the AI Sandbox, hidden files (`.env`, files in `secrets/`) appear as "deleted." Running `git commit -a` or `git add .` could accidentally commit file deletions. Perform git operations on the host, or explicitly specify files with `git add` inside the AI Sandbox.
 
 
 
@@ -241,7 +241,7 @@ make install
 dkmcp serve --config configs/dkmcp.example.yaml
 ```
 
-> **Note:** Use `make install` instead of `make build`. This installs the binary to `$GOPATH/bin` rather than the workspace (which is visible from DevContainer but won't run there).
+> **Note:** Use `make install` instead of `make build`. This installs the binary to `$GOPATH/bin` rather than the workspace (which is visible from AI Sandbox but won't run there).
 
 > **Important:** If you restart the DockMCP server, SSE connections are dropped. The AI assistant needs to reconnect. In Claude Code, run `/mcp` → "Reconnect."
 
@@ -254,7 +254,7 @@ code .
 
 #### Step 3: Connect Claude Code to DockMCP
 
-Inside the DevContainer:
+Inside the AI Sandbox:
 
 ```bash
 claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
@@ -276,7 +276,7 @@ echo "127.0.0.1 securenote.test api.securenote.test" | sudo tee -a /etc/hosts
 # Add: 127.0.0.1 securenote.test api.securenote.test
 ```
 
-> **Note:** The DevContainer automatically resolves custom domains to the host via `extra_hosts` in `docker-compose.yml`. No additional configuration is needed inside the container.
+> **Note:** The AI Sandbox automatically resolves custom domains to the host via `extra_hosts` in `docker-compose.yml`. No additional configuration is needed inside the container.
 
 #### Step 5 (Optional): Try with Demo Apps
 
@@ -292,7 +292,7 @@ docker-compose -f docker-compose.demo.yml up -d --build
 - Web: http://securenote.test:8000
 - API: http://api.securenote.test:8000/api/health
 
-**From DevContainer (AI can test with curl):**
+**From AI Sandbox (AI can test with curl):**
 ```bash
 curl http://api.securenote.test:8000/api/health
 curl http://securenote.test:8000
@@ -314,9 +314,9 @@ If Claude Code doesn't recognize DockMCP tools:
 2. **Try MCP reconnect** — Run `/mcp` in Claude Code and select "Reconnect"
 3. **Fully restart VS Code** (Cmd+Q / Alt+F4) — if Reconnect doesn't help
 
-### Fallback: Using dkmcp client Inside DevContainer
+### Fallback: Using dkmcp client Inside AI Sandbox
 
-If the MCP protocol isn't working (Claude Code or Gemini can't connect), you can use `dkmcp client` commands directly inside the DevContainer as a fallback.
+If the MCP protocol isn't working (Claude Code or Gemini can't connect), you can use `dkmcp client` commands directly inside the AI Sandbox as a fallback.
 
 > **Note:** Even if `/mcp` shows "connected," MCP tools may fail with a "Client not initialized" error. This may be caused by session management timing issues in VS Code extensions (Claude Code, Gemini Code Assist, etc.). In that case:
 > 1. Try `/mcp` → "Reconnect" first (simplest fix)
@@ -325,7 +325,7 @@ If the MCP protocol isn't working (Claude Code or Gemini can't connect), you can
 
 **Setup (first time only):**
 
-Install dkmcp inside the DevContainer:
+Install dkmcp inside the AI Sandbox:
 ```bash
 cd /workspace/dkmcp
 make install
@@ -355,9 +355,9 @@ dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm tes
 |---------|-------------|-------------|
 | `dkmcp serve` | Host OS | Start the DockMCP server |
 | `dkmcp list` | Host OS | List accessible containers |
-| `dkmcp client list` | DevContainer | List containers via HTTP |
-| `dkmcp client logs <container>` | DevContainer | Get logs via HTTP |
-| `dkmcp client exec <container> "cmd"` | DevContainer | Execute commands via HTTP |
+| `dkmcp client list` | AI Sandbox | List containers via HTTP |
+| `dkmcp client logs <container>` | AI Sandbox | Get logs via HTTP |
+| `dkmcp client exec <container> "cmd"` | AI Sandbox | Execute commands via HTTP |
 
 > For detailed command options, see [dkmcp/README.md](dkmcp/README.md#cli-commands)
 
@@ -503,7 +503,7 @@ This hands-on walks you through both the **normal state** and a **misconfigurati
 First, confirm that secret files are properly hidden with the current configuration.
 
 ```bash
-# Run inside DevContainer
+# Run inside AI Sandbox
 # Check the iOS app's Config directory (should appear empty)
 ls -la demo-apps-ios/SecureNote/Config/
 
@@ -581,7 +581,7 @@ The misconfiguration has exposed files that should be hidden, and structural acc
 
 Uncomment the lines and rebuild the DevContainer to return to the normal state.
 
-> **Summary:** Docker mount-based secret settings must be kept in sync across both DevContainer and CLI Sandbox. Misconfigurations are detected at startup and trigger warnings.
+> **Summary:** Docker mount-based secret settings must be kept in sync across both AI Sandbox environments (DevContainer and CLI Sandbox). Misconfigurations are detected at startup and trigger warnings.
 
 ---
 
@@ -630,7 +630,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 
 - **Source**: Each subproject's `.claude/settings.json` (committed to the repository)
 - **Result**: `/workspace/.claude/settings.json` (not in the repository)
-- **Timing**: Automatically executed at DevContainer startup
+- **Timing**: Automatically executed at AI Sandbox startup
 
 **Merge conditions:**
 
@@ -646,7 +646,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 # Check source files (in the repository)
 cat demo-apps-ios/.claude/settings.json
 
-# Check merged result (created at DevContainer startup)
+# Check merged result (created at AI Sandbox startup)
 cat /workspace/.claude/settings.json
 ```
 
@@ -657,7 +657,7 @@ cat /workspace/.claude/settings.json
 ### Demo Scenario 1: Secret Isolation
 
 ```bash
-# From inside DevContainer (AI tries but fails)
+# From inside AI Sandbox (AI tries but fails)
 $ cat demo-apps/securenote-api/secrets/jwt-secret.key
 (empty)
 
@@ -799,7 +799,7 @@ This makes container and volume names more readable:
 
 ### Startup Output Options
 
-The DevContainer and CLI Sandbox run validation scripts at startup. You can control how much output they produce:
+Both AI Sandbox environments (DevContainer and CLI Sandbox) run validation scripts at startup. You can control how much output they produce:
 
 | Mode | Flag | Output |
 |------|------|--------|
@@ -964,7 +964,7 @@ cd your-new-repo
 Since template-derived repositories don't automatically receive upstream updates, this project includes an **update notification feature**.
 
 **How it works:**
-- On DevContainer startup, the system checks GitHub for new releases
+- On AI Sandbox startup, the system checks GitHub for new releases
 - By default, **all releases including pre-releases** are checked, so you can receive bug fixes and improvements quickly
 - On the first startup, the latest version is recorded silently (no notification)
 - From the second check onward, if a newer version is found, you'll see a notification like:
@@ -1126,7 +1126,7 @@ security:
 #### Verify
 
 ```bash
-# Confirm secret files are hidden inside DevContainer
+# Confirm secret files are hidden inside AI Sandbox
 cat your-api/.env
 # → Empty or "No such file"
 

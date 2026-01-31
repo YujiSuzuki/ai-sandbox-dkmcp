@@ -4,7 +4,7 @@
 
 **AIコーディングアシスタントのための安全なDockerコンテナアクセス**
 
-DockMCPは、ホストOS上で動作し、DevContainer内のAIアシスタント（Claude Code、Gemini Code Assistなど）が他のDockerコンテナのログ確認やテスト実行を安全に行えるようにするMCPサーバーです。
+DockMCPは、ホストOS上で動作し、AI Sandbox内のAIアシスタント（Claude Code、Gemini Code Assistなど）が他のDockerコンテナのログ確認やテスト実行を安全に行えるようにするMCPサーバーです。
 
 DockMCPが解決する課題やアーキテクチャの全体像については [ルートの README.ja.md](../README.ja.md) を参照してください。
 
@@ -183,7 +183,7 @@ dkmcp serve --port 8081 --config strict.yaml
 
 ## AIアシスタントとの接続
 
-DevContainer内でのMCP設定手順は [ルートの README.ja.md「クイックスタート」](../README.ja.md#オプションb-sandbox--dockmcp) を参照してください。
+AI Sandbox内でのMCP設定手順は [ルートの README.ja.md「クイックスタート」](../README.ja.md#オプションb-sandbox--dockmcp) を参照してください。
 
 設定後、AIアシスタントがコンテナにアクセスできるようになります:
 
@@ -255,7 +255,7 @@ Image:    node:18-alpine
 
 ### クライアントコマンド（HTTP API経由）
 
-DockMCPサーバーにHTTP経由で接続するため、**DevContainer内**でも使用できます:
+DockMCPサーバーにHTTP経由で接続するため、**AI Sandbox内**でも使用できます:
 
 ```bash
 # DockMCPサーバー経由でコンテナを一覧表示
@@ -286,7 +286,7 @@ dkmcp client list
 
 **どちらを使うべきか:**
 - **ホストOSコマンド**: Dockerソケットへの直接アクセスがある場合
-- **クライアントコマンド**: DevContainer内、またはDockerソケットアクセスがない環境
+- **クライアントコマンド**: AI Sandbox内、またはDockerソケットアクセスがない環境
 
 ## セキュリティモード
 
@@ -589,7 +589,7 @@ dkmcp serve --dangerously-all
 # 直接（ホストOS）
 dkmcp exec --dangerously securenote-api "tail -100 /var/log/app.log"
 
-# クライアント（DevContainer）
+# クライアント（AI Sandbox）
 dkmcp client exec --dangerously --url http://host.docker.internal:8080 securenote-api "tail -100 /var/log/app.log"
 ```
 
@@ -664,7 +664,7 @@ Note: Commands with '*' wildcard match any suffix. Dangerous commands require da
 │           │ :8080                │
 │  ┌────────┴─────────────────┐   │
 │  │ Docker Engine            │   │
-│  │  ├─ DevContainer         │   │
+│  │  ├─ AI Sandbox            │   │
 │  │  │   └─ Claude Code ─┐   │   │
 │  │  ├─ app-api ←─────────┘   │   │
 │  │  └─ app-db              │   │
@@ -807,7 +807,7 @@ DockMCP の現在の設計：
    # 200 OK を返すはず
    ```
 
-2. **DevContainer内でMCP設定を確認：**
+2. **AI Sandbox内でMCP設定を確認：**
    ```bash
    cat ~/.claude.json | jq '.mcpServers.dkmcp'
    # "url": "http://host.docker.internal:8080/sse" であること

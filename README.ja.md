@@ -118,7 +118,7 @@ AIが両方を理解し、移行を支援。
 - 上記に加えて:
 - **DockMCP** - 以下のいずれかの方法でインストール:
   - [GitHub Releases](https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases)からビルド済みバイナリをダウンロード
-  - ソースからビルド（DevContainer内でビルド可能）
+  - ソースからビルド（AI Sandbox内でビルド可能）
 - MCP対応のAIアシスタントCLI（例：`claude` CLI、Gemini（Agentモード））
 
 ## アーキテクチャ概要
@@ -131,7 +131,7 @@ AIが両方を理解し、移行を支援。
 │   └── コンテナアクセスゲートウェイ
 │
 └── Docker Engine
-    ├── DevContainer (AI環境)
+    ├── AI Sandbox (AI環境)
     │   ├── Claude Code / Gemini
     │   └── secrets/ → 空（隠蔽）
     │
@@ -141,17 +141,17 @@ AIが両方を理解し、移行を支援。
     └── Web Container
 ```
 
-**データフロー:** AI (DevContainer) → DockMCP (:8080) → 他のコンテナ
+**データフロー:** AI (AI Sandbox) → DockMCP (:8080) → 他のコンテナ
 
 ### なぜ秘匿ファイルを隠せるのか？
 
-**ポイント:** AIがDevContainer内で動作するため、Dockerボリュームマウントで秘匿ファイルを隠せます。
+**ポイント:** AIがAI Sandbox内で動作するため、Dockerボリュームマウントで秘匿ファイルを隠せます。
 
 ```
 ホストOS
 ├── demo-apps/securenote-api/.env  ← 実体あり
 │
-├── DevContainer (AI実行環境)
+├── AI Sandbox (AI実行環境)
 │   └── AI が .env を読もうとする
 │       → /dev/null にマウントされているため空に見える
 │
@@ -165,9 +165,9 @@ AIが両方を理解し、移行を支援。
 - アプリは秘匿ファイルを読める（機能は維持）
 - DockMCP経由でAIがログ確認・テスト実行は可能
 
-### DevContainerによる隔離のメリット
+### AI Sandboxによる隔離のメリット
 
-AIがDevContainer内で動作することで、ホストOSのファイルへのアクセスも制限されます。
+AIがAI Sandbox内で動作することで、ホストOSのファイルへのアクセスも制限されます。
 
 ```
 ホストOS
@@ -177,7 +177,7 @@ AIがDevContainer内で動作することで、ホストOSのファイルへの�
 ├── ~/other-project/ ← AIからアクセス不可
 ├── ~/secret-memo/   ← AIからアクセス不可
 │
-└── DevContainer
+└── AI Sandbox
     └── /workspace/   ← ここだけ見える
         ├── demo-apps/
         ├── dkmcp/
@@ -190,7 +190,7 @@ AIがDevContainer内で動作することで、ホストOSのファイルへの�
 - SSH鍵や認証情報（`~/.ssh/`）に触れない
 - ホストOSを誤って変更するリスクがない
 
-> ⚠️ **Git 操作の注意:** DevContainer 内では隠蔽されたファイル（`.env`、`secrets/` 内のファイル）が「削除された」ように見えます。`git commit -a` や `git add .` を実行すると、意図せずファイルの削除をコミットする可能性があります。コミット操作はホスト側で行うか、DevContainer 内では明示的にファイルを指定して `git add` してください。
+> ⚠️ **Git 操作の注意:** AI Sandbox 内では隠蔽されたファイル（`.env`、`secrets/` 内のファイル）が「削除された」ように見えます。`git commit -a` や `git add .` を実行すると、意図せずファイルの削除をコミットする可能性があります。コミット操作はホスト側で行うか、AI Sandbox 内では明示的にファイルを指定して `git add` してください。
 
 
 
@@ -241,7 +241,7 @@ make install
 dkmcp serve --config configs/dkmcp.example.yaml
 ```
 
-> **注意:** `make build` ではなく `make install` を使用してください。これにより、バイナリがワークスペース（DevContainerからは見えるが動作しない）ではなく `$GOPATH/bin` にインストールされます。
+> **注意:** `make build` ではなく `make install` を使用してください。これにより、バイナリがワークスペース（AI Sandboxからは見えるが動作しない）ではなく `$GOPATH/bin` にインストールされます。
 
 > **重要:** DockMCPサーバーを再起動した場合、SSE接続が切断されるため、AIアシスタント側で再接続が必要です。Claude Codeでは `/mcp` → 「Reconnect」を実行してください。
 
@@ -254,7 +254,7 @@ code .
 
 #### ステップ3: Claude CodeをDockMCPに接続
 
-DevContainer内で：
+AI Sandbox内で：
 
 ```bash
 claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
@@ -276,7 +276,7 @@ echo "127.0.0.1 securenote.test api.securenote.test" | sudo tee -a /etc/hosts
 # 追加: 127.0.0.1 securenote.test api.securenote.test
 ```
 
-> **注意:** DevContainerは `docker-compose.yml` の `extra_hosts` により、カスタムドメインを自動的にホストに解決します。コンテナ内での追加設定は不要です。
+> **注意:** AI Sandboxは `docker-compose.yml` の `extra_hosts` により、カスタムドメインを自動的にホストに解決します。コンテナ内での追加設定は不要です。
 
 #### ステップ5（オプション）: デモアプリで試す
 
@@ -292,7 +292,7 @@ docker-compose -f docker-compose.demo.yml up -d --build
 - Web: http://securenote.test:8000
 - API: http://api.securenote.test:8000/api/health
 
-**DevContainerから（AIがcurlでテスト可能）:**
+**AI Sandboxから（AIがcurlでテスト可能）:**
 ```bash
 curl http://api.securenote.test:8000/api/health
 curl http://securenote.test:8000
@@ -314,9 +314,9 @@ Claude CodeがDockMCPツールを認識しない場合：
 2. **MCP再接続を試す** - Claude Codeで `/mcp` を実行し、「Reconnect」を選択
 3. **VS Codeを完全に再起動**（Cmd+Q / Alt+F4）- Reconnectで解決しない場合
 
-### フォールバック：DevContainer内でdkmcp clientを使用
+### フォールバック：AI Sandbox内でdkmcp clientを使用
 
-MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続できない）、フォールバックとしてDevContainer内で `dkmcp client` コマンドを直接使用できます。
+MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続できない）、フォールバックとしてAI Sandbox内で `dkmcp client` コマンドを直接使用できます。
 
 > **注意:** `/mcp` で「✔ connected」と表示されていても、MCPツールが「Client not initialized」エラーで失敗することがあります。これはVS Code拡張機能（Claude Code, Gemini Code Assist等）のセッション管理のタイミング問題が原因である可能性があります。この場合：
 > 1. まず `/mcp` → 「Reconnect」を試す（簡単な解決策）
@@ -325,7 +325,7 @@ MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続でき
 
 **セットアップ（初回のみ）:**
 
-DevContainer内でdkmcpをインストール：
+AI Sandbox内でdkmcpをインストール：
 ```bash
 cd /workspace/dkmcp
 make install
@@ -355,9 +355,9 @@ dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm tes
 |---------|---------|------|
 | `dkmcp serve` | ホストOS | DockMCPサーバーを起動 |
 | `dkmcp list` | ホストOS | アクセス可能なコンテナを一覧表示 |
-| `dkmcp client list` | DevContainer | HTTP経由でコンテナ一覧 |
-| `dkmcp client logs <container>` | DevContainer | HTTP経由でログ取得 |
-| `dkmcp client exec <container> "cmd"` | DevContainer | HTTP経由でコマンド実行 |
+| `dkmcp client list` | AI Sandbox | HTTP経由でコンテナ一覧 |
+| `dkmcp client logs <container>` | AI Sandbox | HTTP経由でログ取得 |
+| `dkmcp client exec <container> "cmd"` | AI Sandbox | HTTP経由でコマンド実行 |
 
 > 詳細なコマンドオプションについては [dkmcp/README.ja.md](dkmcp/README.ja.md#cliコマンド) を参照
 
@@ -503,7 +503,7 @@ DATABASE_URL=[MASKED]db:5432/app
 まず、現在の設定で秘匿ファイルが正しく隠蔽されていることを確認します。
 
 ```bash
-# DevContainer 内で実行
+# AI Sandbox 内で実行
 # iOS アプリの Config ディレクトリを確認（空に見える）
 ls -la demo-apps-ios/SecureNote/Config/
 
@@ -583,7 +583,7 @@ cat demo-apps-ios/SecureNote/GoogleService-Info.plist
 
 コメントアウトを解除し、再度リビルドして正常な状態に戻してください。
 
-> 📝 **まとめ:** Docker マウントによる秘匿設定は、DevContainer と CLI Sandbox の両方で同期する必要があります。設定漏れがあると起動時に検出され、警告が表示されます。
+> 📝 **まとめ:** Docker マウントによる秘匿設定は、両方の AI Sandbox 環境（DevContainer と CLI Sandbox）で同期する必要があります。設定漏れがあると起動時に検出され、警告が表示されます。
 
 ---
 
@@ -632,7 +632,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 
 - **マージ元**: 各サブプロジェクトの `.claude/settings.json`（リポジトリにコミット済み）
 - **マージ結果**: `/workspace/.claude/settings.json`（リポジトリには無い）
-- **タイミング**: DevContainer 起動時に自動実行
+- **タイミング**: AI Sandbox 起動時に自動実行
 
 **マージの条件:**
 
@@ -648,7 +648,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 # マージ元を確認（リポジトリにある）
 cat demo-apps-ios/.claude/settings.json
 
-# マージ結果を確認（DevContainer 起動時に作成された）
+# マージ結果を確認（AI Sandbox 起動時に作成された）
 cat /workspace/.claude/settings.json
 ```
 
@@ -659,7 +659,7 @@ cat /workspace/.claude/settings.json
 ### デモシナリオ1: 秘匿情報の隔離
 
 ```bash
-# DevContainer内から（AIが試しても失敗する）
+# AI Sandbox内から（AIが試しても失敗する）
 $ cat demo-apps/securenote-api/secrets/jwt-secret.key
 (空)
 
@@ -801,7 +801,7 @@ COMPOSE_PROJECT_NAME=ai-sandbox
 
 ### 起動時出力オプション
 
-DevContainer と CLI Sandbox は起動時に検証スクリプトを実行します。出力量を制御できます：
+両方の AI Sandbox 環境（DevContainer と CLI Sandbox）は起動時に検証スクリプトを実行します。出力量を制御できます：
 
 | モード | フラグ | 出力内容 |
 |--------|--------|----------|
@@ -966,7 +966,7 @@ cd your-new-repo
 テンプレートから作成したリポジトリはアップストリームの更新を自動で受け取れないため、**更新通知機能** を搭載しています。
 
 **仕組み:**
-- DevContainer 起動時に GitHub の新しいリリースをチェック
+- AI Sandbox 起動時に GitHub の新しいリリースをチェック
 - デフォルトでは **プレリリースを含む全リリース** をチェックするため、バグ修正や改善をすぐに受け取れます
 - 初回起動時は最新バージョンを記録するだけで、通知は表示されません
 - 2回目以降のチェックで新バージョンが見つかると、以下のような通知が表示されます：
@@ -1128,7 +1128,7 @@ security:
 #### 動作確認
 
 ```bash
-# DevContainer内で秘匿ファイルが隠されていることを確認
+# AI Sandbox内で秘匿ファイルが隠されていることを確認
 cat your-api/.env
 # → 空または "No such file"
 

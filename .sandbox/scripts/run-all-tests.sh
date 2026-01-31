@@ -6,8 +6,8 @@
 # Usage: ./.sandbox/scripts/run-all-tests.sh
 # 使用方法: ./.sandbox/scripts/run-all-tests.sh
 #
-# Environment: DevContainer (requires /workspace)
-# 実行環境: DevContainer（/workspace が必要）
+# Environment: AI Sandbox (requires /workspace)
+# 実行環境: AI Sandbox（/workspace が必要）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

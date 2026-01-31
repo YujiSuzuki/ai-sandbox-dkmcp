@@ -7,16 +7,16 @@
 # Usage: ./test-validate-secrets.sh
 # 使用方法: ./test-validate-secrets.sh
 #
-# Environment: DevContainer (requires /workspace)
-# 実行環境: DevContainer（/workspace が必要）
+# Environment: AI Sandbox (requires /workspace)
+# 実行環境: AI Sandbox（/workspace が必要）
 
 set -e
 
-# Verify running in DevContainer
-# DevContainer 内での実行を確認
+# Verify running in AI Sandbox
+# AI Sandbox 内での実行を確認
 if [ ! -d "/workspace" ]; then
-    echo "Error: This test is designed to run inside DevContainer"
-    echo "エラー: このテストは DevContainer 内での実行を想定しています"
+    echo "Error: This test is designed to run inside AI Sandbox"
+    echo "エラー: このテストは AI Sandbox 内での実行を想定しています"
     exit 1
 fi
 

@@ -13,7 +13,7 @@ This is a **comprehensive AI development environment** that demonstrates:
 
 ## Key Innovation: DockMCP
 
-**DockMCP** is an MCP (Model Context Protocol) server that runs on the host OS and provides controlled access to Docker containers. This allows AI assistants inside DevContainer to:
+**DockMCP** is an MCP (Model Context Protocol) server that runs on the host OS and provides controlled access to Docker containers. This allows AI assistants inside the AI Sandbox to:
 
 - Check logs from other containers
 - Run tests in other containers

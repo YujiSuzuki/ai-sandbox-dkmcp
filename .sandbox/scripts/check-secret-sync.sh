@@ -3,9 +3,9 @@
 # Check if files blocked in AI settings are also hidden in docker-compose.yml
 # AI設定でブロックされたファイルが docker-compose.yml でも隠蔽されているかチェック
 #
-# This script runs at DevContainer startup and warns if there are files that should
+# This script runs at AI Sandbox startup and warns if there are files that should
 # be hidden from AI but are not configured in docker-compose.yml volume mounts.
-# このスクリプトは DevContainer 起動時に実行され、AI から隠すべきファイルが
+# このスクリプトは AI Sandbox 起動時に実行され、AI から隠すべきファイルが
 # docker-compose.yml のボリュームマウントに設定されていない場合に警告します。
 #
 # Supported AI settings files / 対応するAI設定ファイル:
@@ -56,7 +56,7 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_MISSING_HEADER="⚠️  以下のファイルが docker-compose.yml に未設定です:"
     MSG_MISSING_FOOTER="これらのファイルはいずれかの AI設定でブロックされていますが、"
     MSG_MISSING_FOOTER2="docker-compose.yml のボリュームマウントに設定されていません。"
-    MSG_MISSING_FOOTER3="DevContainer や CLI Sandbox 内では AI がこれらのファイルを読める可能性があります。"
+    MSG_MISSING_FOOTER3="AI Sandbox 内では AI がこれらのファイルを読める可能性があります。"
     MSG_ACTION="対処方法:"
     MSG_ACTION1="  手動で docker-compose.yml を編集する（ホストOS側で）"
     MSG_ACTION2="  または: .sandbox/scripts/sync-secrets.sh を実行（シェル環境で）"
@@ -72,7 +72,7 @@ else
     MSG_MISSING_HEADER="⚠️  The following files are NOT configured in docker-compose.yml:"
     MSG_MISSING_FOOTER="These files are blocked in one or more AI settings but"
     MSG_MISSING_FOOTER2="not configured in docker-compose.yml volume mounts."
-    MSG_MISSING_FOOTER3="AI may be able to read these files inside DevContainer or CLI Sandbox."
+    MSG_MISSING_FOOTER3="AI may be able to read these files inside AI Sandbox."
     MSG_ACTION="Action required:"
     MSG_ACTION1="  Manually edit docker-compose.yml (on host OS)"
     MSG_ACTION2="  Or run: .sandbox/scripts/sync-secrets.sh (in shell environment)"

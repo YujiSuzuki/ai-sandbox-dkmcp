@@ -20,7 +20,7 @@ This hands-on walks you through both the **normal state** and a **misconfigurati
 First, confirm that secret files are properly hidden with the current configuration.
 
 ```bash
-# Run inside DevContainer
+# Run inside AI Sandbox
 # Check the iOS app's Config directory (should appear empty)
 ls -la demo-apps-ios/SecureNote/Config/
 
@@ -98,7 +98,7 @@ The misconfiguration has exposed files that should be hidden, and structural acc
 
 Uncomment the lines and rebuild the DevContainer to return to the normal state.
 
-> **Summary:** Docker mount-based secret settings must be kept in sync across both DevContainer and CLI Sandbox. Misconfigurations are detected at startup and trigger warnings.
+> **Summary:** Docker mount-based secret settings must be kept in sync across both AI Sandbox environments (DevContainer and CLI Sandbox). Misconfigurations are detected at startup and trigger warnings.
 
 ---
 
@@ -147,7 +147,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 
 - **Source**: Each subproject's `.claude/settings.json` (committed to the repository)
 - **Result**: `/workspace/.claude/settings.json` (not in the repository)
-- **Timing**: Automatically executed at DevContainer startup
+- **Timing**: Automatically executed at AI Sandbox startup
 
 **Merge conditions:**
 
@@ -163,7 +163,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 # Check source files (in the repository)
 cat demo-apps-ios/.claude/settings.json
 
-# Check merged result (created at DevContainer startup)
+# Check merged result (created at AI Sandbox startup)
 cat /workspace/.claude/settings.json
 ```
 

@@ -20,7 +20,7 @@
 まず、現在の設定で秘匿ファイルが正しく隠蔽されていることを確認します。
 
 ```bash
-# DevContainer 内で実行
+# AI Sandbox 内で実行
 # iOS アプリの Config ディレクトリを確認（空に見える）
 ls -la demo-apps-ios/SecureNote/Config/
 
@@ -100,7 +100,7 @@ cat demo-apps-ios/SecureNote/GoogleService-Info.plist
 
 コメントアウトを解除し、再度リビルドして正常な状態に戻してください。
 
-> 📝 **まとめ:** Docker マウントによる秘匿設定は、DevContainer と CLI Sandbox の両方で同期する必要があります。設定漏れがあると起動時に検出され、警告が表示されます。
+> 📝 **まとめ:** Docker マウントによる秘匿設定は、両方の AI Sandbox 環境（DevContainer と CLI Sandbox）で同期する必要があります。設定漏れがあると起動時に検出され、警告が表示されます。
 
 ---
 
@@ -149,7 +149,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 
 - **マージ元**: 各サブプロジェクトの `.claude/settings.json`（リポジトリにコミット済み）
 - **マージ結果**: `/workspace/.claude/settings.json`（リポジトリには無い）
-- **タイミング**: DevContainer 起動時に自動実行
+- **タイミング**: AI Sandbox 起動時に自動実行
 
 **マージの条件:**
 
@@ -165,7 +165,7 @@ demo-apps/.claude/settings.json      ─┼─→ /workspace/.claude/settings.js
 # マージ元を確認（リポジトリにある）
 cat demo-apps-ios/.claude/settings.json
 
-# マージ結果を確認（DevContainer 起動時に作成された）
+# マージ結果を確認（AI Sandbox 起動時に作成された）
 cat /workspace/.claude/settings.json
 ```
 

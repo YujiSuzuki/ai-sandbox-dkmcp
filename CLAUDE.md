@@ -15,7 +15,7 @@ This is a **comprehensive AI development environment** that demonstrates:
 
 ## Key Innovation: DockMCP
 
-**DockMCP** is an MCP (Model Context Protocol) server that runs on the host OS and provides controlled access to Docker containers. This allows AI assistants inside DevContainer to:
+**DockMCP** is an MCP (Model Context Protocol) server that runs on the host OS and provides controlled access to Docker containers. This allows AI assistants inside the AI Sandbox to:
 
 - ✅ Check logs from other containers
 - ✅ Run tests in other containers
@@ -127,7 +127,7 @@ security:
 - **Limited sudo**: Only `apt`, `npm`, `pip3` allowed
 - **No Docker socket**: AI cannot access `/var/run/docker.sock`
 
-**IMPORTANT: What AI CANNOT do in DevContainer:**
+**IMPORTANT: What AI CANNOT do in AI Sandbox:**
 - ❌ Run `docker` commands (no Docker CLI access)
 - ❌ Run `docker-compose` commands (no Docker socket)
 - ❌ Start/stop containers directly
@@ -177,7 +177,7 @@ These files define what AI can and cannot access:
 
 ### Understanding `/workspace/.claude/settings.json`
 
-This file controls what you (AI) can read. It's **automatically merged** from subproject settings on DevContainer startup.
+This file controls what you (AI) can read. It's **automatically merged** from subproject settings on AI Sandbox startup.
 
 **Merge behavior:**
 
@@ -253,7 +253,7 @@ The SecureNote demo application demonstrates:
 
 ```
 ┌─────────────────────────────┐
-│ DevContainer (AI here)      │
+│ AI Sandbox (AI here)        │
 │ - Can read demo app code    │
 │ - CANNOT read secrets/      │
 │ - CANNOT read .env          │
@@ -275,7 +275,7 @@ The SecureNote demo application demonstrates:
 
 You should respond:
 ```
-I cannot run docker-compose from inside the DevContainer because I don't have
+I cannot run docker-compose from inside the AI Sandbox because I don't have
 access to the Docker socket. Please run this on your host OS:
 
 cd /path/to/workspace/demo-apps
@@ -283,7 +283,7 @@ docker-compose -f docker-compose.demo.yml up -d
 ```
 
 Do NOT try to:
-- Run `docker-compose` inside DevContainer (will fail)
+- Run `docker-compose` inside AI Sandbox (will fail)
 - Run `docker` commands (no access)
 
 #### 2. User asks: "Check the API logs"
@@ -337,7 +337,7 @@ However, I can still help develop because:
 
 ## What Runs Where
 
-Understanding the separation between DevContainer (AI environment) and Host OS is critical:
+Understanding the separation between AI Sandbox and Host OS is critical:
 
 ### On Host OS (User runs these):
 - ✅ `docker-compose up` - Start demo apps
@@ -345,7 +345,7 @@ Understanding the separation between DevContainer (AI environment) and Host OS i
 - ✅ `dkmcp serve` - Run DockMCP MCP server
 - ✅ Docker commands (`docker ps`, `docker logs`, etc.)
 
-### In DevContainer (AI runs these):
+### In AI Sandbox (AI runs these):
 - ✅ Read/edit source code
 - ✅ Use DockMCP MCP tools (via HTTP to host)
 - ✅ Install Node packages (`npm install`)
@@ -365,7 +365,7 @@ For AI assistants to access DockMCP, the MCP server must be configured.
 ### Step 1: Start DockMCP on Host OS
 
 ```bash
-# On Host OS (NOT in DevContainer)
+# On Host OS (NOT in AI Sandbox)
 cd dkmcp
 make install  # Builds and installs to $GOPATH/bin (usually ~/go/bin)
 dkmcp serve --config configs/dkmcp.example.yaml
@@ -373,10 +373,10 @@ dkmcp serve --config configs/dkmcp.example.yaml
 
 **Important:** If you restart the DockMCP server, SSE connections are dropped. You (AI assistant) should inform the user to run `/mcp` → "Reconnect" in Claude Code to re-establish the connection.
 
-### Step 2: Configure MCP in DevContainer
+### Step 2: Configure MCP in AI Sandbox
 
 ```bash
-# Inside DevContainer
+# Inside AI Sandbox
 claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
 ```
 
@@ -405,7 +405,7 @@ If Claude Code does not recognize the DockMCP server even though it's running on
 
 1. **Verify DockMCP is running on host OS:**
    ```bash
-   # On Host OS (NOT in DevContainer)
+   # On Host OS (NOT in AI Sandbox)
    curl http://localhost:8080/health
    # Should return 200 OK
    ```
@@ -418,7 +418,7 @@ If Claude Code does not recognize the DockMCP server even though it's running on
    - Windows/Linux: Press `Alt + F4` or use the menu
    - Reopen VS Code to re-establish the MCP connection
 
-**If issues persist**, verify MCP configuration in DevContainer:
+**If issues persist**, verify MCP configuration in AI Sandbox:
 
 ```bash
 cat ~/.claude.json | jq '.mcpServers.dkmcp'
@@ -457,12 +457,12 @@ dkmcp client logs --url http://host.docker.internal:8080 --tail 50 securenote-ap
 dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm test"
 ```
 
-**If `dkmcp` command is not found in DevContainer:**
+**If `dkmcp` command is not found in AI Sandbox:**
 
 Tell the user:
 
 ```
-The dkmcp command is not installed in this DevContainer. Please run the following:
+The dkmcp command is not installed in this AI Sandbox. Please run the following:
 
 cd /workspace/dkmcp
 make install
@@ -471,11 +471,11 @@ This will build and install dkmcp. After installation, I can use the dkmcp clien
 commands to access container logs and run tests.
 ```
 
-**Note:** `make install` can be run inside the DevContainer (Go is available). The `dkmcp client` commands connect to the DockMCP server running on the host OS via HTTP, so they work even without Docker socket access.
+**Note:** `make install` can be run inside the AI Sandbox (Go is available). The `dkmcp client` commands connect to the DockMCP server running on the host OS via HTTP, so they work even without Docker socket access.
 
 ## Two Environment Strategy
 
-This project provides TWO environments:
+This project provides TWO AI Sandbox environments:
 
 1. **DevContainer** (`.devcontainer/`) - Primary
    - VS Code integration
@@ -692,7 +692,7 @@ When writing Japanese documentation (comments, README, docs), **do not translate
 
 ### Host OS Test Scripts
 
-Test scripts that run on the host OS (e.g., under `dkmcp/scripts/`) can cause real side effects such as port occupation and leftover processes, unlike those inside DevContainer. **Display the following information before execution:**
+Test scripts that run on the host OS (e.g., under `dkmcp/scripts/`) can cause real side effects such as port occupation and leftover processes, unlike those inside AI Sandbox. **Display the following information before execution:**
 
 1. **Impact** — Ports used, temporary files created, processes started, etc.
 2. **Risk** — Risk level and reasoning (e.g., localhost only, brief duration)
@@ -722,7 +722,7 @@ Also, **display concrete recovery commands in the failure summary** when tests f
 
 ### Git Operations Warning
 
-Inside DevContainer, hidden files (`.env`, files in `secrets/`) appear as "deleted" to git because they are mounted as empty. **Never use:**
+Inside AI Sandbox, hidden files (`.env`, files in `secrets/`) appear as "deleted" to git because they are mounted as empty. **Never use:**
 - `git add .`
 - `git add -A`
 - `git commit -a`
@@ -752,7 +752,7 @@ Guide them:
 
 User can verify secret hiding works:
 ```bash
-# From inside DevContainer
+# From inside AI Sandbox
 cat demo-apps/securenote-api/secrets/jwt-secret.key
 # Should be empty
 
@@ -765,7 +765,7 @@ curl http://localhost:8080/api/demo/secrets-status
 
 User can verify DockMCP works:
 ```bash
-# From DevContainer, ask AI:
+# From AI Sandbox, ask AI:
 "Show me logs from securenote-api"
 "Run npm test in securenote-api"
 
@@ -801,7 +801,7 @@ The patterns shown here work for any multi-container setup.
 
 ## Summary
 
-**What you are:** An AI assistant working inside a secure DevContainer
+**What you are:** An AI assistant working inside a secure AI Sandbox
 
 **What you can do:**
 - Read code in `/workspace/`

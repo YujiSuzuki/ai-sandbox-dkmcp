@@ -4,7 +4,7 @@
 
 **Secure Docker Container Access for AI Coding Assistants**
 
-DockMCP is an MCP server that runs on the host OS, enabling AI assistants (Claude Code, Gemini Code Assist, etc.) inside a DevContainer to safely check logs and run tests in other Docker containers.
+DockMCP is an MCP server that runs on the host OS, enabling AI assistants (Claude Code, Gemini Code Assist, etc.) inside an AI Sandbox to safely check logs and run tests in other Docker containers.
 
 For the problems DockMCP solves and the overall architecture, see the [root README.md](../README.md).
 
@@ -183,7 +183,7 @@ dkmcp serve --port 8081 --config strict.yaml
 
 ## Connecting AI Assistants
 
-For MCP configuration steps inside DevContainer, see the [root README.md "Quick Start"](../README.md#option-b-sandbox--dockmcp).
+For MCP configuration steps inside AI Sandbox, see the [root README.md "Quick Start"](../README.md#option-b-sandbox--dockmcp).
 
 After configuration, AI assistants can access containers:
 
@@ -255,7 +255,7 @@ Image:    node:18-alpine
 
 ### Client Commands (Via HTTP API)
 
-These connect to the DockMCP server via HTTP and can be used **inside a DevContainer**:
+These connect to the DockMCP server via HTTP and can be used **inside an AI Sandbox**:
 
 ```bash
 # List containers via DockMCP server
@@ -286,7 +286,7 @@ dkmcp client list
 
 **Which to use:**
 - **Host OS commands**: When you have direct Docker socket access
-- **Client commands**: Inside DevContainer, or environments without Docker socket access
+- **Client commands**: Inside AI Sandbox, or environments without Docker socket access
 
 ## Security Modes
 
@@ -589,7 +589,7 @@ These flags:
 # Direct (host OS)
 dkmcp exec --dangerously securenote-api "tail -100 /var/log/app.log"
 
-# Client (DevContainer)
+# Client (AI Sandbox)
 dkmcp client exec --dangerously --url http://host.docker.internal:8080 securenote-api "tail -100 /var/log/app.log"
 ```
 
@@ -664,7 +664,7 @@ Note: Commands with '*' wildcard match any suffix. Dangerous commands require da
 │           │ :8080               │
 │  ┌────────┴─────────────────┐   │
 │  │ Docker Engine            │   │
-│  │  ├─ DevContainer         │   │
+│  │  ├─ AI Sandbox            │   │
 │  │  │   └─ Claude Code ─┐   │   │
 │  │  ├─ app-api ←─────────┘   │   │
 │  │  └─ app-db              │   │
@@ -807,7 +807,7 @@ This maintains a clear boundary on what AI can affect while delivering the benef
    # Should return 200 OK
    ```
 
-2. **Check MCP configuration inside DevContainer:**
+2. **Check MCP configuration inside AI Sandbox:**
    ```bash
    cat ~/.claude.json | jq '.mcpServers.dkmcp'
    # Should show: "url": "http://host.docker.internal:8080/sse"
@@ -829,7 +829,7 @@ Restarting the DockMCP server drops SSE connections, so the AI assistant needs t
 ### "Connection refused" Error
 
 - Is DockMCP running on host? → `ps aux | grep dkmcp`
-- Are you using `host.docker.internal` in the URL? (`localhost` won't work from DevContainer)
+- Are you using `host.docker.internal` in the URL? (`localhost` won't work from AI Sandbox)
 - Is port 8080 blocked by a firewall? → `lsof -i :8080`
 
 ### "Container not in allowed list"

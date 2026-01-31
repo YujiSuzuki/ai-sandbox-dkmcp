@@ -17,13 +17,13 @@ if [[ -z "${SANDBOX_ENV:-}" ]] && [[ ! -f "/.dockerenv" ]]; then
         echo "❌ このスクリプトはホストOSでは実行できません。"
         echo ""
         echo "以下のいずれかの環境で実行してください："
-        echo "  • DevContainer のターミナル"
+        echo "  • AI Sandbox のターミナル"
         echo "  • cli_sandbox/ai_sandbox.sh"
     else
         echo "❌ This script cannot be run on the host OS."
         echo ""
         echo "Please run in one of these environments:"
-        echo "  • DevContainer terminal"
+        echo "  • AI Sandbox terminal"
         echo "  • cli_sandbox/ai_sandbox.sh"
     fi
     exit 1
