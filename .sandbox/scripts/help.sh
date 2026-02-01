@@ -3,118 +3,202 @@
 # Display description of all scripts in .sandbox/scripts/
 # .sandbox/scripts/ 内の全スクリプトの説明を表示
 #
-# Usage: .sandbox/scripts/help.sh [--all]
-#   --all: Include test scripts (default: utility scripts only)
+# Usage: .sandbox/scripts/help.sh [--list]
+#   --list: Show raw script list (for developers)
 #
-# 使用法: .sandbox/scripts/help.sh [--all]
-#   --all: テストスクリプトも表示（デフォルト: ユーティリティのみ）
+# 使用法: .sandbox/scripts/help.sh [--list]
+#   --list: スクリプト一覧を表示（開発者向け）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Language detection
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     LANG_JA=true
-    MSG_TITLE="📚 .sandbox/scripts/ スクリプト一覧"
-    MSG_UTILITY="ユーティリティスクリプト"
-    MSG_TEST="テストスクリプト"
-    MSG_ENV_CONTAINER="コンテナ内で実行"
-    MSG_ENV_HOST="ホストOSで実行"
-    MSG_ENV_BOTH="どちらでも実行可"
-    MSG_SHOW_TESTS="テストスクリプトも表示するには: $0 --all"
 else
     LANG_JA=false
-    MSG_TITLE="📚 .sandbox/scripts/ Script List"
-    MSG_UTILITY="Utility Scripts"
-    MSG_TEST="Test Scripts"
-    MSG_ENV_CONTAINER="Run in container"
-    MSG_ENV_HOST="Run on host OS"
-    MSG_ENV_BOTH="Run anywhere"
-    MSG_SHOW_TESTS="To show test scripts: $0 --all"
 fi
 
-# Parse arguments
-SHOW_ALL=false
-if [[ "${1:-}" == "--all" ]]; then
-    SHOW_ALL=true
-fi
+# ─── Raw script list mode (--list) ───────────────────────────────
 
-# Scripts that must run on host OS
-HOST_ONLY_SCRIPTS="copy-credentials.sh"
+show_script_list() {
+    local msg_title msg_utility msg_test msg_container msg_host msg_show_tests
 
-# Scripts that must run in container
-CONTAINER_ONLY_SCRIPTS="sync-secrets.sh validate-secrets.sh sync-compose-secrets.sh"
-
-# Get environment indicator
-get_env_indicator() {
-    local script="$1"
-    if [[ " $HOST_ONLY_SCRIPTS " == *" $script "* ]]; then
-        echo "🖥️"
-    elif [[ " $CONTAINER_ONLY_SCRIPTS " == *" $script "* ]]; then
-        echo "🐳"
+    if [[ "$LANG_JA" == true ]]; then
+        msg_title="📚 .sandbox/scripts/ スクリプト一覧"
+        msg_utility="ユーティリティスクリプト"
+        msg_test="テストスクリプト"
+        msg_container="コンテナ内で実行"
+        msg_host="ホストOSで実行"
     else
-        echo "  "
+        msg_title="📚 .sandbox/scripts/ Script List"
+        msg_utility="Utility Scripts"
+        msg_test="Test Scripts"
+        msg_container="Run in container"
+        msg_host="Run on host OS"
     fi
-}
 
-# Extract description from script header
-get_description() {
-    local script="$1"
-    local desc_en desc_ja
+    # Scripts that must run on host OS
+    local host_only="copy-credentials.sh init-host-env.sh"
+    # Scripts that must run in container
+    local container_only="sync-secrets.sh validate-secrets.sh sync-compose-secrets.sh"
 
-    # Read lines 3-4 (after shebang and script name)
-    desc_en=$(sed -n '3p' "$script" | sed 's/^# *//')
-    desc_ja=$(sed -n '4p' "$script" | sed 's/^# *//')
+    get_env_icon() {
+        local s="$1"
+        if [[ " $host_only " == *" $s "* ]]; then echo "🖥️"
+        elif [[ " $container_only " == *" $s "* ]]; then echo "🐳"
+        else echo "  "; fi
+    }
 
-    # Return appropriate language
-    if [[ "$LANG_JA" == true ]] && [[ -n "$desc_ja" ]] && [[ "$desc_ja" != "#"* ]]; then
-        echo "$desc_ja"
-    else
-        echo "$desc_en"
-    fi
-}
+    get_desc() {
+        local script="$1" desc_en desc_ja
+        desc_en=$(sed -n '3p' "$script" | sed 's/^# *//')
+        desc_ja=$(sed -n '4p' "$script" | sed 's/^# *//')
+        if [[ "$LANG_JA" == true ]] && [[ -n "$desc_ja" ]] && [[ "$desc_ja" != "#"* ]]; then
+            echo "$desc_ja"
+        else
+            echo "$desc_en"
+        fi
+    }
 
-# Print header
-echo ""
-echo "$MSG_TITLE"
-echo ""
-echo "  🐳 = $MSG_ENV_CONTAINER"
-echo "  🖥️  = $MSG_ENV_HOST"
-echo ""
+    echo ""
+    echo "$msg_title"
+    echo ""
+    echo "  🐳 = $msg_container    🖥️  = $msg_host"
+    echo ""
+    echo "━━━ $msg_utility ━━━"
+    echo ""
 
-# Print utility scripts
-echo "━━━ $MSG_UTILITY ━━━"
-echo ""
+    for script in "$SCRIPT_DIR"/*.sh; do
+        local name
+        name=$(basename "$script")
+        [[ "$name" == test-* ]] && continue
+        [[ "$name" == "help.sh" ]] && continue
+        [[ "$name" == "_startup_common.sh" ]] && continue
 
-for script in "$SCRIPT_DIR"/*.sh; do
-    name=$(basename "$script")
+        printf "  %s %-32s %s\n" "$(get_env_icon "$name")" "$name" "$(get_desc "$script")"
+    done
 
-    # Skip test scripts, help.sh itself, and _startup_common.sh
-    [[ "$name" == test-* ]] && continue
-    [[ "$name" == "help.sh" ]] && continue
-    [[ "$name" == "_startup_common.sh" ]] && continue
-
-    env_icon=$(get_env_indicator "$name")
-    desc=$(get_description "$script")
-
-    printf "  %s %-28s %s\n" "$env_icon" "$name" "$desc"
-done
-
-echo ""
-
-# Print test scripts if requested
-if [[ "$SHOW_ALL" == true ]]; then
-    echo "━━━ $MSG_TEST ━━━"
+    echo ""
+    echo "━━━ $msg_test ━━━"
     echo ""
 
     for script in "$SCRIPT_DIR"/test-*.sh; do
         [[ ! -f "$script" ]] && continue
+        local name
         name=$(basename "$script")
-        desc=$(get_description "$script")
-
-        printf "     %-28s %s\n" "$name" "$desc"
+        printf "     %-32s %s\n" "$name" "$(get_desc "$script")"
     done
     echo ""
-else
-    echo "$MSG_SHOW_TESTS"
-    echo ""
-fi
+}
+
+# ─── Default: workflow guide ─────────────────────────────────────
+
+show_workflow_guide() {
+    if [[ "$LANG_JA" == true ]]; then
+        cat <<'GUIDE_JA'
+
+🚀 AI Sandbox ヘルプ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ はじめる
+  DevContainer または CLI Sandbox を起動すれば準備完了。
+  シークレットの隠蔽は自動で適用されます。
+
+■ 起動時に自動実行（手動で実行する必要はありません）
+
+  シークレットが正しく隠れているか確認:
+    .sandbox/scripts/validate-secrets.sh
+
+  AI 設定ファイルと docker-compose の同期チェック:
+    .sandbox/scripts/check-secret-sync.sh
+
+■ 必要に応じて手動実行（上記の結果に応じて実行を提案されます）
+
+  同期のズレを対話的に修正:
+    .sandbox/scripts/sync-secrets.sh
+
+■ DockMCP（他コンテナとの連携）
+
+  ホスト OS で DockMCP サーバーを起動:
+    cd dkmcp && make install && dkmcp serve
+
+  AI Sandbox 内から接続:
+    claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+
+  接続後は AI がログ確認・テスト実行などを自動で行います。
+
+■ 困ったとき
+
+  README を確認:
+    README.md（英語） / README.ja.md（日本語）
+
+  全スクリプトの一覧を見る:
+    .sandbox/scripts/help.sh --list
+
+GUIDE_JA
+    else
+        cat <<'GUIDE_EN'
+
+🚀 AI Sandbox Help
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ Getting Started
+  Open DevContainer or start CLI Sandbox. That's it.
+  Secret hiding is applied automatically.
+
+■ Auto-run on startup (no need to run manually)
+
+  Verify secrets are properly hidden:
+    .sandbox/scripts/validate-secrets.sh
+
+  Check if AI config and docker-compose are in sync:
+    .sandbox/scripts/check-secret-sync.sh
+
+■ Run manually when needed (suggested based on results above)
+
+  Interactively fix sync issues:
+    .sandbox/scripts/sync-secrets.sh
+
+■ DockMCP (Cross-Container Access)
+
+  Start DockMCP server on host OS:
+    cd dkmcp && make install && dkmcp serve
+
+  Connect from AI Sandbox:
+    claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+
+  Once connected, AI can check logs, run tests, etc. automatically.
+
+■ Need Help?
+
+  See the docs:
+    README.md (English) / README.ja.md (Japanese)
+
+  Show all scripts:
+    .sandbox/scripts/help.sh --list
+
+GUIDE_EN
+    fi
+}
+
+# ─── Main ────────────────────────────────────────────────────────
+
+case "${1:-}" in
+    --list)
+        show_script_list
+        ;;
+    --help|-h)
+        if [[ "$LANG_JA" == true ]]; then
+            echo "使用法: .sandbox/scripts/help.sh [--list]"
+            echo "  (引数なし)  ワークフローガイドを表示"
+            echo "  --list      全スクリプトの一覧を表示"
+        else
+            echo "Usage: .sandbox/scripts/help.sh [--list]"
+            echo "  (no args)   Show workflow guide"
+            echo "  --list      Show all scripts"
+        fi
+        ;;
+    *)
+        show_workflow_guide
+        ;;
+esac

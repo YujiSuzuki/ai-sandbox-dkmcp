@@ -19,6 +19,48 @@ VS Code は必須ではありません。[CLIだけでも使えます](#2つの�
   └── CLI Sandbox 環境（ターミナルベース）
 ```
 
+AI Sandbox を起動しヘルプを表示した様子
+
+```
+node@8519d034f887:/workspace$ .sandbox/scripts/help.sh 
+
+🚀 AI Sandbox ヘルプ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ はじめる
+  DevContainer または CLI Sandbox を起動すれば準備完了。
+  シークレットの隠蔽は自動で適用されます。
+
+■ 起動時に自動実行されるスクリプト
+（自動的に処理されるので自分で実行する事はありません）
+
+  シークレットが正しく隠れているか確認:
+    .sandbox/scripts/validate-secrets.sh
+
+  AI 設定ファイルと docker-compose の同期チェック:
+    .sandbox/scripts/check-secret-sync.sh
+
+■ 手動で実行するもの
+（上記スクリプトで実行された結果必要な時に下記のスクリプトを動かす提案があります。）
+
+  同期のズレを対話的に修正:
+    .sandbox/scripts/sync-secrets.sh
+
+■ DockMCP（他コンテナとの連携）
+
+  ホスト OS で DockMCP サーバーを起動:
+    cd dkmcp && make install && dkmcp serve
+
+  AI Sandbox 内から接続:
+    claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+
+  接続後は AI がログ確認・テスト実行などを自動で行います。
+
+
+  全スクリプトの一覧を見る:
+    .sandbox/scripts/help.sh --list
+
+```
 
 本プロジェクトはローカル開発環境での使用を想定しており、本番環境での使用は想定されていません。制約事項については「[この環境が解決していない課題](#この環境が解決していない課題)」と「[よくある質問](#よくある質問)」を参照してください。
 

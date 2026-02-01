@@ -19,6 +19,45 @@ VS Code is not required. [You can also use the CLI-only environment.](#two-envir
   └── CLI Sandbox environment (terminal-based)
 ```
 
+Help output after launching AI Sandbox:
+
+```
+node@sandbox:/workspace$ .sandbox/scripts/help.sh
+
+🚀 AI Sandbox Help
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ Getting Started
+  Open DevContainer or start CLI Sandbox. That's it.
+  Secret hiding is applied automatically.
+
+■ Auto-run on startup (no need to run manually)
+
+  Verify secrets are properly hidden:
+    .sandbox/scripts/validate-secrets.sh
+
+  Check if AI config and docker-compose are in sync:
+    .sandbox/scripts/check-secret-sync.sh
+
+■ Run manually when needed (suggested based on results above)
+
+  Interactively fix sync issues:
+    .sandbox/scripts/sync-secrets.sh
+
+■ DockMCP (Cross-Container Access)
+
+  Start DockMCP server on host OS:
+    cd dkmcp && make install && dkmcp serve
+
+  Connect from AI Sandbox:
+    claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+
+  Once connected, AI can check logs, run tests, etc. automatically.
+
+  Show all scripts:
+    .sandbox/scripts/help.sh --list
+
+```
 
 This project is intended for local development environments and is not designed for production use. For limitations, see "[Issues this environment does not address](#issues-this-environment-does-not-address)" and "[FAQ](#faq)".
 
