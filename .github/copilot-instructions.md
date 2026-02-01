@@ -13,6 +13,8 @@ The following files/directories appear empty due to security measures:
 
 This is intentional. The API containers have access to real secrets, but AI assistants don't.
 
+**Important:** If a file appears empty or missing, check whether its path is listed in the volume/tmpfs mounts in `.devcontainer/docker-compose.yml` or `cli_sandbox/docker-compose.yml`. If so, the file is sandbox-hidden and exists on the host OS. Ask the user to verify on the host side.
+
 ### No Docker Access
 You cannot run `docker` or `docker-compose` commands. Tell users to run these on the host OS.
 

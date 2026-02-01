@@ -43,7 +43,7 @@ This solves the common problem: "My API is in a separate container, how can AI h
 │       ├── sync-secrets.sh           # 🐳 Interactive tool to sync secrets to docker-compose
 │       ├── sync-compose-secrets.sh   # 🐳 Sync secret config between DevContainer/CLI compose
 │       ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
-│       ├── init-env-files.sh         # Auto-create env files from .example templates
+│       ├── init-host-env.sh           # Host-side init: env files from templates + host OS info
 │       ├── copy-credentials.sh       # 🖥️ Copy home directory between compose projects
 │       ├── run-all-tests.sh          # Run all test scripts
 │       └── test-*.sh                 # Test scripts for each utility
@@ -445,17 +445,24 @@ If DockMCP MCP tools are not available (MCP server not recognized, connection is
 
 ```bash
 # List containers
-dkmcp client list --url http://host.docker.internal:8080
+dkmcp client list
 
 # Get logs from a container
-dkmcp client logs --url http://host.docker.internal:8080 securenote-api
+dkmcp client logs securenote-api
 
 # Get logs with tail option
-dkmcp client logs --url http://host.docker.internal:8080 --tail 50 securenote-api
+dkmcp client logs --tail 50 securenote-api
 
 # Execute a whitelisted command
-dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm test"
+dkmcp client exec securenote-api "npm test"
 ```
+
+> **Note on `--url`:** The default URL is `http://host.docker.internal:8080`. If the server port is changed in `dkmcp.yaml`, specify the URL explicitly via the `--url` flag or the `DOCKMCP_SERVER_URL` environment variable.
+> ```bash
+> dkmcp client list --url http://host.docker.internal:9090
+> # or
+> export DOCKMCP_SERVER_URL=http://host.docker.internal:9090
+> ```
 
 **If `dkmcp` command is not found in AI Sandbox:**
 
@@ -730,6 +737,16 @@ Inside AI Sandbox, hidden files (`.env`, files in `secrets/`) appear as "deleted
 **Instead:**
 - Recommend user to perform git operations on the host side
 - Or explicitly specify files: `git add path/to/specific/file.js`
+
+### Hidden Files May Appear as Missing
+
+Inside AI Sandbox, secret files are hidden by Docker volume mounts (`/dev/null`) and `tmpfs`. As a result, files that **exist on the host OS** may appear empty or missing from the sandbox. Before concluding that a file does not exist:
+
+1. **Check if the file path is listed in the volume/tmpfs mounts** in `.devcontainer/docker-compose.yml` or `cli_sandbox/docker-compose.yml`
+2. **If a file appears empty or missing and matches a hidden path**, it is likely hidden by the sandbox — not actually absent
+3. **Ask the user to verify on the host OS** (e.g., `ls -la <path>` or `cat <path>` on the host) since you cannot see the real contents from inside the sandbox
+
+This is especially important when investigating issues related to `.env` files, `secrets/` directories, or any path configured as a hidden mount. Never report these files as "not found" without first considering whether they are sandbox-hidden.
 
 ### When User Wants to Customize
 

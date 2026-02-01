@@ -91,9 +91,9 @@ parse_startup_verbosity() {
 parse_startup_verbosity "$@"
 set -- "${REMAINING_ARGS[@]}"
 
-# Auto-create env files from examples on first run
-# 初回起動時に .example ファイルから環境変数ファイルを自動生成
-.sandbox/scripts/init-env-files.sh .
+# Host-side initialization: create env files from templates and write host OS info
+# ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
+.sandbox/scripts/init-host-env.sh .
 
 # Load environment files for docker-compose variable substitution
 # docker-compose.yml の変数置換(${...})を有効にするため、事前に環境変数を読み込む

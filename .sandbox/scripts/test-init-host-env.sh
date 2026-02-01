@@ -1,11 +1,11 @@
 #!/bin/bash
-# test-init-env-files.sh
-# Test script for init-env-files.sh
+# test-init-host-env.sh
+# Test script for init-host-env.sh
 #
-# init-env-files.sh のテストスクリプト
+# init-host-env.sh のテストスクリプト
 #
-# Usage: ./test-init-env-files.sh
-# 使用方法: ./test-init-env-files.sh
+# Usage: ./test-init-host-env.sh
+# 使用方法: ./test-init-host-env.sh
 #
 # Environment: AI Sandbox (requires /workspace)
 # 実行環境: AI Sandbox（/workspace が必要）
@@ -21,7 +21,7 @@ if [ ! -d "/workspace" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/init-env-files.sh"
+SCRIPT="$SCRIPT_DIR/init-host-env.sh"
 TEST_PROJECT=""
 
 # Colors for output
@@ -565,12 +565,87 @@ EOF
     cleanup
 }
 
+# Test 20: Creates .sandbox/.host-os with OS and arch info
+# テスト20: .sandbox/.host-os にOS・アーキテクチャ情報を書き出す
+test_creates_host_os_file() {
+    echo ""
+    echo "=== Test: Creates .sandbox/.host-os with OS and arch info ==="
+
+    setup
+    mkdir -p "$TEST_PROJECT/.sandbox"
+
+    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+
+    local host_os_file="$TEST_PROJECT/.sandbox/.host-os"
+    if [ ! -f "$host_os_file" ]; then
+        fail ".sandbox/.host-os was not created"
+        cleanup
+        return
+    fi
+
+    local line_count
+    line_count=$(wc -l < "$host_os_file")
+    if [ "$line_count" -ne 2 ]; then
+        fail ".host-os should have exactly 2 lines, got $line_count"
+        cleanup
+        return
+    fi
+
+    local os_name arch_name
+    os_name=$(sed -n '1p' "$host_os_file")
+    arch_name=$(sed -n '2p' "$host_os_file")
+
+    # OS name should be lowercase (e.g., linux, darwin)
+    # OS名は小文字であること（例: linux, darwin）
+    if echo "$os_name" | grep -qE '^[a-z]+$'; then
+        pass ".host-os line 1: OS name is lowercase ($os_name)"
+    else
+        fail ".host-os line 1: OS name should be lowercase, got: $os_name"
+    fi
+
+    # Arch should be normalized (amd64 or arm64, not x86_64 or aarch64)
+    # アーキテクチャは正規化されていること（x86_64→amd64, aarch64→arm64）
+    if echo "$arch_name" | grep -qE '^(amd64|arm64|armv7l|i386|i686|s390x|ppc64le|riscv64)$'; then
+        pass ".host-os line 2: arch is normalized ($arch_name)"
+    else
+        fail ".host-os line 2: unexpected arch value: $arch_name"
+    fi
+
+    cleanup
+}
+
+# Test 21: .sandbox/.host-os is overwritten on each run
+# テスト21: .sandbox/.host-os は毎回上書きされる
+test_host_os_file_overwritten() {
+    echo ""
+    echo "=== Test: .sandbox/.host-os is overwritten on each run ==="
+
+    setup
+    mkdir -p "$TEST_PROJECT/.sandbox"
+
+    # Create stale .host-os
+    # 古い .host-os を作成
+    printf "oldos\noldarch\n" > "$TEST_PROJECT/.sandbox/.host-os"
+
+    bash "$SCRIPT" "$TEST_PROJECT" > /dev/null 2>&1
+
+    local os_name
+    os_name=$(sed -n '1p' "$TEST_PROJECT/.sandbox/.host-os")
+    if [ "$os_name" != "oldos" ]; then
+        pass ".host-os is overwritten on each run (was oldos, now $os_name)"
+    else
+        fail ".host-os should be overwritten, still contains old value"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  init-env-files.sh Test Suite"
+    echo "  init-host-env.sh Test Suite"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     test_script_executable_and_valid
@@ -592,6 +667,8 @@ main() {
     test_interactive_japanese_decline_tz
     test_interactive_english_no_tz_prompt
     test_interactive_tz_update_existing
+    test_creates_host_os_file
+    test_host_os_file_overwritten
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -135,6 +135,12 @@ Use DockMCP MCP tool: `exec_command` with container `securenote-api` and command
 ### When user asks to read .env file:
 The file will appear empty. Explain that secrets are hidden for security.
 
+### When a file appears empty or missing:
+Files hidden by Docker volume mounts (`/dev/null`) or `tmpfs` will appear empty or non-existent inside the AI Sandbox, even though they exist on the host OS. Before reporting a file as missing:
+1. Check if the file path is listed in volume/tmpfs mounts in `.devcontainer/docker-compose.yml` or `cli_sandbox/docker-compose.yml`
+2. If it matches a hidden path, inform the user it is likely sandbox-hidden
+3. Ask the user to verify on the host OS, since you cannot see the real contents from inside the sandbox
+
 ## DockMCP MCP Tools
 
 | Tool | Description |

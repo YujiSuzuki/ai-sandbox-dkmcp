@@ -1,20 +1,23 @@
 #!/bin/bash
-# init-env-files.sh
-# Auto-create env files from .example templates on first setup
-# 初回セットアップ時に .example テンプレートから環境変数ファイルを自動生成
+# init-host-env.sh
+# Host-side initialization: create env files from templates and write host OS info
+# ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
 #
 # Usage:
-#   Automatic (startup):  init-env-files.sh [project_root]
-#   Manual (interactive): init-env-files.sh -i [project_root]
-#                         init-env-files.sh --interactive [project_root]
+#   Automatic (startup):  init-host-env.sh [project_root]
+#   Manual (interactive): init-host-env.sh -i [project_root]
+#                         init-host-env.sh --interactive [project_root]
 # 使用法:
-#   自動（起動時）:       init-env-files.sh [project_root]
-#   手動（対話式）:       init-env-files.sh -i [project_root]
-#                         init-env-files.sh --interactive [project_root]
+#   自動（起動時）:       init-host-env.sh [project_root]
+#   手動（対話式）:       init-host-env.sh -i [project_root]
+#                         init-host-env.sh --interactive [project_root]
 #
 # This script is called from:
 #   - cli_sandbox/_common.sh (CLI sandbox startup)
 #   - .devcontainer/devcontainer.json initializeCommand (DevContainer startup)
+#
+# Also writes host OS info to .sandbox/.host-os for cross-build support
+# クロスビルド用にホストOS情報を .sandbox/.host-os に書き出す
 
 set -euo pipefail
 
@@ -29,7 +32,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h|--help)
-            echo "Usage: init-env-files.sh [-i|--interactive] [project_root]"
+            echo "Usage: init-host-env.sh [-i|--interactive] [project_root]"
             echo "  -i, --interactive  Enable interactive mode (prompt for language)"
             echo "                     対話モードを有効化（言語を選択できます）"
             echo "  project_root       Project root directory (default: current directory)"
@@ -200,3 +203,10 @@ if [ "$created" -gt 0 ]; then
     echo "--- $created 個の環境変数ファイルを初期化しました。これらのファイルは git 管理対象外です。 ---"
     echo ""
 fi
+
+# Write host OS info for cross-build (used by dkmcp/Makefile build-host)
+# クロスビルド用にホストOS情報を書き出し（dkmcp/Makefile build-host で使用）
+HOST_OS_FILE="$PROJECT_ROOT/.sandbox/.host-os"
+mkdir -p "$(dirname "$HOST_OS_FILE")"
+uname -s | tr '[:upper:]' '[:lower:]' > "$HOST_OS_FILE"
+uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/' >> "$HOST_OS_FILE"

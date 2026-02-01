@@ -1,4 +1,4 @@
-.PHONY: build build-all clean test install
+.PHONY: build build-all build-host clean test install install-host
 
 # Versioning
 # バージョン管理
@@ -24,18 +24,42 @@ build-all:
 	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o dist/dkmcp_linux_amd64 ./cmd/dkmcp
 	GOOS=linux GOARCH=arm64 go build ${LDFLAGS} -o dist/dkmcp_linux_arm64 ./cmd/dkmcp
 
-# Build for MacOS ARM64
-# MacOS ARM64向けにビルド
-build-mac-arm64:
-	@echo "Building dkmcp version ${VERSION} for MacOS ARM64..."
+# Cross-build for the host OS
+# ホストOS向けクロスビルド
+#
+# Read host OS/arch from .sandbox/.host-os (written at container startup)
+# Falls back to current platform if file not found
+# .sandbox/.host-os からホストOS/アーキテクチャを読み取り（コンテナ起動時に書き出される）
+# ファイルがない場合は現在のプラットフォームにフォールバック
+HOST_OS_FILE := $(wildcard $(realpath ../.sandbox/.host-os))
+ifdef HOST_OS_FILE
+  HOST_OS ?= $(shell sed -n '1p' $(HOST_OS_FILE))
+  HOST_ARCH ?= $(shell sed -n '2p' $(HOST_OS_FILE))
+else
+  HOST_OS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+  HOST_ARCH ?= $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+endif
+DEST ?= dist
+build-host:
+	@echo "Building dkmcp version ${VERSION} for ${HOST_OS}/${HOST_ARCH}..."
 	mkdir -p dist
-	GOOS=darwin GOARCH=arm64 go build ${LDFLAGS} -o dist/dkmcp_darwin_arm64 ./cmd/dkmcp
+	GOOS=${HOST_OS} GOARCH=${HOST_ARCH} go build ${LDFLAGS} -o dist/dkmcp_${HOST_OS}_${HOST_ARCH} ./cmd/dkmcp
+	@echo "✓ Built: dist/dkmcp_${HOST_OS}_${HOST_ARCH}"
 
-# Install binary built in DevContainer (run on MacOS host)
-# DevContainerでビルドしたバイナリをインストール（MacOSホスト上で実行）
-install-mac-arm64:
-	@mv dist/dkmcp_darwin_arm64 $$GOPATH/bin/dkmcp
-
+# Install cross-built binary to host OS (run on host OS)
+# クロスビルドしたバイナリをホストOSにインストール（ホストOS上で実行）
+# Usage: make install-host [DEST=/usr/local/bin]
+install-host:
+	@set -e; \
+	BINARY="dist/dkmcp_${HOST_OS}_${HOST_ARCH}"; \
+	if [ ! -f "$$BINARY" ]; then \
+		echo "Error: $$BINARY not found. Run 'make build-host' first."; \
+		exit 1; \
+	fi; \
+	mkdir -p ${DEST}; \
+	cp $$BINARY ${DEST}/dkmcp; \
+	chmod +x ${DEST}/dkmcp; \
+	echo "✓ Installed to ${DEST}/dkmcp"
 
 
 # Clean build artifacts

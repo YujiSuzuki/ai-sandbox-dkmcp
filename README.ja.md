@@ -3,14 +3,21 @@
 [English README is here](README.md)
 
 
-本プロジェクトはセキュリティリスクを最小限にとどめ、AIの持つ俯瞰的な分析能力をフルに引き出すことを目指した開発環境テンプレートです。
-
-必要なものは Docker（または OrbStack）と VS Code です。（ただし VS Code は必須ではありません。[CLIだけでも使えます](#2つの環境)）
+本プロジェクトはセキュリティリスクを最小限にとどめ、AIの持つ俯瞰的な分析能力をフルに引き出すことを目指した開発環境のテンプレートです。
 
 
 - **複数プロジェクトの横断開発** — モバイル・API・Webなど複数のコードベースを1つの環境でAIに扱わせる
 - **秘匿情報の構造的な隔離** — `.env` や秘密鍵をボリュームマウントでAIから隠しつつ、実コンテナでは通常どおり利用
 - **DockMCPによるコンテナ間連携** — AI が別コンテナのログ確認やテスト実行を行える
+
+必要なものは Docker（または OrbStack）と VS Code です。
+
+VS Code は必須ではありません。[CLIだけでも使えます](#2つの環境)
+```
+ AI Sandbox（概念）
+  ├── DevContainer 環境（VS Code統合）
+  └── CLI Sandbox 環境（ターミナルベース）
+```
 
 
 本プロジェクトはローカル開発環境での使用を想定しており、本番環境での使用は想定されていません。制約事項については「[この環境が解決していない課題](#この環境が解決していない課題)」と「[よくある質問](#よくある質問)」を参照してください。
@@ -18,7 +25,7 @@
 
 
 > [!NOTE]
-> **DockMCP単体での利用は非推奨です。** ホストOSでAIを実行する場合、AIはユーザーと同じ権限を持つため DockMCP を経由するメリットがありません。リモートホストへのアクセス用途も考えられますが、現時点では認証機能がないためアクセス制限がありません。スタンドアロンセットアップについては [dkmcp/README.ja.md](dkmcp/README.ja.md) を参照してください。
+> **DockMCP単体での利用は非推奨です。** ホストOSでAIを実行する場合、AIはユーザーと同じ権限を持つため DockMCP を経由するメリットがありません。リモートホストへのアクセス用途も考えられますが、現時点では認証機能がないためアクセス制限がなく、誰でもアクセスできてしまいます。スタンドアロンセットアップについては [dkmcp/README.ja.md](dkmcp/README.ja.md) を参照してください。
 
 
 ---
@@ -31,13 +38,13 @@
 - [コマンド](#コマンド)
 - [プロジェクト構造](#プロジェクト構造)
 - [セキュリティ機能](#セキュリティ機能)
-- [デモを試す](#デモを試す)
-- [2つの環境](#2つの環境)
-- [高度な使い方](#高度な使い方)
+- [ハンズオン](#ハンズオン)
 - [自分のプロジェクトへの適用](#自分のプロジェクトへの適用)
   - [テンプレートとして使う](#テンプレートとして使う)
     - [更新をチェック](#更新をチェック)
   - [または、直接クローン](#別の方法-直接クローン)
+  - [プロジェクトのカスタマイズ](#プロジェクトのカスタマイズ)
+- [リファレンス](#リファレンス)
 - [対応AIツール](#対応aiツール)
 - [よくある質問](#よくある質問)
 - [ドキュメント](#ドキュメント)
@@ -46,24 +53,23 @@
 
 
 
-
 # この環境が解決する実際の課題
 
 ## 秘匿情報の構造的な保護
-ホストOSでのAI実行は便利ですが、.env や秘密鍵へのアクセスを防ぐのは困難です。本環境ではAIをSandboxコンテナ内に隔離し、ボリュームマウント制御によって**「コードは見えても、秘密は見えない」**境界線を構造的に構築します。
+ホストOSでのAI実行は便利ですが、.env や秘密鍵へのアクセスを防ぐのは困難です。本環境ではAIをSandboxコンテナ内に隔離し、ボリュームマウント制御によって **「コードは見えても、秘匿ファイルは見えない」** 境界線を構造的に構築します。
 
 ## 複数プロジェクトの横断的な統合
-リポジトリ間の「隙間」で発生する不具合の調査は、人間のエンジニアにとっても重労働です。本環境は複数のプロジェクトを1つのワークスペースに統合し、AIがシステム全体を俯瞰できるようにします。サブプロジェクトごとの設定や秘匿情報の隠蔽状態も、起動時に専用スクリプトで自動検証されます。
+リポジトリ間の「隙間」（例えばアプリとサーバーの連携）で発生する不具合の調査は、人間のエンジニアにとっても重労働です。本環境は複数のプロジェクトを1つのワークスペースに統合し、AIがシステム全体を俯瞰できるようにします。サブプロジェクトごとの設定や秘匿情報の隠蔽状態も、起動時に専用スクリプトで自動検証されます。
 
 ## DockMCPによるクロスコンテナ操作
 サンドボックス化の代償である「他コンテナへのアクセス不可」を、DockMCPが解消します。
-セキュリティポリシーに基づき、AIに**「他のコンテナのログを読み、テストを実行する権限」**を付与。APIとフロントエンドの連携不具合なども、AIがシステム全体を横断して自律的に調査可能になります。
+セキュリティポリシーに基づき、AIに **「他のコンテナのログを読み、テストを実行する」** 等の権限を付与。APIとフロントエンドの連携不具合なども、AIがシステム全体を横断して自律的に調査可能になります。
 
 
 
 ## この環境が解決していない課題
 
-**ネットワーク制限** 
+**ネットワーク制限**
 
 AIが任意の外部ドメインにアクセスするのを防止したい場合、ホワイトリスト方式のプロキシの導入が考えられます。
 
@@ -77,6 +83,8 @@ AIが任意の外部ドメインにアクセスするのを防止したい場合
 
 
 # ユースケース
+
+## AI Sandbox + DockMCP 環境がどんな開発シナリオで役立つか
 
 ### 1. マイクロサービス開発
 ```
@@ -108,6 +116,10 @@ workspace/
 
 AIが両方を理解し、移行を支援。
 
+---
+
+# クイックスタート
+
 ## 前提条件
 
 ### Sandbox： セキュアなサンドボックス + 秘匿情報隠蔽
@@ -122,6 +134,39 @@ AIが両方を理解し、移行を支援。
 - MCP対応のAIアシスタントCLI（例：`claude` CLI、Gemini（Agentモード））
 
 ## アーキテクチャ概要
+
+```
+┌───────────────────────────────────────────────────┐
+│ Host OS                                           │
+│                                                   │
+│  ┌──────────────────────────────────────────────┐ │
+│  │ DockMCP Server                               │ │
+│  │  HTTP/SSE API for AI                         ←─────┐
+│  │  Security policy enforcement                 │ │   │
+│  │  Container access gateway                    │ │   │
+│  │                                              │ │   │
+│  └────────────────────↑─────────────────────────┘ │   │
+│                       │ :8080                     │   │
+│  ┌────────────────────│─────────────────────────┐ │   │
+│  │ Docker Engine      │                         │ │   │
+│  │                    │                         │ │   │
+│  │   AI Sandbox  ←────┘                         │ │   │
+│  │    └─ Claude Code / Gemini                   │ │   │
+│  │       secrets/ → empty (hidden)              │ │   │
+│  │                                              │ │   │
+│  │   API Container    ←───────────────────────────────┘
+│  │    └─ secrets/ → real files                  │ │   │
+│  │                                              │ │   │
+│  │   Web Container    ←───────────────────────────────┘
+│  │                                              │ │
+│  └──────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────┘
+```
+
+<details>
+<summary>ツリー形式で見る</summary>
+
+**データフロー:** AI (AI Sandbox) → DockMCP (:8080) → 他のコンテナ
 
 ```
 ホストOS
@@ -141,9 +186,10 @@ AIが両方を理解し、移行を支援。
     └── Web Container
 ```
 
-**データフロー:** AI (AI Sandbox) → DockMCP (:8080) → 他のコンテナ
+</details>
 
-### なぜ秘匿ファイルを隠せるのか？
+
+#### なぜ秘匿ファイルを隠せるのか？
 
 **ポイント:** AIがAI Sandbox内で動作するため、Dockerボリュームマウントで秘匿ファイルを隠せます。
 
@@ -165,7 +211,7 @@ AIが両方を理解し、移行を支援。
 - アプリは秘匿ファイルを読める（機能は維持）
 - DockMCP経由でAIがログ確認・テスト実行は可能
 
-### AI Sandboxによる隔離のメリット
+#### AI Sandboxによる隔離のメリット
 
 AIがAI Sandbox内で動作することで、ホストOSのファイルへのアクセスも制限されます。
 
@@ -190,25 +236,22 @@ AIがAI Sandbox内で動作することで、ホストOSのファイルへのア
 - SSH鍵や認証情報（`~/.ssh/`）に触れない
 - ホストOSを誤って変更するリスクがない
 
-> ⚠️ **Git 操作の注意:** AI Sandbox 内では隠蔽されたファイル（`.env`、`secrets/` 内のファイル）が「削除された」ように見えます。`git commit -a` や `git add .` を実行すると、意図せずファイルの削除をコミットする可能性があります。コミット操作はホスト側で行うか、AI Sandbox 内では明示的にファイルを指定して `git add` してください。
+> [!NOTE]
+> **デモ環境での git status について:** このテンプレートではデモ用の秘匿ファイルを `git add -f` で強制追跡しているため、AI Sandbox 内の git status で「削除された」ように見えます。自分のプロジェクトでは秘匿ファイルを `.gitignore` に入れるため、この問題は発生しません。対処方法は[ハンズオン](#ハンズオン)を参照してください。
 
 
-
-
-
-
-
-
-# クイックスタート
 
 > **💡 日本語環境にする場合:** DevContainer（または cli_sandbox）を開く前に、ホストOS上で以下を実行：
 > ```bash
-> .sandbox/scripts/init-env-files.sh -i
+> .sandbox/scripts/init-host-env.sh -i
 > ```
 > 言語選択で `2) 日本語` を選ぶと、コンテナ内のターミナル出力が日本語になります。
 > （コンテナ内からでも実行できます）
 
-### オプションA: Sandbox
+
+
+
+## オプションA: Sandbox
 
 秘匿情報隠蔽付きのセキュアなサンドボックスだけが必要な場合：
 
@@ -219,18 +262,50 @@ code .
 # 2. コンテナで再度開く（Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"）
 ```
 
+<details>
+<summary><code>code</code> コマンドが見つからない場合</summary>
+
+**VS Codeのメニューから開く方法:**
+「ファイル → フォルダーを開く」でこのフォルダーを選択してください。
+
+**`code` コマンドをインストールする方法（macOS）:**
+VS Code上でコマンドパレット（Cmd+Shift+P）を開き、`Shell Command: Install 'code' command in PATH` を実行してください。ターミナルを再起動すると `code` コマンドが使えるようになります。
+
+> 参考: [Visual Studio Code on macOS - 公式ドキュメント](https://code.visualstudio.com/docs/setup/mac)
+
+</details>
+
+
+
+<details>
+<summary>CLI Sandbox 環境（ターミナルベース）の場合</summary>
+
+```bash
+   ./cli_sandbox/claude.sh # (Claude Code)
+   ./cli_sandbox/gemini.sh # (Gemini CLI)
+```
+
+</details>
+
 **これだけです！** AIは `/workspace` 内のコードにアクセスできますが、`.env` と `secrets/` ディレクトリは隠されています。
 
-**保護されているもの:**
-- `.env` ファイル → 空としてマウント
-- `secrets/` ディレクトリ → 空に見える
-- ホストOSのファイル → 全くアクセス不可
 
-### オプションB: Sandbox + DockMCP
+**保護されているもの:**
+- `demo-apps/securenote-api/.env` → 空としてマウント
+- `demo-apps/securenote-api/secrets/` → 空に見える
+- ホストOSのファイル → AI Sandbox 内からはアクセス不可
+
+
+
+
+## オプションB: Sandbox + DockMCP
 
 AIが他のコンテナのログを確認したりテストを実行したりする必要がある場合は、DockMCPを使用：
 
-#### ステップ1: DockMCPを起動（ホストOS上で）
+### ステップ1: DockMCPサーバーを起動（ホストOS上で）
+
+ホストOSにGo言語の環境があれば次の様にインストールします。（Go言語の環境構築は、[Go公式サイト](https://go.dev/dl/) を参照してください）
+
 
 ```bash
 # DockMCPをインストール（~/go/bin/ にインストール）
@@ -243,26 +318,63 @@ dkmcp serve --config configs/dkmcp.example.yaml
 
 > **注意:** `make build` ではなく `make install` を使用してください。これにより、バイナリがワークスペース（AI Sandboxからは見えるが動作しない）ではなく `$GOPATH/bin` にインストールされます。
 
-> **重要:** DockMCPサーバーを再起動した場合、SSE接続が切断されるため、AIアシスタント側で再接続が必要です。Claude Codeでは `/mcp` → 「Reconnect」を実行してください。
+<details>
+<summary>ホストOSにGo環境がない場合、AI Sandbox内でビルド後、インストール可能です</summary>
 
-#### ステップ2: DevContainerを開く
+AI Sandbox内にはGo環境があるため、ホストOS向けのバイナリをクロスビルドできます。
+ホストOSの種類はコンテナ起動時に自動検出されるので、OS指定は不要です。
+
+**1. AI Sandbox内でビルド:**
+
+```bash
+cd /workspace/dkmcp
+make build-host
+```
+
+ビルドされたバイナリは `dkmcp/dist/` に出力されます。このディレクトリはホストOSからも見えます。
+
+> 自動検出がうまくいかない場合は、手動で指定できます:
+> `make build-host HOST_OS=darwin HOST_ARCH=arm64`
+
+**2. ホストOS上でインストール:**
+
+```bash
+cd <このリポジトリのパス>/dkmcp
+
+# ~/go/bin にインストール（Go環境がある場合）
+make install-host DEST=~/go/bin
+
+# /usr/local/bin にインストール（Go環境がない場合）
+make install-host DEST=/usr/local/bin
+```
+
+</details>
+
+
+### ステップ2: DevContainerを開く
 
 ```bash
 code .
 # Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"
 ```
 
-#### ステップ3: Claude CodeをDockMCPに接続
+### ステップ3: Claude CodeをDockMCPに接続
 
-AI Sandbox内で：
+AI Sandbox内のシェルで：
 
 ```bash
 claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
 ```
 
-**VS Codeを再起動**してMCP接続を有効にします。
 
-#### ステップ4（推奨）: カスタムドメイン設定
+Claude Codeで：
+
+`/mcp` → 「Reconnect」を実行してください。
+
+> **重要:** DockMCPサーバーを再起動した場合も、SSE接続が切断されるため、AIアシスタント側で再接続が必要です。Claude Codeでは `/mcp` → 「Reconnect」を実行してください。
+
+
+### ステップ4（推奨）: カスタムドメイン設定
 
 より現実的な開発体験のために、カスタムドメインを設定します：
 
@@ -278,15 +390,16 @@ echo "127.0.0.1 securenote.test api.securenote.test" | sudo tee -a /etc/hosts
 
 > **注意:** AI Sandboxは `docker-compose.yml` の `extra_hosts` により、カスタムドメインを自動的にホストに解決します。コンテナ内での追加設定は不要です。
 
-#### ステップ5（オプション）: デモアプリで試す
+### ステップ5（オプション）: デモアプリで試す
 
-> .env や、key ファイルの用意など必要です。詳細は [demo-apps/README.ja.md](demo-apps/README.ja.md) を参照
+#### デモアプリを起動（ホストOS上で）
 
 ```bash
 # ホストOS上で - デモアプリを起動
 cd demo-apps
 docker-compose -f docker-compose.demo.yml up -d --build
 ```
+
 
 **アクセス:**
 - Web: http://securenote.test:8000
@@ -298,23 +411,35 @@ curl http://api.securenote.test:8000/api/health
 curl http://securenote.test:8000
 ```
 
-これでAIは以下が可能に：
-- ✅ ログ確認: 「securenote-apiのログを見せて」
-- ✅ テスト実行: 「securenote-apiでnpm testを実行して」
-- ✅ 疎通確認: カスタムドメインでcurlテスト
+
+#### AI に 他のコンテナにアクセスしてもらう
+
+- ログ確認: 
+  - `securenote-apiのログを見せて`
+
+- テスト実行:
+  - `securenote-apiでnpm testを実行して`
+
+- 疎通確認:
+  - `curl http://api.securenote.test:8000/api/health を実行して`
+
 - 秘匿情報は依然として保護
+  - `秘匿ファイルがあるか確認してみて`
+
 
 ---
 
-### トラブルシューティング：DockMCP接続
+## トラブルシューティング：DockMCP接続
 
 Claude CodeがDockMCPツールを認識しない場合：
 
-1. **DockMCPが実行中か確認**: `curl http://localhost:8080/health`（ホストOS上で）
-2. **MCP再接続を試す** - Claude Codeで `/mcp` を実行し、「Reconnect」を選択
-3. **VS Codeを完全に再起動**（Cmd+Q / Alt+F4）- Reconnectで解決しない場合
+1. **VS Codeのポートパネルを確認** - DockMCPのポート（デフォルトでは8080）がフォワードされていたら停止
+2. **DockMCPが実行中か確認** - `curl http://localhost:8080/health`（ホストOS上で）
+3. **MCP再接続を試す** - Claude Codeで `/mcp` を実行し、「Reconnect」を選択
+4. **VS Codeを完全に再起動**（Cmd+Q / Alt+F4）- Reconnectで解決しない場合
 
-### フォールバック：AI Sandbox内でdkmcp clientを使用
+
+## フォールバック：AI Sandbox内でdkmcp clientを使用
 
 MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続できない）、フォールバックとしてAI Sandbox内で `dkmcp client` コマンドを直接使用できます。
 
@@ -336,14 +461,21 @@ make install
 **使用方法:**
 ```bash
 # コンテナ一覧
-dkmcp client list --url http://host.docker.internal:8080
+dkmcp client list
 
 # ログ取得
-dkmcp client logs --url http://host.docker.internal:8080 securenote-api
+dkmcp client logs securenote-api
 
 # コマンド実行
-dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm test"
+dkmcp client exec securenote-api "npm test"
 ```
+
+> **`--url` について:** デフォルトで `http://host.docker.internal:8080` に接続します。`dkmcp.yaml` でサーバーのポートを変更した場合は、`--url` フラグまたは環境変数 `DOCKMCP_SERVER_URL` で明示的に指定してください。
+> ```bash
+> dkmcp client list --url http://host.docker.internal:9090
+> # または
+> export DOCKMCP_SERVER_URL=http://host.docker.internal:9090
+> ```
 
 
 
@@ -366,6 +498,11 @@ dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm tes
 
 
 # プロジェクト構造
+
+`.sandbox/` に共有基盤、`.devcontainer/` と `cli_sandbox/` に2つのSandbox環境、`dkmcp/` にMCPサーバー、`demo-apps/` と `demo-apps-ios/` にデモアプリが配置されています。
+
+<details>
+<summary>ディレクトリツリーを見る</summary>
 
 ```
 workspace/
@@ -400,13 +537,14 @@ workspace/
     └── README.md
 ```
 
+</details>
 
-
+実際に使用する時は、デモアプリ demo-apps/ と demo-apps-ios/ を削除して使用します。
 
 
 # セキュリティ機能
 
-### 1. 秘匿情報の隠蔽
+## 1. 秘匿情報の隠蔽
 
 Dockerボリュームマウントを使ってAIから秘匿情報を隠蔽：
 
@@ -426,7 +564,30 @@ tmpfs:
 - 実際のコンテナは本物の秘匿情報にアクセス可能
 - 開発は通常通り動作！
 
-### 2. 制御されたコンテナアクセス
+**実際の動作例:**
+
+```bash
+# AI Sandbox内から（AIが試しても失敗する）
+$ cat demo-apps/securenote-api/secrets/jwt-secret.key
+(空)
+
+# しかしClaude Codeに聞いてみる:
+"APIが秘匿情報にアクセスできているか確認して"
+
+# Claude は DockMCP を使ってクエリ:
+$ curl http://localhost:8080/api/demo/secrets-status
+
+# レスポンスでAPIが秘匿情報を持っていることが証明される:
+{
+  "secretsLoaded": true,
+  "proof": {
+    "jwtSecretLoaded": true,
+    "jwtSecretPreview": "super-sec***"
+  }
+}
+```
+
+## 2. 制御されたコンテナアクセス
 
 DockMCPがセキュリティポリシーを実施：
 
@@ -447,7 +608,30 @@ security:
 
 コンテナ内の機密ファイルブロック（`blocked_paths`）、Claude Code / Gemini 設定からの自動インポートなど、詳細な設定は [dkmcp/README.ja.md「設定リファレンス」](dkmcp/README.ja.md#設定リファレンス) を参照。
 
-### 3. 基本的なサンドボックス保護
+**実際の動作例 — クロスコンテナでのデバッグ:**
+
+```bash
+# バグをシミュレート: Webアプリでログインできない
+
+# Claude Codeに聞く:
+"ログインが失敗しています。APIのログを確認してもらえますか？"
+
+# ClaudeはDockMCPを使ってログを取得:
+dkmcp.get_logs("securenote-api", { tail: "50" })
+
+# ログからエラーを発見:
+"JWT verification failed - invalid secret"
+
+# Claude Codeに聞く:
+"APIのテストを実行して確認してください"
+
+# Claude は DockMCP経由でテストを実行:
+dkmcp.exec_command("securenote-api", "npm test")
+
+# 問題が特定され、修正完了！
+```
+
+## 3. 基本的なサンドボックス保護
 
 - **非rootユーザー**: `node` ユーザーとして実行
 - **制限されたsudo**: パッケージマネージャーのみ（apt、npm、pip）
@@ -463,7 +647,7 @@ security:
 > 3. 必要なパッケージをDockerfileで事前インストール
 > 4. `.npmrc`に`ignore-scripts=true`を設定
 
-### 4. 出力マスキング（多層防御）
+## 4. 出力マスキング（多層防御）
 
 万が一シークレットがログやコマンド出力に含まれていても、DockMCPが自動的にマスクします：
 
@@ -477,13 +661,52 @@ DATABASE_URL=[MASKED]db:5432/app
 
 パスワード、APIキー、Bearerトークン、認証情報付きデータベースURLなどをデフォルトで検出します。設定方法の詳細は [dkmcp/README.ja.md「出力マスキング」](dkmcp/README.ja.md#出力マスキング) を参照。
 
+## マルチプロジェクトワークスペース
+
+これらのセキュリティ機能により、複数プロジェクトを1つのワークスペースで安全に扱えます。
+
+このデモ環境の例：
+- **バックエンドAPI** (demo-apps/securenote-api)
+- **Webフロントエンド** (demo-apps/securenote-web)
+- **iOSアプリ** (demo-apps-ios/)
+
+AIができること：
+- すべてのソースコードを読む（アプリとサーバー間の連携不具合の調査が可能）
+- 任意のコンテナのログを確認（DockMCP経由）
+- プロジェクト横断でテストを実行
+- クロスコンテナの問題をデバッグ
+- **秘匿情報には一切触れない**
 
 
 
 
-# デモを試す
 
-### ハンズオン: 秘匿情報隠蔽を体験してみよう
+# ハンズオン
+
+セキュリティ機能を実際に体験するための演習です。
+
+## デモ環境での git status について
+
+このテンプレートでは、秘匿ファイルの隠蔽を体験できるように、デモ用の秘匿ファイル（`.env`、`secrets/` 内のファイル）を `git add -f` で強制追跡しています。そのため、AI Sandbox 内から git status を見ると隠蔽されたファイルが「削除された」ように見えます。
+
+通常、自分のプロジェクトに適用する場合は秘匿ファイルを `.gitignore` に入れるため、この問題は発生しません。
+
+デモ環境で git status の表示を抑制するには `skip-worktree` を使用します：
+
+```bash
+# 既に skip-worktree が設定済みか確認
+git ls-files -v | grep ^S
+
+# 隠蔽されたファイルを git status から除外
+git update-index --skip-worktree <file>
+
+# 設定を解除する場合
+git update-index --no-skip-worktree <file>
+```
+
+---
+
+## 秘匿情報隠蔽を体験してみよう
 
 このプロジェクトでは **2つの隠蔽メカニズム** を使い分けています：
 
@@ -498,7 +721,7 @@ DATABASE_URL=[MASKED]db:5432/app
 
 このハンズオンでは、秘匿設定の **正常な状態** と **設定漏れの状態** の両方を体験します。
 
-#### ステップ1: 正常な状態を確認
+### ステップ1: 正常な状態を確認
 
 まず、現在の設定で秘匿ファイルが正しく隠蔽されていることを確認します。
 
@@ -513,7 +736,7 @@ cat demo-apps-ios/SecureNote/GoogleService-Info.plist
 
 ディレクトリが空、またはファイルの内容が空であれば、正しく隠蔽されています。
 
-#### ステップ2: 設定漏れを体験する
+### ステップ2: 設定漏れを体験する
 
 次に、意図的に設定をコメントアウトして、設定漏れの状態を体験します。
 
@@ -536,7 +759,7 @@ cat demo-apps-ios/SecureNote/GoogleService-Info.plist
 2. DevContainer をリビルド：
    - VS Code: `Cmd+Shift+P` → "Dev Containers: Rebuild Container"
 
-#### ステップ3: 起動時の警告を確認
+### ステップ3: 起動時の警告を確認
 
 リビルド後、ターミナルに以下のような警告が表示されます：
 
@@ -565,7 +788,7 @@ docker-compose.yml のボリュームマウントに設定されていません�
 
 > 💡 **ポイント:** 起動時の検証スクリプトが複数のチェックを行い、設定漏れを検出します。これにより、AI がファイルにアクセスする前に問題に気づくことができます。
 
-#### ステップ4: 秘匿情報が見えてしまうことを確認
+### ステップ4: 秘匿情報が見えてしまうことを確認
 
 エラーが出た状態で、秘匿ファイルの内容を確認してみましょう：
 
@@ -579,7 +802,7 @@ cat demo-apps-ios/SecureNote/GoogleService-Info.plist
 
 設定漏れにより、本来隠蔽すべきファイルがコンテナ内に露出し、構造的なアクセス制限が効いていない状態です。
 
-#### ステップ5: 設定を元に戻す
+### ステップ5: 設定を元に戻す
 
 コメントアウトを解除し、再度リビルドして正常な状態に戻してください。
 
@@ -654,287 +877,6 @@ cat /workspace/.claude/settings.json
 
 > 📝 マージは `.sandbox/scripts/merge-claude-settings.sh` で行われます。
 
----
-
-### デモシナリオ1: 秘匿情報の隔離
-
-```bash
-# AI Sandbox内から（AIが試しても失敗する）
-$ cat demo-apps/securenote-api/secrets/jwt-secret.key
-(空)
-
-# しかしClaude Codeに聞いてみる:
-"APIが秘匿情報にアクセスできているか確認して"
-
-# Claude は DockMCP を使ってクエリ:
-$ curl http://localhost:8080/api/demo/secrets-status
-
-# レスポンスでAPIが秘匿情報を持っていることが証明される:
-{
-  "secretsLoaded": true,
-  "proof": {
-    "jwtSecretLoaded": true,
-    "jwtSecretPreview": "super-sec***"
-  }
-}
-```
-
-### デモシナリオ2: クロスコンテナ開発
-
-```bash
-# バグをシミュレート: Webアプリでログインできない
-
-# Claude Codeに聞く:
-"ログインが失敗しています。APIのログを確認してもらえますか？"
-
-# ClaudeはDockMCPを使ってログを取得:
-dkmcp.get_logs("securenote-api", { tail: "50" })
-
-# ログからエラーを発見:
-"JWT verification failed - invalid secret"
-
-# Claude Codeに聞く:
-"APIのテストを実行して確認してください"
-
-# Claude は DockMCP経由でテストを実行:
-dkmcp.exec_command("securenote-api", "npm test")
-
-# 問題が特定され、修正完了！
-```
-
-### デモシナリオ3: マルチプロジェクトワークスペース
-
-このワークスペースには以下が含まれます：
-- **バックエンドAPI** (demo-apps/securenote-api)
-- **Webフロントエンド** (demo-apps/securenote-web)
-- **iOSアプリ** (demo-apps-ios/)
-
-Claude Codeができること：
-- すべてのソースコードを見る（アプリとサーバー間の連携不具合の調査が可能）
-- 任意のコンテナのログを確認（DockMCP経由）
-- プロジェクト横断でテストを実行
-- クロスコンテナの問題をデバッグ
-
-
-
-
-
-
-# 2つの環境
-
-| 環境 | 用途 | 使用タイミング |
-|-------------|---------|-------------|
-| **DevContainer** (`.devcontainer/`) | VS Codeでの主要開発 | 日常的な開発 |
-| **CLI Sandbox** (`cli_sandbox/`) | 代替/復旧 | DevContainerが壊れた時 |
-
-### なぜ2つの環境？
-
-**復旧用の代替環境** として重要です。
-
-Dev Container の設定が壊れた場合：
-1. VS Code で Dev Container が起動できない
-2. Claude Code も動かない
-3. 設定を直すのに AI の助けを借りられない → **詰む**
-
-`cli_sandbox/` があれば：
-1. Dev Container が壊れても
-2. ホストから AI を起動できる
-   - `./cli_sandbox/claude.sh` (Claude Code)
-   - `./cli_sandbox/gemini.sh` (Gemini CLI)
-3. AI に Dev Container の設定を直してもらえる
-
-```bash
-./cli_sandbox/claude.sh   # または
-./cli_sandbox/gemini.sh
-# 壊れたDevContainer設定をAIに修正してもらう
-```
-
-
-
-
-
-
-# 高度な使い方
-
-### プラグインの活用（マルチリポ構成）
-
-マルチリポ構成（各プロジェクトが独立したGitリポジトリ）でClaude Codeプラグインを使う場合は工夫が必要です。詳細は [プラグインガイド](docs/plugins.ja.md) を参照。
-
-> **注意**: このセクションは Claude Code 専用です。Gemini Code Assist では使えません。
-
-### カスタムDockMCP設定
-
-```yaml
-# dkmcp.yaml
-security:
-  mode: "strict"  # 読み取り専用（logs, inspect, stats）
-
-  allowed_containers:
-    - "prod-*"      # 本番コンテナのみ
-
-  exec_whitelist: {}  # コマンド実行なし
-```
-
-複数インスタンスの起動など、詳細は [dkmcp/README.ja.md「サーバー起動」](dkmcp/README.ja.md#複数インスタンスの起動) を参照。
-
-### プロジェクト名のカスタマイズ
-
-デフォルトでは、DevContainer のプロジェクト名は `<親ディレクトリ名>_devcontainer`（例：`workspace_devcontainer`）になります。
-
-カスタムのプロジェクト名を設定するには、`.devcontainer/.env` ファイルを作成します：
-
-```bash
-# .env.example をコピー
-cp .devcontainer/.env.example .devcontainer/.env
-```
-
-`.env` ファイルの内容：
-```bash
-COMPOSE_PROJECT_NAME=ai-sandbox
-```
-
-これにより、コンテナ名やボリューム名がより分かりやすくなります：
-- コンテナ: `ai-sandbox-ai-sandbox-1`
-- ボリューム: `ai-sandbox_node-home`
-
-> **注意:** `.env` ファイルは `.gitignore` に追加されているため、各開発者が自分用の設定を持てます。
-
-### 起動時出力オプション
-
-両方の AI Sandbox 環境（DevContainer と CLI Sandbox）は起動時に検証スクリプトを実行します。出力量を制御できます：
-
-| モード | フラグ | 出力内容 |
-|--------|--------|----------|
-| Quiet | `--quiet` または `-q` | 警告とエラーのみ（最小限） |
-| Summary | `--summary` または `-s` | 簡潔なサマリー |
-| Verbose | (なし、デフォルト) | 罫線装飾付きの詳細出力 |
-
-**CLI Sandbox の例：**
-```bash
-# 最小限の出力（警告のみ）
-./cli_sandbox/ai_sandbox.sh --quiet
-
-# 簡潔なサマリー
-./cli_sandbox/ai_sandbox.sh --summary
-```
-
-**環境変数：**
-```bash
-# デフォルトの詳細度を設定
-export STARTUP_VERBOSITY=quiet  # または: summary, verbose
-```
-
-**設定ファイル:** `.sandbox/config/startup.conf`
-```bash
-# 全起動スクリプトのデフォルト詳細度
-STARTUP_VERBOSITY="verbose"
-
-# "詳細はREADMEを参照"メッセージで使用するURL
-README_URL="README.md"
-README_URL_JA="README.ja.md"  # LANG=ja_JP* の場合に使用
-
-# ラベルごとのバックアップ保持件数（0 = 無制限）
-BACKUP_KEEP_COUNT=0
-```
-
-sync スクリプトが作成するバックアップは `.sandbox/backups/` に保存されます。保持件数を制限するには：
-
-```bash
-# 直近10件のみ保持
-BACKUP_KEEP_COUNT=10
-
-# 環境変数で一時的に上書きも可能
-BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.sh
-```
-
-### 同期警告からのファイル除外
-
-起動スクリプトは `.claude/settings.json` でブロックされたファイルが `docker-compose.yml` でも隠蔽されているかチェックします。特定のパターン（`.example` ファイルなど）を警告から除外するには、`.sandbox/config/sync-ignore` を編集します：
-
-```gitignore
-# example/template ファイルを同期警告から除外
-**/*.example
-**/*.sample
-**/*.template
-```
-
-これは gitignore 形式のパターンを使用します。これらのパターンにマッチするファイルは「docker-compose.yml に未設定」警告をトリガーしません。
-
-### 複数のDevContainerを起動する場合
-
-完全に分離したDevContainer環境が必要な場合（例：異なるクライアント案件）、`COMPOSE_PROJECT_NAME` を使って分離したインスタンスを作成できます。
-
-#### 方法A: .env ファイルで分離（推奨）
-
-`.devcontainer/.env` で異なるプロジェクト名を設定：
-
-```bash
-COMPOSE_PROJECT_NAME=client-a
-```
-
-別のワークスペースでは：
-
-```bash
-COMPOSE_PROJECT_NAME=client-b
-```
-
-#### 方法B: コマンドラインで分離
-
-異なるプロジェクト名でDevContainerを起動：
-
-```bash
-# プロジェクトA
-COMPOSE_PROJECT_NAME=client-a docker-compose up -d
-
-# プロジェクトB（別のボリュームが作成される）
-COMPOSE_PROJECT_NAME=client-b docker-compose up -d
-```
-
-> ⚠️ **注意:** プロジェクト名が異なるとボリュームも別になるため、ホームディレクトリ（認証情報・設定・履歴）は自動的に共有されません。下記「ホームディレクトリのコピー」を参照。
-
-#### 方法C: バインドマウントでホームディレクトリを共有
-
-全インスタンスでホームディレクトリを自動共有したい場合、`docker-compose.yml` をバインドマウントに変更：
-
-```yaml
-volumes:
-  # 名前付きボリュームの代わりにバインドマウント
-  - ~/.ai-sandbox/home:/home/node
-  - ~/.ai-sandbox/gcloud:/home/node/.config/gcloud
-```
-
-**メリット:**
-- 全インスタンスでホームディレクトリを自動共有
-- バックアップが簡単（ホストディレクトリをコピーするだけ）
-
-**デメリット:**
-- ホストのディレクトリ構造に依存
-- Linuxホストでは UID/GID の調整が必要な場合あり
-
-#### ホームディレクトリのエクスポート/インポート
-
-ホームディレクトリ（認証情報・設定・履歴）をバックアップまたは別のワークスペースに移行できます：
-
-```bash
-# ワークスペース全体をエクスポート（devcontainer と cli_sandbox の両方）
-./.sandbox/scripts/copy-credentials.sh --export /path/to/workspace ~/backup
-
-# 特定の docker-compose.yml からエクスポート
-./.sandbox/scripts/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
-
-# ワークスペースにインポート
-./.sandbox/scripts/copy-credentials.sh --import ~/backup /path/to/workspace
-```
-
-**注意:** インポート先のボリュームが存在しない場合、先に環境を一度起動してボリュームを作成する必要があります。
-
-用途：
-- `~/.claude/` の使用量データを確認
-- 設定のバックアップ
-- 新しいワークスペースへの認証情報の移行
-- トラブルシューティング
-
-
 
 
 
@@ -943,9 +885,9 @@ volumes:
 
 このリポジトリは **GitHub テンプレートリポジトリ** として設計されています。テンプレートから自分のプロジェクトを作成できます。
 
-### テンプレートとして使う
+## テンプレートとして使う
 
-#### Step 1: テンプレートから作成
+### Step 1: テンプレートから作成
 
 GitHub で **「Use this template」** → **「Create a new repository」** をクリック。
 
@@ -954,19 +896,21 @@ GitHub で **「Use this template」** → **「Create a new repository」** を
 - 新しいGit履歴からスタート
 - アップストリームとは独立（自動同期なし）
 
-#### Step 2: 新しいリポジトリをクローン
+### Step 2: 新しいリポジトリをクローン
 
 ```bash
 git clone https://github.com/your-username/your-new-repo.git
 cd your-new-repo
 ```
 
-#### 更新をチェック
+### 更新をチェック
 
-テンプレートから作成したリポジトリはアップストリームの更新を自動で受け取れないため、**更新通知機能** を搭載しています。
+テンプレートから作成したリポジトリはアップストリームの更新を自動で受け取れないため、**更新通知機能** を搭載しています。AI Sandbox 起動時に GitHub の新しいリリースをチェックし、新バージョンがあれば通知します。
+
+<details>
+<summary>通知の例と設定の詳細</summary>
 
 **仕組み:**
-- AI Sandbox 起動時に GitHub の新しいリリースをチェック
 - デフォルトでは **プレリリースを含む全リリース** をチェックするため、バグ修正や改善をすぐに受け取れます
 - 初回起動時は最新バージョンを記録するだけで、通知は表示されません
 - 2回目以降のチェックで新バージョンが見つかると、以下のような通知が表示されます：
@@ -1004,14 +948,11 @@ CHECK_INTERVAL_HOURS="24"      # チェック間隔（0 = 毎回）
 | `"all"`（デフォルト） | プレリリースを含む全リリースをチェック | バグ修正や改善をすぐに受け取りたい |
 | `"stable"` | 正式リリースのみチェック | 安定版マイルストーンだけ追いたい |
 
-**デバッグ:** 更新チェックの内部動作を確認するには `--debug` を使います：
-```bash
-.sandbox/scripts/check-upstream-updates.sh --debug
-```
+</details>
 
 ---
 
-### 別の方法: 直接クローン
+## 別の方法: 直接クローン
 
 Git で上流の変更を追跡したい場合（コントリビュート目的など）：
 
@@ -1022,11 +963,11 @@ cd ai-sandbox-dkmcp
 
 ---
 
-### プロジェクトのカスタマイズ
+## プロジェクトのカスタマイズ
 
 テンプレートを使用した場合も直接クローンした場合も、以下の手順で環境をカスタマイズします。
 
-#### demo-apps を自分のプロジェクトに置き換え
+### demo-apps を自分のプロジェクトに置き換え
 
 ```bash
 # デモアプリを削除（または参考用に残す）
@@ -1037,7 +978,7 @@ git clone https://github.com/your-org/your-api.git
 git clone https://github.com/your-org/your-web.git
 ```
 
-#### 秘匿ファイルの隠蔽設定
+### 秘匿ファイルの隠蔽設定
 
 **`.devcontainer/docker-compose.yml`** と **`cli_sandbox/docker-compose.yml`** の両方を編集：
 
@@ -1090,7 +1031,7 @@ exit
 - `/dev/null:/workspace/...` の volumes → 秘匿ファイル
 - `/workspace/...:ro` の tmpfs → 秘匿ディレクトリ
 
-#### DockMCP設定
+### DockMCP設定
 
 **`dkmcp/configs/dkmcp.example.yaml`** をコピーして編集：
 
@@ -1118,14 +1059,57 @@ security:
       - "psql -c 'SELECT 1'"
 ```
 
-#### DevContainerをリビルド
+より厳格な設定例：
+
+```yaml
+security:
+  mode: "strict"  # 読み取り専用（logs, inspect, stats）
+
+  allowed_containers:
+    - "prod-*"      # 本番コンテナのみ
+
+  exec_whitelist: {}  # コマンド実行なし
+```
+
+複数インスタンスの起動など、詳細は [dkmcp/README.ja.md「サーバー起動」](dkmcp/README.ja.md#複数インスタンスの起動) を参照。
+
+### AI アシスタントの設定
+
+AI アシスタントがプロジェクトの構成や秘匿ポリシーを正しく理解できるよう、以下のファイルを編集します。
+
+**自動で反映されるもの（手順不要）:**
+
+サブプロジェクトに `.claude/settings.json` が既にある場合、AI Sandbox 起動時に自動マージされます（`merge-claude-settings.sh`）。新規に作成する必要はありません。
+
+**編集が必要なもの:**
+
+| ファイル | 内容 | 対応 |
+|----------|------|------|
+| `CLAUDE.md` | Claude Code 向けのプロジェクト説明 | デモアプリ固有の記述を削除し、自分のプロジェクトに書き換え |
+| `GEMINI.md` | Gemini Code Assist 向けのプロジェクト説明 | 同上 |
+| `.aiexclude` | Gemini Code Assist の秘匿パターン | 必要に応じて自分の秘匿パスを追加 |
+| `.geminiignore` | Gemini CLI の秘匿パターン | 同上 |
+
+**CLAUDE.md / GEMINI.md の編集方針:**
+
+- **残す**: DockMCP MCP Tools の使い方、セキュリティアーキテクチャの概要、環境の分離（What Runs Where）
+- **書き換え**: プロジェクト構造、Common Tasks の具体例
+- **削除**: SecureNote デモ固有の記述、デモシナリオの説明
+
+### プラグインの活用（マルチリポ構成）
+
+マルチリポ構成（各プロジェクトが独立したGitリポジトリ）でClaude Codeプラグインを使う場合は工夫が必要です。詳細は [プラグインガイド](docs/plugins.ja.md) を参照。
+
+> **注意**: このセクションは Claude Code 専用です。Gemini Code Assist では使えません。
+
+### DevContainerをリビルド
 
 ```bash
 # VS Code で Command Palette を開く (Cmd/Ctrl + Shift + P)
 # "Dev Containers: Rebuild Container" を実行
 ```
 
-#### 動作確認
+### 動作確認
 
 ```bash
 # AI Sandbox内で秘匿ファイルが隠されていることを確認
@@ -1137,17 +1121,224 @@ cat your-api/.env
 # Claude Code に "your-apiのログを見せて" と聞く
 ```
 
-#### チェックリスト
+### チェックリスト
 
 - [ ] `.devcontainer/docker-compose.yml` で秘匿ファイルを設定
 - [ ] `cli_sandbox/docker-compose.yml` で同じ設定を適用
 - [ ] `dkmcp.yaml` でコンテナ名を設定
 - [ ] `dkmcp.yaml` で許可コマンドを設定
+- [ ] `CLAUDE.md` / `GEMINI.md` を自分のプロジェクトに合わせて編集
+- [ ] `.aiexclude` / `.geminiignore` に秘匿パスを追加（必要に応じて）
 - [ ] DevContainerをリビルド
 - [ ] 秘匿ファイルが隠されていることを確認
 - [ ] DockMCP経由でログ確認できることを確認
 
 
+
+
+
+# リファレンス
+
+## 2つの環境
+
+| 環境 | 用途 | 使用タイミング |
+|-------------|---------|-------------|
+| **DevContainer** (`.devcontainer/`) | VS Codeでの主要開発 | 日常的な開発 |
+| **CLI Sandbox** (`cli_sandbox/`) | 代替/復旧 | DevContainerが壊れた時 |
+
+**なぜ2つの環境？**
+
+**復旧用の代替環境** として重要です。
+
+Dev Container の設定が壊れた場合：
+1. VS Code で Dev Container が起動できない
+2. Claude Code も動かない
+3. 設定を直すのに AI の助けを借りられない → **詰む**
+
+`cli_sandbox/` があれば：
+1. Dev Container が壊れても
+2. ホストから AI を起動できる
+   - `./cli_sandbox/claude.sh` (Claude Code)
+   - `./cli_sandbox/gemini.sh` (Gemini CLI)
+3. AI に Dev Container の設定を直してもらえる
+
+```bash
+./cli_sandbox/claude.sh   # または
+./cli_sandbox/gemini.sh
+# 壊れたDevContainer設定をAIに修正してもらう
+```
+
+## プロジェクト名のカスタマイズ
+
+デフォルトでは、DevContainer のプロジェクト名は `<親ディレクトリ名>_devcontainer`（例：`workspace_devcontainer`）になります。
+
+カスタムのプロジェクト名を設定するには、`.devcontainer/.env` ファイルを作成します：
+
+```bash
+# .env.example をコピー
+cp .devcontainer/.env.example .devcontainer/.env
+```
+
+`.env` ファイルの内容：
+```bash
+COMPOSE_PROJECT_NAME=ai-sandbox
+```
+
+これにより、コンテナ名やボリューム名がより分かりやすくなります：
+- コンテナ: `ai-sandbox-ai-sandbox-1`
+- ボリューム: `ai-sandbox_node-home`
+
+> **注意:** `.env` ファイルは `.gitignore` に追加されているため、各開発者が自分用の設定を持てます。
+
+## 起動時出力オプション
+
+両方の AI Sandbox 環境（DevContainer と CLI Sandbox）は起動時に検証スクリプトを実行します。この時、検証結果の表示量を制御可能です：
+
+| モード | フラグ | 出力内容 |
+|--------|--------|----------|
+| Quiet | `--quiet` または `-q` | 警告とエラーのみ（最小限） |
+| Summary | `--summary` または `-s` | 簡潔なサマリー |
+| Verbose | (なし、デフォルト) | 罫線装飾付きの詳細出力 |
+
+**CLI Sandbox の例：**
+```bash
+# 最小限の出力（警告のみ）
+./cli_sandbox/ai_sandbox.sh --quiet
+
+# 簡潔なサマリー
+./cli_sandbox/ai_sandbox.sh --summary
+```
+
+**環境変数：**
+```bash
+# デフォルトの詳細度を設定
+export STARTUP_VERBOSITY=quiet  # または: summary, verbose
+```
+
+**設定ファイル:** `.sandbox/config/startup.conf`
+```bash
+# 全起動スクリプトのデフォルト詳細度
+STARTUP_VERBOSITY="verbose"
+
+# "詳細はREADMEを参照"メッセージで使用するURL
+README_URL="README.md"
+README_URL_JA="README.ja.md"  # LANG=ja_JP* の場合に使用
+
+# ラベルごとのバックアップ保持件数（0 = 無制限）
+BACKUP_KEEP_COUNT=0
+```
+
+sync スクリプトが作成するバックアップは `.sandbox/backups/` に保存されます。保持件数を制限するには：
+
+```bash
+# 直近10件のみ保持
+BACKUP_KEEP_COUNT=10
+
+# 環境変数で一時的に上書きも可能
+BACKUP_KEEP_COUNT=10 .sandbox/scripts/sync-secrets.sh
+```
+
+## 同期警告からのファイル除外
+
+起動スクリプトは `.claude/settings.json` でブロックされたファイルが `docker-compose.yml` でも隠蔽されているかチェックします。特定のパターン（`.example` ファイルなど）を警告から除外するには、`.sandbox/config/sync-ignore` を編集します：
+
+```gitignore
+# example/template ファイルを同期警告から除外
+**/*.example
+**/*.sample
+**/*.template
+```
+
+これは gitignore 形式のパターンを使用します。これらのパターンにマッチするファイルは「docker-compose.yml に未設定」警告をトリガーしません。
+
+## 複数のDevContainerを起動する場合
+
+完全に分離したDevContainer環境が必要な場合（例：異なるクライアント案件）、`COMPOSE_PROJECT_NAME` を使って分離したインスタンスを作成できます。
+
+<details>
+<summary>方法とホームディレクトリの共有</summary>
+
+### 方法A: .env ファイルで分離（推奨）
+
+`.devcontainer/.env` で異なるプロジェクト名を設定：
+
+```bash
+COMPOSE_PROJECT_NAME=client-a
+```
+
+別のワークスペースでは：
+
+```bash
+COMPOSE_PROJECT_NAME=client-b
+```
+
+### 方法B: コマンドラインで分離
+
+異なるプロジェクト名でDevContainerを起動：
+
+```bash
+# プロジェクトA
+COMPOSE_PROJECT_NAME=client-a docker-compose up -d
+
+# プロジェクトB（別のボリュームが作成される）
+COMPOSE_PROJECT_NAME=client-b docker-compose up -d
+```
+
+> ⚠️ **注意:** プロジェクト名が異なるとボリュームも別になるため、ホームディレクトリ（認証情報・設定・履歴）は自動的に共有されません。下記「ホームディレクトリのコピー」を参照。
+
+### 方法C: バインドマウントでホームディレクトリを共有
+
+全インスタンスでホームディレクトリを自動共有したい場合、`docker-compose.yml` をバインドマウントに変更：
+
+```yaml
+volumes:
+  # 名前付きボリュームの代わりにバインドマウント
+  - ~/.ai-sandbox/home:/home/node
+  - ~/.ai-sandbox/gcloud:/home/node/.config/gcloud
+```
+
+**メリット:**
+- 全インスタンスでホームディレクトリを自動共有
+- バックアップが簡単（ホストディレクトリをコピーするだけ）
+
+**デメリット:**
+- ホストのディレクトリ構造に依存
+- Linuxホストでは UID/GID の調整が必要な場合あり
+
+### ホームディレクトリのエクスポート/インポート
+
+ホームディレクトリ（認証情報・設定・履歴）をバックアップまたは別のワークスペースに移行できます：
+
+```bash
+# ワークスペース全体をエクスポート（devcontainer と cli_sandbox の両方）
+./.sandbox/scripts/copy-credentials.sh --export /path/to/workspace ~/backup
+
+# 特定の docker-compose.yml からエクスポート
+./.sandbox/scripts/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
+
+# ワークスペースにインポート
+./.sandbox/scripts/copy-credentials.sh --import ~/backup /path/to/workspace
+```
+
+**注意:** インポート先のボリュームが存在しない場合、先に環境を一度起動してボリュームを作成する必要があります。
+
+用途：
+- `~/.claude/` の使用量データを確認
+- 設定のバックアップ
+- 新しいワークスペースへの認証情報の移行
+- トラブルシューティング
+
+</details>
+
+## DockMCPのアンインストール
+
+DockMCPが不要になった場合、インストール先に応じてバイナリを削除します：
+
+```bash
+rm ~/go/bin/dkmcp
+# または
+rm /usr/local/bin/dkmcp
+```
 
 
 

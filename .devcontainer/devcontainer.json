@@ -108,7 +108,7 @@
 
   // Before container build: auto-create env files from .example templates (first-time setup)
   // コンテナビルド前: .example テンプレートから環境変数ファイルを自動生成（初回セットアップ）
-  "initializeCommand": ".sandbox/scripts/init-env-files.sh .",
+  "initializeCommand": ".sandbox/scripts/init-host-env.sh .",
 
   // On startup: merge Claude settings, compare configs, validate secrets, check secret sync, and check for template updates
   // Run low-failure scripts first to ensure essential setup completes even if validation fails
