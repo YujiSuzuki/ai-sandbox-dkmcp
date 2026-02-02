@@ -43,7 +43,7 @@ This project is designed for local development environments and is not intended 
 
 ## Limitations
 
-**Network restrictions** — If you want to restrict AI's external access, consider introducing a proxy. See: [Docker Compose networking](https://docs.docker.com/compose/networking/) / [Anthropic's official sandbox environment](https://github.com/anthropics/claude-code/tree/main/.devcontainer)
+**Network restrictions** — If you want to restrict AI's external access, we recommend using Anthropic's official firewall script. See [Network Restrictions Guide](docs/network-firewall.md) for details.
 
 
 # Use Cases
@@ -341,6 +341,7 @@ A: It should work with Docker Desktop, but only macOS has been tested. Linux/Win
 | [Customization Guide](docs/customization.md) | How to adapt this template to your project |
 | [Reference](docs/reference.md) | Environment settings, options, troubleshooting |
 | [Architecture Details](docs/architecture.md) | Security mechanisms and architecture diagrams |
+| [Network Restrictions](docs/network-firewall.md) | How to add firewall to AI Sandbox |
 | [DockMCP Documentation](dkmcp/README.md) | MCP server details |
 | [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) | Why DockMCP doesn't support container lifecycle operations |
 | [Plugin Guide](docs/plugins.md) | Claude Code plugins for multi-repo setups |

@@ -43,7 +43,7 @@ AIコーディングアシスタントのための、セキュアな開発環境
 
 ## この環境が解決していない課題
 
-**ネットワーク制限** — AIの外部アクセスを制限したい場合は、プロキシの導入を検討してください。参考: [Docker Compose ネットワーク設定](https://docs.docker.com/compose/networking/) / [Anthropic公式のサンドボックス環境](https://github.com/anthropics/claude-code/tree/main/.devcontainer)
+**ネットワーク制限** — AIの外部アクセスを制限したい場合は、Anthropic公式のファイアウォールスクリプトの導入をおすすめします。詳しくは [ネットワーク制限ガイド](docs/network-firewall.ja.md) を参照してください。
 
 
 # ユースケース
@@ -341,6 +341,7 @@ A: Docker Desktop があれば動作する想定ですが、macOS でのみ確�
 | [自分のプロジェクトへの適用](docs/customization.ja.md) | テンプレートのカスタマイズ手順 |
 | [リファレンス](docs/reference.ja.md) | 環境設定、オプション、トラブルシューティング |
 | [アーキテクチャ詳細](docs/architecture.ja.md) | セキュリティの仕組みと構成図 |
+| [ネットワーク制限](docs/network-firewall.ja.md) | ファイアウォールの導入方法 |
 | [DockMCP ドキュメント](dkmcp/README.ja.md) | MCPサーバーの詳細 |
 | [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) | なぜDockMCPはコンテナ操作をサポートしないのか |
 | [プラグインガイド](docs/plugins.ja.md) | マルチリポ構成でのClaude Codeプラグイン活用 |
