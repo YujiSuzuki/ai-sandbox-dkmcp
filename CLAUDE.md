@@ -209,12 +209,12 @@ Example:
   → Response: "Please see README.md for setup instructions"
 
 - User: "Why can't I read the .env file?"
-  → Response: "This is explained in README.md under 'Secret Hiding'"
+  → Response: "This is explained in docs/architecture.md under 'How Secret Hiding Works'"
 
 - User: "DockMCP isn't connecting"
-  → Response: "See README.md → Troubleshooting section"
+  → Response: "See docs/reference.md → Troubleshooting section"
 
-Please see README.md for practical guidance to users.
+Please see README.md (and docs/ for detailed topics) for practical guidance to users.
 
 ## Working with This Project
 
@@ -537,7 +537,7 @@ Use the provided script to copy the home directory from one project to another:
 
 **Note:** If the target DevContainer is already running, it needs to be restarted for the changes to take effect.
 
-For more details, see README.md → "Running Multiple DevContainer Instances" section.
+For more details, see docs/reference.md → "Running Multiple DevContainers" section.
 
 ## DockMCP MCP Tools
 
