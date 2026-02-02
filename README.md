@@ -298,8 +298,9 @@ When using this for your own project, delete the demo apps demo-apps/ and demo-a
 | **Container access control** | DockMCP restricts AI's access scope based on security policies |
 | **Sandbox protection** | Non-root user, limited sudo, no access to host OS files |
 | **Output masking** | DockMCP automatically masks passwords and API keys in logs |
+| **Startup validation** | Automatically checks secret configuration consistency on every startup. Warns if issues are found |
 
-→ For details and configuration, see [Architecture Details](docs/architecture.md)
+→ For details and configuration, see [Architecture Details](docs/architecture.md). For startup validation details, see [Reference](docs/reference.md#startup-validation)
 
 > [!NOTE]
 > **About git status in the demo environment:** This template force-tracks demo secret files with `git add -f`, so they appear as "deleted" in git status inside the AI Sandbox. This won't happen in your own project since you'll add secret files to `.gitignore`. See [Hands-on Guide](docs/hands-on.md) for workarounds.

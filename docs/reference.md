@@ -61,9 +61,23 @@ This makes container and volume names more readable:
 
 ---
 
-## Startup Output Options
+## Startup Validation
 
-Both AI Sandbox environments (DevContainer and CLI Sandbox) run validation scripts at startup. You can control the output verbosity:
+Both AI Sandbox environments (DevContainer and CLI Sandbox) automatically run the following checks on every startup:
+
+| Check | What It Does |
+|-------|-------------|
+| AI settings merge | Automatically combines `.claude/settings.json` from subprojects |
+| Configuration consistency | Verifies secret hiding settings match between DevContainer and CLI Sandbox |
+| Secret hiding verification | Confirms `.env` and `secrets/` are actually hidden from AI |
+| Sync check | Ensures files blocked in AI settings are also hidden in docker-compose |
+| Template updates | Notifies if a newer template version is available |
+
+If any issues are found, warnings are displayed and you can review them before continuing. <ins>This ensures you never work with a misconfigured environment without knowing.</ins>
+
+### Output Options
+
+You can control the output verbosity:
 
 | Mode | Flag | Output |
 |------|------|--------|
