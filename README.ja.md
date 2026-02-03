@@ -3,15 +3,18 @@
 [English README is here](README.md)
 
 
-AIコーディングアシスタントのための、セキュアな開発環境テンプレートです。
+AIコーディングエージェントは、プロジェクトディレクトリ内のすべてのファイルを読みます — `.env`、APIキー、秘密鍵も含めて。アプリケーションレベルのdenyルールで防げますが、設定ミスや[スコープの制限](docs/comparison.ja.md)に左右されます。もしシークレットがAIのファイルシステムに存在しなかったら？
 
-- **秘匿情報を隠してAIを使う** — `.env` や秘密鍵はAIから見えないが、アプリは普通に動く
-- **複数プロジェクトをまとめて扱う** — モバイル・API・Webを1つの環境でAIに見せる
-- **他のコンテナにもアクセスできる** — DockMCPを使えば、AIが別コンテナのログ確認やテスト実行もできる
+このテンプレートは、Dockerベースの開発環境を作ります：
+
+- **シークレットが物理的に存在しない** — `.env` や秘密鍵はAIのファイルシステムに存在しない。ルールでブロックするのではなく、そもそもない
+- **設定ミスを自動検出** — 起動時にdenyルールとボリュームマウントの整合性をチェックし、隠し忘れがあればAIがアクセスする前に警告
+- **コードは完全にアクセス可能** — 複数プロジェクトのソースコードをAIが読み書きできる
+- **他のコンテナにもアクセスできる** — DockMCPを使えば、AIが別コンテナのログ確認やテスト実行を安全に行える
 
 必要なものは **Docker** と **VS Code** だけ。[CLIだけでも使えます](docs/reference.ja.md#2つの環境)。
 
-本プロジェクトはローカル開発環境での使用を想定しており、本番環境での使用は想定されていません。制約事項については「[この環境が解決していない課題](#この環境が解決していない課題)」と「[よくある質問](#よくある質問)」を参照してください。
+本プロジェクトはローカル開発環境での使用を想定しており、本番環境での使用は想定されていません。制約事項については「[制約事項](#制約事項)」と「[よくある質問](#よくある質問)」を参照してください。
 
 > [!NOTE]
 > **DockMCP単体での利用は非推奨です。** ホストOSでAIを実行する場合、AIはユーザーと同じ権限を持つため DockMCP を経由するメリットがありません。スタンドアロンセットアップについては [dkmcp/README.ja.md](dkmcp/README.ja.md) を参照してください。
@@ -41,9 +44,15 @@ AIコーディングアシスタントのための、セキュアな開発環境
 
 **コンテナ間の連携** — Sandbox化すると他のコンテナにアクセスできなくなりますが、DockMCPがこれを解消します。AIがAPIコンテナのログを読んだり、テストを実行したりできます。
 
-## この環境が解決していない課題
+> **既存ツールとの違いは？** Claude Code SandboxやDocker AI Sandboxesは有用なツールです。本プロジェクトはそれらを補完し、ファイルシステムレベルのシークレット隠蔽とコンテナ間アクセスを追加します。詳しくは [既存ソリューションとの比較](docs/comparison.ja.md) を参照してください。
 
-**ネットワーク制限** — AIの外部アクセスを制限したい場合は、Anthropic公式のファイアウォールスクリプトの導入をおすすめします。詳しくは [ネットワーク制限ガイド](docs/network-firewall.ja.md) を参照してください。
+## 制約事項
+
+- **ローカル開発専用** — DockMCPには認証機能がないため、ローカル開発環境での使用を想定しています
+- **Docker必須** — ボリュームマウントによるアプローチのため、Docker互換のランタイム（Docker Desktop、OrbStackなど）が必要です
+- **macOSのみ検証済み** — Linux/Windowsでも動作する想定ですが、未検証です
+- **ネットワーク制限なし（デフォルト）** — AIは外部HTTPリクエストを実行できます。ファイアウォールの追加は [ネットワーク制限ガイド](docs/network-firewall.ja.md) を参照してください
+- **本番用シークレット管理の代替ではない** — 開発時の保護レイヤーです。本番環境ではHashiCorp Vault、AWS Secrets Manager等を使用してください
 
 
 # ユースケース
@@ -183,17 +192,21 @@ code .
 # Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"
 ```
 
-### ステップ3: Claude CodeをDockMCPに接続
+### ステップ3: DockMCPをMCPサーバーとして登録
 
 AI Sandbox内のシェルで：
 
 ```bash
+# Claude Code
 claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+
+# Gemini CLI
+gemini mcp add --transport sse dkmcp http://host.docker.internal:8080/sse
 ```
 
-Claude Codeで `/mcp` → 「Reconnect」を実行してください。
+Claude Codeの場合は `/mcp` → 「Reconnect」を実行してください。
 
-> **重要:** DockMCPサーバーを再起動した場合も、`/mcp` → 「Reconnect」が必要です。
+> **重要:** DockMCPサーバーを再起動した場合も、再接続が必要です。
 
 ### ステップ4（推奨）: カスタムドメイン設定
 
@@ -309,28 +322,25 @@ workspace/
 # 対応AIツール
 
 - ✅ **Claude Code** (Anthropic) - 完全なMCPサポート
-- ✅ **Gemini Code Assist** (Google) - Agentモードで MCP対応（`.gemini/settings.json` にMCPの設定を記述する）
-- ✅ **Gemini CLI** (Google) - ターミナル （MCP連携やIDE連携の対応状況は不明なため公式サイトを参照してください）
+- ✅ **Gemini Code Assist** (Google) - Agentモードで MCP対応
+- ✅ **Gemini CLI** (Google) - MCP対応
 - ✅ **Cline** (VS Code拡張) - MCP統合（おそらく対応しています。未検証）
 
 
 
 # よくある質問
 
-**Q: なぜAIに `docker-compose up/down` を頼めないの？**
-A: これは意図的な設計です。AIは「観察と提案」、人間は「インフラ操作の実行」という責任分離をしています。詳細は [DockMCP設計思想](dkmcp/README.ja.md#設計思想) を参照してください。
+**Q: Claude Code SandboxやDocker AI Sandboxesとの違いは？**
+A: 補完関係にあります。Claude Code Sandboxは実行を制限し、Docker AI SandboxesはVM分離を提供します。本プロジェクトはファイルシステムレベルのシークレット隠蔽とコンテナ間アクセスを追加します。組み合わせて多層防御にできます。詳しくは [既存ソリューションとの比較](docs/comparison.ja.md) を参照してください。
 
 **Q: DockMCPを使う必要がありますか？**
 A: いいえ。DockMCPなしでも通常のサンドボックスとして機能します。DockMCPはクロスコンテナアクセスを可能にします。
 
-**Q: 本番環境で使用しても安全ですか？**
-A: **いいえ、推奨しません。** DockMCPには認証機能がないため、ローカル開発環境での使用を想定しています。
+**Q: なぜAIに `docker-compose up/down` を頼めないの？**
+A: これは意図的な設計です。AIは「観察と提案」、人間は「インフラ操作の実行」という責任分離をしています。詳細は [DockMCP設計思想](dkmcp/README.ja.md#設計思想) を参照してください。
 
 **Q: 別の秘匿情報管理を使えますか？**
-A: はい！他の秘匿情報管理の方法とも組み合わせられます。
-
-**Q: Windowsでも動作しますか？**
-A: Docker Desktop があれば動作する想定ですが、macOS でのみ確認済みです。Linux/Windows は未検証です。
+A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられます。本プロジェクトは開発時の保護を担い、本番環境では専用ツールをお使いください。
 
 
 
@@ -338,6 +348,7 @@ A: Docker Desktop があれば動作する想定ですが、macOS でのみ確�
 
 | ドキュメント | 内容 |
 |-------------|------|
+| [既存ソリューションとの比較](docs/comparison.ja.md) | Claude Code Sandbox、Docker AI Sandboxes等との比較 |
 | [ハンズオン](docs/hands-on.ja.md) | セキュリティ機能を実際に体験する演習 |
 | [自分のプロジェクトへの適用](docs/customization.ja.md) | テンプレートのカスタマイズ手順 |
 | [リファレンス](docs/reference.ja.md) | 環境設定、オプション、トラブルシューティング |

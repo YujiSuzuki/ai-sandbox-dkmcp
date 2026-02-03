@@ -3,11 +3,14 @@
 [日本語の README はこちら](README.ja.md)
 
 
-A secure development environment template for AI coding assistants.
+AI coding agents read everything in your project directory — including `.env` files, API keys, and private certificates. Application-level deny rules can help, but they depend on correct configuration and have [scope limitations](docs/comparison.md). What if the secrets simply didn't exist in AI's filesystem?
 
-- **Hide secrets from AI** — `.env` files and private keys are invisible to AI, while your apps work normally
-- **Work across multiple projects** — Let AI see mobile, API, and web codebases in a single environment
-- **Access other containers** — With DockMCP, AI can check logs and run tests in other containers
+This template creates a Docker-based development environment where:
+
+- **Secrets are physically absent** — `.env` files and private keys don't exist in AI's filesystem, not blocked by rules — just not there
+- **Misconfigurations are caught automatically** — Startup validation checks that your deny rules and volume mounts are in sync, warning you before AI sees anything
+- **Code is fully accessible** — AI can read and edit all source code across multiple projects
+- **Other containers are reachable** — With DockMCP, AI can check logs and run tests in other containers safely
 
 All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](docs/reference.md#two-environments).
 
@@ -41,9 +44,15 @@ This project is designed for local development environments and is not intended 
 
 **Cross-container access** — Sandboxing prevents access to other containers, but DockMCP solves this. AI can read API container logs and run tests.
 
+> **How does this compare to existing tools?** Claude Code Sandboxing and Docker AI Sandboxes are valuable — this project complements them by adding filesystem-level secret hiding and controlled cross-container access. See [Comparison with Existing Solutions](docs/comparison.md) for details.
+
 ## Limitations
 
-**Network restrictions** — If you want to restrict AI's external access, we recommend using Anthropic's official firewall script. See [Network Restrictions Guide](docs/network-firewall.md) for details.
+- **Local development only** — DockMCP has no authentication, so it's designed for local use only
+- **Docker required** — The volume mount approach requires a Docker-compatible runtime (Docker Desktop, OrbStack, etc.)
+- **Only tested on macOS** — It should work on Linux and Windows, but this is unverified
+- **No network restriction by default** — AI can still make outbound HTTP requests. See [Network Restrictions Guide](docs/network-firewall.md) for adding a firewall
+- **Not a replacement for production secrets management** — This is a development-time protection layer. Use HashiCorp Vault, AWS Secrets Manager, etc. for production
 
 
 # Use Cases
@@ -183,17 +192,21 @@ code .
 # Cmd+Shift+P / F1 → "Dev Containers: Reopen in Container"
 ```
 
-### Step 3: Connect Claude Code to DockMCP
+### Step 3: Register DockMCP as an MCP server
 
 In the AI Sandbox shell:
 
 ```bash
+# Claude Code
 claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+
+# Gemini CLI
+gemini mcp add --transport sse dkmcp http://host.docker.internal:8080/sse
 ```
 
-In Claude Code, run `/mcp` → "Reconnect".
+For Claude Code, run `/mcp` → "Reconnect".
 
-> **Important:** If you restart the DockMCP server, `/mcp` → "Reconnect" is required again.
+> **Important:** If you restart the DockMCP server, reconnection is required again.
 
 ### Step 4 (Recommended): Custom domain setup
 
@@ -309,28 +322,25 @@ When using this for your own project, delete the demo apps demo-apps/ and demo-a
 # Supported AI Tools
 
 - ✅ **Claude Code** (Anthropic) - Full MCP support
-- ✅ **Gemini Code Assist** (Google) - MCP support in Agent mode (configure MCP in `.gemini/settings.json`)
-- ✅ **Gemini CLI** (Google) - Terminal-based (MCP/IDE integration status unknown — check official docs)
+- ✅ **Gemini Code Assist** (Google) - MCP support in Agent mode
+- ✅ **Gemini CLI** (Google) - MCP support
 - ✅ **Cline** (VS Code extension) - MCP integration (likely supported, unverified)
 
 
 
 # FAQ
 
-**Q: Why can't I ask AI to run `docker-compose up/down`?**
-A: This is by design. AI handles "observation and suggestions" while humans handle "infrastructure operations". See [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) for details.
+**Q: How is this different from Claude Code's sandboxing or Docker AI Sandboxes?**
+A: They're complementary. Claude Code's sandbox restricts execution; Docker AI Sandboxes provide full VM isolation. This project adds filesystem-level secret hiding and cross-container access. Use them together for defense in depth. See [Comparison with Existing Solutions](docs/comparison.md) for details.
 
 **Q: Do I need to use DockMCP?**
 A: No. It works as a regular sandbox without DockMCP. DockMCP enables cross-container access.
 
-**Q: Is it safe for production use?**
-A: **No, not recommended.** DockMCP has no authentication, so it's designed for local development only.
+**Q: Why can't I ask AI to run `docker-compose up/down`?**
+A: This is by design. AI handles "observation and suggestions" while humans handle "infrastructure operations". See [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) for details.
 
 **Q: Can I use a different secret management solution?**
-A: Yes! It can be combined with other secret management methods.
-
-**Q: Does it work on Windows?**
-A: It should work with Docker Desktop, but only macOS has been tested. Linux/Windows are unverified.
+A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other tools. This project handles development-time protection; use dedicated tools for production.
 
 
 
@@ -338,6 +348,7 @@ A: It should work with Docker Desktop, but only macOS has been tested. Linux/Win
 
 | Document | Description |
 |----------|-------------|
+| [Comparison with Existing Solutions](docs/comparison.md) | How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc. |
 | [Hands-on Guide](docs/hands-on.md) | Hands-on exercises for security features |
 | [Customization Guide](docs/customization.md) | How to adapt this template to your project |
 | [Reference](docs/reference.md) | Environment settings, options, troubleshooting |
