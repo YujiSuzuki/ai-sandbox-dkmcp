@@ -1139,8 +1139,8 @@ func TestMaskHostPaths(t *testing.T) {
 		{
 			name:     "JSON with paths",
 			enabled:  true,
-			input:    `{"Source": "/Users/suzu/my_work/dev/workspace/demo-apps/securenote-api/.env"}`,
-			expected: `{"Source": "[HOST_PATH]/my_work/dev/workspace/demo-apps/securenote-api/.env"}`,
+			input:    `{"Source": "/Users/john/workspace/demo-apps/securenote-api/.env"}`,
+			expected: `{"Source": "[HOST_PATH]/workspace/demo-apps/securenote-api/.env"}`,
 		},
 		{
 			name:     "Multiple paths",

@@ -765,3 +765,283 @@ func TestToolGetBlockedPaths_Functional(t *testing.T) {
 		t.Error("expected content in result")
 	}
 }
+
+// createTestPolicyWithHostPathMasking creates a security policy with host path masking enabled.
+// createTestPolicyWithHostPathMaskingはホストパスマスキングが有効なセキュリティポリシーを作成します。
+func createTestPolicyWithHostPathMasking() *security.Policy {
+	cfg := &config.SecurityConfig{
+		Mode:              "moderate",
+		AllowedContainers: []string{"test-*", "demo-*"},
+		Permissions: config.SecurityPermissions{
+			Logs:    true,
+			Inspect: true,
+			Stats:   true,
+			Exec:    true,
+		},
+		ExecWhitelist: map[string][]string{
+			"test-api": {"npm test", "npm run lint"},
+			"*":        {"echo *"},
+		},
+		HostPathMasking: config.HostPathMaskingConfig{
+			Enabled:     true,
+			Replacement: "[HOST_PATH]",
+		},
+	}
+	return security.NewPolicy(cfg)
+}
+
+// TestToolListContainers_HostPathMasking tests that host paths are masked in list_containers output.
+// TestToolListContainers_HostPathMaskingはlist_containers出力でホストパスがマスクされることをテストします。
+func TestToolListContainers_HostPathMasking(t *testing.T) {
+	// Create a policy with host path masking enabled
+	// ホストパスマスキングが有効なポリシーを作成
+	policy := createTestPolicyWithHostPathMasking()
+	mockClient := docker.NewMockClient(policy)
+
+	// Mock containers with labels containing host paths
+	// ホストパスを含むラベルを持つコンテナをモック
+	mockClient.ListContainersFunc = func(ctx context.Context) ([]docker.ContainerInfo, error) {
+		return []docker.ContainerInfo{
+			{
+				ID:     "abc123",
+				Name:   "test-api",
+				Image:  "node:18",
+				State:  "running",
+				Status: "Up 2 hours",
+				Labels: map[string]string{
+					"com.docker.compose.project.config_files": "/Users/john/workspace/demo-apps/docker-compose.yml",
+				},
+			},
+		}, nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolListContainers(ctx, map[string]any{})
+	if err != nil {
+		t.Fatalf("toolListContainers returned error: %v", err)
+	}
+
+	// Extract the response text
+	// レスポンステキストを抽出
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+
+	// Verify host path is masked
+	// ホストパスがマスクされていることを検証
+	if strings.Contains(text, "/Users/john") {
+		t.Errorf("expected host path to be masked, but found '/Users/john' in: %s", text)
+	}
+
+	// Verify masking replacement is present
+	// マスキング置換が存在することを検証
+	if !strings.Contains(text, "[HOST_PATH]") {
+		t.Errorf("expected '[HOST_PATH]' in result, got: %s", text)
+	}
+}
+
+// TestToolGetLogs_HostPathMasking tests that host paths are masked in log output.
+// TestToolGetLogs_HostPathMaskingはログ出力でホストパスがマスクされることをテストします。
+func TestToolGetLogs_HostPathMasking(t *testing.T) {
+	policy := createTestPolicyWithHostPathMasking()
+	mockClient := docker.NewMockClient(policy)
+
+	// Mock logs containing host paths
+	// ホストパスを含むログをモック
+	mockClient.GetLogsFunc = func(ctx context.Context, name, tail, since string, follow bool) (string, error) {
+		return "Loading config from /Users/suzu/my_work/dev/app/config.json\nServer started", nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolGetLogs(ctx, map[string]any{
+		"container": "test-api",
+	})
+	if err != nil {
+		t.Fatalf("toolGetLogs returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+
+	// Verify host path is masked
+	// ホストパスがマスクされていることを検証
+	if strings.Contains(text, "/Users/suzu") {
+		t.Errorf("expected host path to be masked, but found '/Users/suzu' in: %s", text)
+	}
+
+	if !strings.Contains(text, "[HOST_PATH]") {
+		t.Errorf("expected '[HOST_PATH]' in result, got: %s", text)
+	}
+}
+
+// TestToolExecCommand_HostPathMasking tests that host paths are masked in exec command output.
+// TestToolExecCommand_HostPathMaskingはexecコマンド出力でホストパスがマスクされることをテストします。
+func TestToolExecCommand_HostPathMasking(t *testing.T) {
+	policy := createTestPolicyWithHostPathMasking()
+	mockClient := docker.NewMockClient(policy)
+
+	// Mock exec returning host paths
+	// ホストパスを返すexecをモック
+	mockClient.ExecFunc = func(ctx context.Context, name, command string, dangerously bool) (*docker.ExecResult, error) {
+		return &docker.ExecResult{
+			Output:   "File path: /home/developer/projects/app/src/main.go",
+			ExitCode: 0,
+		}, nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolExecCommand(ctx, map[string]any{
+		"container": "test-api",
+		"command":   "echo test",
+	})
+	if err != nil {
+		t.Fatalf("toolExecCommand returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+
+	// Verify host path is masked
+	// ホストパスがマスクされていることを検証
+	if strings.Contains(text, "/home/developer") {
+		t.Errorf("expected host path to be masked, but found '/home/developer' in: %s", text)
+	}
+
+	if !strings.Contains(text, "[HOST_PATH]") {
+		t.Errorf("expected '[HOST_PATH]' in result, got: %s", text)
+	}
+}
+
+// TestToolInspectContainer_HostPathMasking tests that host paths are masked in inspect output.
+// TestToolInspectContainer_HostPathMaskingはinspect出力でホストパスがマスクされることをテストします。
+func TestToolInspectContainer_HostPathMasking(t *testing.T) {
+	policy := createTestPolicyWithHostPathMasking()
+	mockClient := docker.NewMockClient(policy)
+
+	mockClient.InspectContainerFunc = func(ctx context.Context, name string) (*types.ContainerJSON, error) {
+		return &types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				ID:   "abc123",
+				Name: "/test-api",
+				HostConfig: &container.HostConfig{
+					Binds: []string{"/Users/jane/workspace/app:/app"},
+				},
+			},
+			Config: &container.Config{
+				Image: "node:18",
+				Env:   []string{"APP_PATH=/home/user/app"},
+			},
+		}, nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolInspectContainer(ctx, map[string]any{
+		"container": "test-api",
+	})
+	if err != nil {
+		t.Fatalf("toolInspectContainer returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+
+	// Verify host paths are masked
+	// ホストパスがマスクされていることを検証
+	if strings.Contains(text, "/Users/jane") {
+		t.Errorf("expected host path to be masked, but found '/Users/jane' in: %s", text)
+	}
+
+	if strings.Contains(text, "/home/user") {
+		t.Errorf("expected host path to be masked, but found '/home/user' in: %s", text)
+	}
+
+	if !strings.Contains(text, "[HOST_PATH]") {
+		t.Errorf("expected '[HOST_PATH]' in result, got: %s", text)
+	}
+}
+
+// TestToolSearchLogs_HostPathMasking tests that host paths are masked in search_logs output.
+// TestToolSearchLogs_HostPathMaskingはsearch_logs出力でホストパスがマスクされることをテストします。
+func TestToolSearchLogs_HostPathMasking(t *testing.T) {
+	policy := createTestPolicyWithHostPathMasking()
+	mockClient := docker.NewMockClient(policy)
+
+	mockClient.GetLogsFunc = func(ctx context.Context, name, tail, since string, follow bool) (string, error) {
+		return "Error loading /Users/admin/config.json\nFile not found", nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolSearchLogs(ctx, map[string]any{
+		"container": "test-api",
+		"pattern":   "Error",
+	})
+	if err != nil {
+		t.Fatalf("toolSearchLogs returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+
+	// Verify host path is masked
+	// ホストパスがマスクされていることを検証
+	if strings.Contains(text, "/Users/admin") {
+		t.Errorf("expected host path to be masked, but found '/Users/admin' in: %s", text)
+	}
+
+	if !strings.Contains(text, "[HOST_PATH]") {
+		t.Errorf("expected '[HOST_PATH]' in result, got: %s", text)
+	}
+}
+
+// TestToolReadFile_HostPathMasking tests that host paths are masked in read_file output.
+// TestToolReadFile_HostPathMaskingはread_file出力でホストパスがマスクされることをテストします。
+func TestToolReadFile_HostPathMasking(t *testing.T) {
+	policy := createTestPolicyWithHostPathMasking()
+	mockClient := docker.NewMockClient(policy)
+
+	mockClient.ReadFileFunc = func(ctx context.Context, containerName, path string, maxLines int) (*docker.FileAccessResult, error) {
+		return &docker.FileAccessResult{
+			Success: true,
+			Data:    "source_path: /home/jenkins/workspace/project/src",
+		}, nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolReadFile(ctx, map[string]any{
+		"container": "test-api",
+		"path":      "/app/config.yaml",
+	})
+	if err != nil {
+		t.Fatalf("toolReadFile returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+
+	// Verify host path is masked
+	// ホストパスがマスクされていることを検証
+	if strings.Contains(text, "/home/jenkins") {
+		t.Errorf("expected host path to be masked, but found '/home/jenkins' in: %s", text)
+	}
+
+	if !strings.Contains(text, "[HOST_PATH]") {
+		t.Errorf("expected '[HOST_PATH]' in result, got: %s", text)
+	}
+}

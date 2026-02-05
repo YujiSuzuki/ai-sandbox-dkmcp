@@ -473,7 +473,16 @@ func (s *Server) toolListContainers(ctx context.Context, args map[string]any) (a
 
 	// Convert container list to JSON for structured, readable output
 	// 構造化された読みやすい出力のためにコンテナリストをJSONに変換
-	return jsonTextResponse(containers)
+	jsonBytes, err := json.MarshalIndent(containers, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal container list: %w", err)
+	}
+
+	// Apply host path masking to hide host OS username and directory structure
+	// ホストパスマスキングを適用してホストOSのユーザー名やディレクトリ構造を隠す
+	maskedJSON := s.docker.GetPolicy().MaskHostPaths(string(jsonBytes))
+
+	return textResponse(maskedJSON), nil
 }
 
 // toolGetLogs implements the get_logs tool.
@@ -513,6 +522,10 @@ func (s *Server) toolGetLogs(ctx context.Context, args map[string]any) (any, err
 	// Apply output masking to hide sensitive data
 	// 機密データを隠すために出力マスキングを適用
 	maskedLogs := s.docker.GetPolicy().MaskLogs(logs)
+
+	// Apply host path masking to hide host OS username and directory structure
+	// ホストパスマスキングを適用してホストOSのユーザー名やディレクトリ構造を隠す
+	maskedLogs = s.docker.GetPolicy().MaskHostPaths(maskedLogs)
 
 	return textResponse(fmt.Sprintf("Logs from container '%s':\n\n%s", container, maskedLogs)), nil
 }
@@ -611,6 +624,10 @@ func (s *Server) toolExecCommand(ctx context.Context, args map[string]any) (any,
 	// Apply output masking to hide sensitive data in command output
 	// コマンド出力内の機密データを隠すために出力マスキングを適用
 	maskedOutput := s.docker.GetPolicy().MaskExec(result.Output)
+
+	// Apply host path masking to hide host OS username and directory structure
+	// ホストパスマスキングを適用してホストOSのユーザー名やディレクトリ構造を隠す
+	maskedOutput = s.docker.GetPolicy().MaskHostPaths(maskedOutput)
 
 	// Format the result with command, exit code, and output
 	// コマンド、終了コード、出力を含めて結果をフォーマット
@@ -751,7 +768,18 @@ func (s *Server) toolGetSecurityPolicy(ctx context.Context, args map[string]any)
 
 	policy := s.docker.GetSecurityPolicy()
 
-	return jsonCodeBlockResponse("Current Security Policy", policy)
+	// Convert to JSON for masking
+	// マスキングのためにJSONに変換
+	jsonBytes, err := json.MarshalIndent(policy, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal security policy: %w", err)
+	}
+
+	// Apply host path masking to hide host OS username and directory structure
+	// ホストパスマスキングを適用してホストOSのユーザー名やディレクトリ構造を隠す
+	maskedJSON := s.docker.GetPolicy().MaskHostPaths(string(jsonBytes))
+
+	return textResponse(fmt.Sprintf("Current Security Policy:\n```json\n%s\n```", maskedJSON)), nil
 }
 
 // toolSearchLogs implements the search_logs tool.
@@ -802,6 +830,10 @@ func (s *Server) toolSearchLogs(ctx context.Context, args map[string]any) (any, 
 	// Apply output masking before searching to hide sensitive data
 	// 検索前に機密データを隠すために出力マスキングを適用
 	maskedLogs := s.docker.GetPolicy().MaskLogs(logs)
+
+	// Apply host path masking to hide host OS username and directory structure
+	// ホストパスマスキングを適用してホストOSのユーザー名やディレクトリ構造を隠す
+	maskedLogs = s.docker.GetPolicy().MaskHostPaths(maskedLogs)
 
 	// Search for pattern in logs (case-insensitive)
 	// ログ内でパターンを検索（大文字小文字を区別しない）
@@ -989,7 +1021,11 @@ func (s *Server) toolReadFile(ctx context.Context, args map[string]any) (any, er
 		return containerFileResponse("Error reading file", container, path, result.Error), nil
 	}
 
-	return containerFileResponse("Contents of", container, path, result.Data), nil
+	// Apply host path masking to hide host OS username and directory structure in file contents
+	// ファイル内容内のホストOSのユーザー名やディレクトリ構造を隠すためにホストパスマスキングを適用
+	maskedData := s.docker.GetPolicy().MaskHostPaths(result.Data)
+
+	return containerFileResponse("Contents of", container, path, maskedData), nil
 }
 
 // toolGetBlockedPaths implements the get_blocked_paths tool.
@@ -1024,7 +1060,18 @@ func (s *Server) toolGetBlockedPaths(ctx context.Context, args map[string]any) (
 		}
 	}
 
-	return jsonTextResponse(result)
+	// Convert to JSON and apply host path masking
+	// JSONに変換してホストパスマスキングを適用
+	jsonBytes, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal blocked paths: %w", err)
+	}
+
+	// Apply host path masking to hide host OS username and directory structure
+	// ホストパスマスキングを適用してホストOSのユーザー名やディレクトリ構造を隠す
+	maskedJSON := s.docker.GetPolicy().MaskHostPaths(string(jsonBytes))
+
+	return textResponse(maskedJSON), nil
 }
 
 // formatBlockedResponse formats a response for when a path is blocked by security policy.
