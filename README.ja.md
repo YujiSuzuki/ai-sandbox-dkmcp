@@ -240,6 +240,7 @@ docker-compose -f docker-compose.demo.yml up -d --build
 
 - **セキュリティ機能を体験したい** → [ハンズオン](docs/hands-on.ja.md)
 - **自分のプロジェクトで使いたい** → [自分のプロジェクトへの適用](docs/customization.ja.md)
+- **設定漏れを検出したい** → `.sandbox/scripts/check-secret-sync.sh`（AI拒否設定とdocker-compose.ymlの同期チェック）
 
 ---
 
@@ -269,7 +270,10 @@ docker-compose -f docker-compose.demo.yml up -d --build
 workspace/
 ├── .sandbox/               # 共有サンドボックス基盤
 │   ├── Dockerfile          # コンテナイメージ定義
-│   └── scripts/            # 共有スクリプト（validate-secrets, check-secret-sync, sync-secrets）
+│   └── scripts/            # 共有スクリプト
+│       ├── validate-secrets.sh    # 秘匿ファイルが隠蔽されているか確認
+│       ├── check-secret-sync.sh   # AI拒否設定との同期チェック
+│       └── sync-secrets.sh        # 対話的に設定を同期
 │
 ├── .devcontainer/          # VS Code Dev Container 設定
 │   ├── docker-compose.yml  # 秘匿情報隠蔽の設定

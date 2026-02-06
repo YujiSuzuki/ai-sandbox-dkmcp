@@ -725,18 +725,12 @@ Also, **display concrete recovery commands in the failure summary** when tests f
 - ❌ Suggest removing security configurations without explanation
 - ❌ Attempt to access Docker socket directly
 - ❌ Modify security files without user approval
-- ❌ Use `git add .` or `git commit -a` (hidden files appear as "deleted" and may be accidentally committed)
 
-### Git Operations Warning
+### Git Operations in Demo Environment
 
-Inside AI Sandbox, hidden files (`.env`, files in `secrets/`) appear as "deleted" to git because they are mounted as empty. **Never use:**
-- `git add .`
-- `git add -A`
-- `git commit -a`
+In this demo project, secret files are force-tracked with `git add -f` to demonstrate the hiding mechanism. As a result, `git status` shows them as "deleted" inside AI Sandbox.
 
-**Instead:**
-- Recommend user to perform git operations on the host side
-- Or explicitly specify files: `git add path/to/specific/file.js`
+This is demo-specific. In real projects, secrets should be in `.gitignore`, so this issue won't occur. See [docs/hands-on.ja.md](docs/hands-on.ja.md) for details.
 
 ### Hidden Files May Appear as Missing
 

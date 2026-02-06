@@ -240,6 +240,7 @@ docker-compose -f docker-compose.demo.yml up -d --build
 
 - **Want to experience the security features?** → [Hands-on Guide](docs/hands-on.md)
 - **Ready to use with your own project?** → [Customization Guide](docs/customization.md)
+- **Want to detect configuration gaps?** → `.sandbox/scripts/check-secret-sync.sh` (sync check between AI deny settings and docker-compose.yml)
 
 ---
 
@@ -269,7 +270,10 @@ docker-compose -f docker-compose.demo.yml up -d --build
 workspace/
 ├── .sandbox/               # Shared sandbox infrastructure
 │   ├── Dockerfile          # Container image definition
-│   └── scripts/            # Shared scripts (validate-secrets, check-secret-sync, sync-secrets)
+│   └── scripts/            # Shared scripts
+│       ├── validate-secrets.sh    # Verify secret files are hidden
+│       ├── check-secret-sync.sh   # Sync check with AI deny settings
+│       └── sync-secrets.sh        # Interactively sync settings
 │
 ├── .devcontainer/          # VS Code Dev Container settings
 │   ├── docker-compose.yml  # Secret hiding configuration
