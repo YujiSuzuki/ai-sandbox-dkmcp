@@ -1,4 +1,5 @@
 #!/bin/bash
+# merge-claude-settings.sh
 # Merge .claude/settings.json from subprojects into workspace root
 # サブプロジェクトの .claude/settings.json を workspace 直下にマージ
 

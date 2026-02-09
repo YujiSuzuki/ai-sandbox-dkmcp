@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     less \
     sudo \
     curl \
+    wget \
     iputils-ping \
     dnsutils \
     jq \
@@ -21,6 +22,14 @@ RUN apt-get update && apt-get install -y \
     # netcat-openbsd \   # Port connectivity testing / ポート到達性テスト
     # iproute2 \         # Modern network tools (ip, ss commands) / モダンなネットワークツール (ip, ss コマンド)
     && rm -rf /var/lib/apt/lists/*
+
+# Install Go (for SandboxMCP and other Go tools)
+# Go をインストール（SandboxMCP と他の Go ツール用）
+ARG GO_VERSION=1.24.12
+ARG TARGETARCH
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz" | tar -C /usr/local -xz
+ENV GOPATH="/home/node/go"
+ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
 
 # Install Claude Code
 # Claude Code インストール

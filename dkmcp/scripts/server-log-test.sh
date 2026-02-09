@@ -143,7 +143,7 @@ build_dkmcp() {
     print_info "Building from $PROJECT_DIR..."
     cd "$PROJECT_DIR"
 
-    if go build -o "$DKMCP_BIN" ./cmd/dkmcp 2>&1; then
+    if CGO_ENABLED=0 go build -o "$DKMCP_BIN" ./cmd/dkmcp 2>&1; then
         print_pass "Build successful: $DKMCP_BIN"
     else
         print_fail "Build failed"

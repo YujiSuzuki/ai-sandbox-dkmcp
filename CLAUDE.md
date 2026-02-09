@@ -34,19 +34,24 @@ This solves the common problem: "My API is in a separate container, how can AI h
 │   ├── config/             # Startup configuration
 │   │   ├── startup.conf    # Verbosity settings, README URLs, backup retention
 │   │   └── sync-ignore     # Patterns to exclude from sync warnings
-│   └── scripts/            # Shared scripts (run: .sandbox/scripts/help.sh)
-│       ├── help.sh                   # Show this script list with descriptions
-│       ├── _startup_common.sh        # Common functions for startup scripts
-│       ├── validate-secrets.sh       # 🐳 Secret hiding verification
-│       ├── compare-secret-config.sh  # DevContainer/CLI config diff check
-│       ├── check-secret-sync.sh      # Check if Claude deny files are hidden in docker-compose
-│       ├── sync-secrets.sh           # 🐳 Interactive tool to sync secrets to docker-compose
-│       ├── sync-compose-secrets.sh   # 🐳 Sync secret config between DevContainer/CLI compose
-│       ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
-│       ├── init-host-env.sh           # Host-side init: env files from templates + host OS info
-│       ├── copy-credentials.sh       # 🖥️ Copy home directory between compose projects
-│       ├── run-all-tests.sh          # Run all test scripts
-│       └── test-*.sh                 # Test scripts for each utility
+│   ├── scripts/            # Shared scripts (run: .sandbox/scripts/help.sh)
+│   │   ├── help.sh                   # Show this script list with descriptions
+│   │   ├── _startup_common.sh        # Common functions for startup scripts
+│   │   ├── validate-secrets.sh       # 🐳 Secret hiding verification
+│   │   ├── compare-secret-config.sh  # DevContainer/CLI config diff check
+│   │   ├── check-secret-sync.sh      # Check if Claude deny files are hidden in docker-compose
+│   │   ├── sync-secrets.sh           # 🐳 Interactive tool to sync secrets to docker-compose
+│   │   ├── sync-compose-secrets.sh   # 🐳 Sync secret config between DevContainer/CLI compose
+│   │   ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
+│   │   ├── init-host-env.sh           # Host-side init: env files from templates + host OS info
+│   │   ├── copy-credentials.sh       # 🖥️ Copy home directory between compose projects
+│   │   ├── run-all-tests.sh          # Run all test scripts
+│   │   └── test-*.sh                 # Test scripts for each utility
+│   ├── tools/               # Utility tools (extras)
+│   │   └── search-history.go         # Claude Code conversation history search
+│   └── sandbox-mcp/          # Sandbox-Tools MCP Server (stdio, Go)
+│       ├── cmd/sandbox-mcp/        # Entry point
+│       └── internal/                 # Implementation
 │
 ├── .devcontainer/          # VS Code Dev Container (AI environment)
 │   ├── docker-compose.yml  # ⚠️ Secret hiding configuration
@@ -560,6 +565,45 @@ As an AI assistant, you have access to these DockMCP tools:
 **Security:** All operations are checked against the security policy in `dkmcp.yaml`. Output masking automatically hides sensitive data (passwords, API keys, tokens) in logs and command output.
 
 **Note on tool naming:** In MCP implementations, tools appear with prefixed names like `mcp__dkmcp__list_containers`. The base tool names listed above remain the same regardless of prefix.
+
+## SandboxMCP
+
+In addition to DockMCP (host-side), there's **SandboxMCP** that runs **inside the container** via stdio. It helps you discover and use scripts/tools in `.sandbox/`.
+
+### Available Tools
+
+| Tool | What It Does | Example Use |
+|------|--------------|-------------|
+| `list_scripts` | List scripts in .sandbox/scripts/ | "What scripts are available?" |
+| `get_script_info` | Get detailed info about a script | "How do I use validate-secrets.sh?" |
+| `run_script` | Execute a container script | "Run validate-secrets.sh" |
+| `list_tools` | List tools in .sandbox/tools/ | "What tools are available?" |
+| `get_tool_info` | Get detailed info about a tool | "How do I use search-history?" |
+| `run_tool` | Execute a tool | "Search my conversation history for 'MCP'" |
+
+### Key Features
+
+- **Auto-registered**: Builds and registers automatically on container startup
+- **Host-only rejection**: Scripts like `copy-credentials.sh` that require Docker socket are rejected with guidance on how to run them on the host OS
+- **Script metadata**: Returns description (EN/JA), execution environment (host/container/any), category (utility/test)
+
+### Manual Registration
+
+If not auto-registered, you can register manually:
+```bash
+cd /workspace/.sandbox/sandbox-mcp
+make register    # Build and register
+make unregister  # Remove registration
+```
+
+### Difference from DockMCP
+
+| | sandbox-mcp | DockMCP |
+|---|---|---|
+| Location | Inside container | Host OS |
+| Transport | stdio | SSE (HTTP) |
+| Purpose | Script/tool discovery | Container access |
+| Auto-start | By Claude Code | Manual (`dkmcp serve`) |
 
 ## Development Approach: Test-Driven Development (TDD)
 

@@ -11,18 +11,18 @@ LDFLAGS := -ldflags="-X 'github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/c
 # 現在のプラットフォーム向けにビルド
 build:
 	@echo "Building dkmcp version ${VERSION}..."
-	go build ${LDFLAGS} -o dkmcp ./cmd/dkmcp
+	CGO_ENABLED=0 go build ${LDFLAGS} -o dkmcp ./cmd/dkmcp
 
 # Build for all platforms
 # 全プラットフォーム向けにビルド（クロスコンパイル）
 build-all:
 	@echo "Building dkmcp version ${VERSION} for all platforms..."
 	mkdir -p dist
-	GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o dist/dkmcp_windows_amd64.exe ./cmd/dkmcp
-	GOOS=darwin GOARCH=arm64 go build ${LDFLAGS} -o dist/dkmcp_darwin_arm64 ./cmd/dkmcp
-	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o dist/dkmcp_darwin_amd64 ./cmd/dkmcp
-	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o dist/dkmcp_linux_amd64 ./cmd/dkmcp
-	GOOS=linux GOARCH=arm64 go build ${LDFLAGS} -o dist/dkmcp_linux_arm64 ./cmd/dkmcp
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o dist/dkmcp_windows_amd64.exe ./cmd/dkmcp
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build ${LDFLAGS} -o dist/dkmcp_darwin_arm64 ./cmd/dkmcp
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o dist/dkmcp_darwin_amd64 ./cmd/dkmcp
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o dist/dkmcp_linux_amd64 ./cmd/dkmcp
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ${LDFLAGS} -o dist/dkmcp_linux_arm64 ./cmd/dkmcp
 
 # Cross-build for the host OS
 # ホストOS向けクロスビルド
@@ -43,7 +43,7 @@ DEST ?= dist
 build-host:
 	@echo "Building dkmcp version ${VERSION} for ${HOST_OS}/${HOST_ARCH}..."
 	mkdir -p dist
-	GOOS=${HOST_OS} GOARCH=${HOST_ARCH} go build ${LDFLAGS} -o dist/dkmcp_${HOST_OS}_${HOST_ARCH} ./cmd/dkmcp
+	CGO_ENABLED=0 GOOS=${HOST_OS} GOARCH=${HOST_ARCH} go build ${LDFLAGS} -o dist/dkmcp_${HOST_OS}_${HOST_ARCH} ./cmd/dkmcp
 	@echo "✓ Built: dist/dkmcp_${HOST_OS}_${HOST_ARCH}"
 
 # Install cross-built binary to host OS (run on host OS)
@@ -98,11 +98,11 @@ test-mcp:
 install:
 ifdef DEVCONTAINER
 	@mkdir -p /home/node/.local/bin
-	@go build ${LDFLAGS} -o /home/node/.local/bin/dkmcp ./cmd/dkmcp
+	@CGO_ENABLED=0 go build ${LDFLAGS} -o /home/node/.local/bin/dkmcp ./cmd/dkmcp
 	@echo "✓ Installed to /home/node/.local/bin/dkmcp"
 	@echo "  (persisted in DevContainer volume)"
 else
-	go install ${LDFLAGS} ./cmd/dkmcp
+	CGO_ENABLED=0 go install ${LDFLAGS} ./cmd/dkmcp
 	@echo "✓ Installed to $$GOPATH/bin/dkmcp"
 endif
 

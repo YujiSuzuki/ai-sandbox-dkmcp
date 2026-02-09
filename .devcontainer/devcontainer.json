@@ -4,15 +4,8 @@
   "service": "ai-sandbox",
   "workspaceFolder": "/workspace",
 
-  // Optional: Go environment for DockMCP development
-  // Comment out the "features" block below if you want a smaller image
-  // オプション：DockMCP ビルド用のGo環境
-  // イメージサイズを小さくしたい場合は下記の features ブロックをコメントアウトしてください
-  "features": {
-    "ghcr.io/devcontainers/features/go:1": {
-      "version": "1.24"
-    }
-  },
+  // Go is installed in .sandbox/Dockerfile (shared with CLI Sandbox)
+  // Go は .sandbox/Dockerfile でインストールされています（CLI Sandbox と共有）
 
   // Environment variables for DevContainer
   // DevContainer内で使用する環境変数
@@ -110,15 +103,9 @@
   // コンテナビルド前: .example テンプレートから環境変数ファイルを自動生成（初回セットアップ）
   "initializeCommand": ".sandbox/scripts/init-host-env.sh .",
 
-  // On startup: merge Claude settings, compare configs, validate secrets, check secret sync, and check for template updates
-  // Run low-failure scripts first to ensure essential setup completes even if validation fails
-  // Compare config consistency before validation so root cause (config mismatch) is reported first
-  // Update check runs last as it's informational only
-  // 起動時: Claude設定マージ、設定整合性チェック、シークレット検証、シークレット同期チェック、テンプレート更新チェック
-  // 失敗しにくいスクリプトを先に実行し、検証が失敗しても必須のセットアップが完了するようにする
-  // 検証より先に設定整合性を比較し、根本原因（設定の不一致）を先に報告する
-  // 更新チェックは情報提供のみなので最後に実行
-  "postStartCommand": "/workspace/.sandbox/scripts/merge-claude-settings.sh && /workspace/.sandbox/scripts/compare-secret-config.sh && /workspace/.sandbox/scripts/validate-secrets.sh && /workspace/.sandbox/scripts/check-secret-sync.sh && /workspace/.sandbox/scripts/check-upstream-updates.sh",
+  // On startup: run orchestrated startup script
+  // 起動時: 統合起動スクリプトを実行
+  "postStartCommand": "/workspace/.sandbox/scripts/startup.sh",
 
   "remoteUser": "node"
 }

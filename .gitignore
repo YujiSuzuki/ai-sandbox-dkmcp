@@ -60,6 +60,12 @@ secrets/
 .claude.json
 .claude.json.backup
 
+# Gemini CLI
+# https://github.com/google-gemini/gemini-cli
+# Personal settings - use .gemini/settings.json.example as template
+# 個人設定 - .gemini/settings.json.example をテンプレートとして使用
+.gemini/
+
 # MCP server configuration (use .mcp.json.example as template)
 # MCP サーバー設定（.mcp.json.example をテンプレートとして使用）
 .mcp.json

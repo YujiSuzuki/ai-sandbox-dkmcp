@@ -24,8 +24,9 @@ Detailed diagrams explaining how AI Sandbox + DockMCP works.
 │  │ Docker Engine      │                         │ │   │
 │  │                    │                         │ │   │
 │  │   AI Sandbox  ←────┘                         │ │   │
-│  │    └─ Claude Code / Gemini                   │ │   │
-│  │       secrets/ → empty (hidden)              │ │   │
+│  │    ├─ Claude Code / Gemini                   │ │   │
+│  │    ├─ SandboxMCP (stdio)                     │ │   │
+│  │    └─ secrets/ → empty (hidden)              │ │   │
 │  │                                              │ │   │
 │  │   API Container    ←───────────────────────────────┘
 │  │    └─ secrets/ → real files                  │ │   │
@@ -51,6 +52,7 @@ Host OS
 └── Docker Engine
     ├── AI Sandbox (AI environment)
     │   ├── Claude Code / Gemini
+    │   ├── SandboxMCP (stdio)
     │   └── secrets/ → empty (hidden)
     │
     ├── API Container
@@ -250,3 +252,86 @@ What AI can do:
 - Run tests across projects
 - Debug cross-container issues
 - **Never touch secrets**
+
+---
+
+## SandboxMCP - In-Container MCP Server
+
+In addition to DockMCP (host-side), **SandboxMCP** runs inside the container.
+
+```
+┌─────────────────────────────────────────────────────┐
+│ AI Sandbox (inside container)                       │
+│                                                     │
+│  ┌─────────────────┐      ┌─────────────────────┐  │
+│  │ Claude Code     │ ←──→ │ SandboxMCP (stdio)  │  │
+│  │ Gemini CLI      │      │                     │  │
+│  └─────────────────┘      │ • list_scripts      │  │
+│                           │ • get_script_info   │  │
+│                           │ • run_script        │  │
+│  ┌─────────────────────┐  │ • list_tools        │  │
+│  │ .sandbox/scripts/   │  │ • get_tool_info     │  │
+│  │ • validate-secrets  │←─│ • run_tool          │  │
+│  │ • sync-secrets      │  └─────────────────────┘  │
+│  │ • help              │                           │
+│  │ • ...               │                           │
+│  └─────────────────────┘                           │
+└─────────────────────────────────────────────────────┘
+```
+
+### DockMCP vs SandboxMCP
+
+| | SandboxMCP | DockMCP |
+|---|---|---|
+| Location | Inside container | Host OS |
+| Transport | stdio | SSE (HTTP) |
+| Purpose | Script/tool discovery & execution | Cross-container access |
+| Startup | Auto-started by AI CLI | Manual (`dkmcp serve`) |
+
+### 6 MCP Tools
+
+| Tool | Description | Example Use |
+|------|-------------|-------------|
+| `list_scripts` | List available scripts | "What scripts can I use?" |
+| `get_script_info` | Get script details | "How do I use validate-secrets.sh?" |
+| `run_script` | Execute a container script | "Run validate-secrets.sh" |
+| `list_tools` | List available tools | "What tools are available?" |
+| `get_tool_info` | Get tool details | "How do I use search-history?" |
+| `run_tool` | Execute a tool | "Search my conversation history for 'MCP'" |
+
+### Host-Only Script Handling
+
+Some scripts (like `copy-credentials.sh`) require Docker socket access and cannot run inside the container.
+
+```
+When AI calls run_script("copy-credentials.sh"):
+
+┌────────────────────────────────────────────────────────────┐
+│ ❌ This script (copy-credentials.sh) must be run           │
+│    on the host OS, not inside the AI Sandbox.              │
+│                                                            │
+│ To run it on your host machine:                            │
+│   .sandbox/scripts/copy-credentials.sh                     │
+│                                                            │
+│ I cannot execute host-only scripts because the AI Sandbox  │
+│ does not have Docker socket access.                        │
+└────────────────────────────────────────────────────────────┘
+```
+
+**Result:** Clear guidance instead of a confusing error
+
+### Auto-Registration
+
+SandboxMCP automatically builds and registers on container startup:
+
+- **DevContainer**: Runs in `postStartCommand`
+- **CLI Sandbox**: Runs in startup script
+- **Supports both Claude Code and Gemini CLI**: Registers if CLI is installed
+
+For manual registration:
+
+```bash
+cd /workspace/.sandbox/sandbox-mcp
+make register    # Build and register
+make unregister  # Remove registration
+```

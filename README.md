@@ -11,6 +11,7 @@ This template creates a Docker-based development environment where:
 - **Misconfigurations are caught automatically** — Startup validation checks that your deny rules and volume mounts are in sync, warning you before AI sees anything
 - **Code is fully accessible** — AI can read and edit all source code across multiple projects
 - **Other containers are reachable** — With DockMCP, AI can check logs and run tests in other containers safely
+- **Helper scripts are discoverable** — AI automatically finds and understands utility scripts in `.sandbox/`, with clear guidance for host-only operations
 
 All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](docs/reference.md#two-environments).
 
@@ -105,6 +106,8 @@ AI Sandbox (container)  →  DockMCP (host OS)     →  Other containers (API, D
 ```
 
 Since AI runs inside a Docker container Sandbox, secret files become completely inaccessible — as if they don't exist. This doesn't hinder development, because AI can still check logs and run tests in other containers through DockMCP.
+
+**SandboxMCP** runs inside the container and lets AI discover available utility scripts automatically. Ask "What scripts can I use?" and AI will list them with descriptions. For host-only operations (like copying credentials between containers), AI provides clear instructions instead of confusing errors. Works with both Claude Code and Gemini CLI, auto-registered on startup.
 
 → For detailed architecture diagrams, see [Architecture Details](docs/architecture.md)
 
@@ -257,6 +260,11 @@ docker-compose -f docker-compose.demo.yml up -d --build
 
 > For detailed command options, see [dkmcp/README.md](dkmcp/README.md#cli-commands)
 
+## Bonus: Conversation History Search
+
+Not directly related to the Sandbox, but `.sandbox/tools/` includes a tool that searches Claude Code conversation history. Ask your AI something like "Did we discuss ○○ yesterday?" and it will search past conversations for you.
+
+> For details, see [docs/architecture.md](docs/architecture.md)
 
 
 # Project Structure

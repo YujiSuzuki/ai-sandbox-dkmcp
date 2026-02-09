@@ -24,8 +24,9 @@ AI Sandbox + DockMCP の仕組みを図解で詳しく説明します。
 │  │ Docker Engine      │                         │ │   │
 │  │                    │                         │ │   │
 │  │   AI Sandbox  ←────┘                         │ │   │
-│  │    └─ Claude Code / Gemini                   │ │   │
-│  │       secrets/ → empty (hidden)              │ │   │
+│  │    ├─ Claude Code / Gemini                   │ │   │
+│  │    ├─ SandboxMCP (stdio)                     │ │   │
+│  │    └─ secrets/ → empty (hidden)              │ │   │
 │  │                                              │ │   │
 │  │   API Container    ←───────────────────────────────┘
 │  │    └─ secrets/ → real files                  │ │   │
@@ -51,6 +52,7 @@ AI Sandbox + DockMCP の仕組みを図解で詳しく説明します。
 └── Docker Engine
     ├── AI Sandbox (AI環境)
     │   ├── Claude Code / Gemini
+    │   ├── SandboxMCP (stdio)
     │   └── secrets/ → 空（隠蔽）
     │
     ├── API Container
@@ -250,3 +252,86 @@ AIができること：
 - プロジェクト横断でテストを実行
 - クロスコンテナの問題をデバッグ
 - **秘匿情報には一切触れない**
+
+---
+
+## SandboxMCP - コンテナ内MCPサーバー
+
+DockMCP（ホストOS側）とは別に、**SandboxMCP** がコンテナ内で動作します。
+
+```
+┌─────────────────────────────────────────────────────┐
+│ AI Sandbox (コンテナ内)                               │
+│                                                     │
+│  ┌─────────────────┐      ┌─────────────────────┐  │
+│  │ Claude Code     │ ←──→ │ SandboxMCP (stdio)  │  │
+│  │ Gemini CLI      │      │                     │  │
+│  └─────────────────┘      │ • list_scripts      │  │
+│                           │ • get_script_info   │  │
+│                           │ • run_script        │  │
+│  ┌─────────────────────┐  │ • list_tools        │  │
+│  │ .sandbox/scripts/   │  │ • get_tool_info     │  │
+│  │ • validate-secrets  │←─│ • run_tool          │  │
+│  │ • sync-secrets      │  └─────────────────────┘  │
+│  │ • help              │                           │
+│  │ • ...               │                           │
+│  └─────────────────────┘                           │
+└─────────────────────────────────────────────────────┘
+```
+
+### DockMCP と SandboxMCP の役割分担
+
+| | SandboxMCP | DockMCP |
+|---|---|---|
+| 動作場所 | コンテナ内 | ホストOS |
+| 通信方式 | stdio | SSE (HTTP) |
+| 用途 | スクリプト/ツールの発見・実行 | 他コンテナへのアクセス |
+| 起動方法 | AI CLIが自動起動 | 手動 (`dkmcp serve`) |
+
+### 6つのMCPツール
+
+| ツール | 説明 | 使用例 |
+|--------|------|--------|
+| `list_scripts` | スクリプト一覧を表示 | 「使えるスクリプトは？」 |
+| `get_script_info` | スクリプトの詳細情報 | 「validate-secrets.sh の使い方は？」 |
+| `run_script` | コンテナ内スクリプトを実行 | 「validate-secrets.sh を実行して」 |
+| `list_tools` | ツール一覧を表示 | 「使えるツールは？」 |
+| `get_tool_info` | ツールの詳細情報 | 「search-history の使い方は？」 |
+| `run_tool` | ツールを実行 | 「会話履歴から 'MCP' を検索して」 |
+
+### ホスト専用スクリプトの取り扱い
+
+一部のスクリプト（`copy-credentials.sh` など）はDocker ソケットが必要なため、コンテナ内では実行できません。
+
+```
+AIが run_script("copy-credentials.sh") を呼び出すと:
+
+┌────────────────────────────────────────────────────────────┐
+│ ❌ このスクリプト (copy-credentials.sh) は                  │
+│    ホストOSで実行する必要があります。                        │
+│                                                            │
+│ ホストマシンで以下を実行してください:                        │
+│   .sandbox/scripts/copy-credentials.sh                     │
+│                                                            │
+│ AI Sandbox にはDockerソケットへのアクセス権がないため、      │
+│ ホスト専用スクリプトは実行できません。                       │
+└────────────────────────────────────────────────────────────┘
+```
+
+**結果:** エラーではなく、明確なガイダンスが返される
+
+### 自動登録
+
+SandboxMCP はコンテナ起動時に自動でビルド・登録されます：
+
+- **DevContainer**: `postStartCommand` で実行
+- **CLI Sandbox**: 起動スクリプト内で実行
+- **Claude Code / Gemini CLI 両対応**: CLIがインストールされていれば登録
+
+手動登録が必要な場合：
+
+```bash
+cd /workspace/.sandbox/sandbox-mcp
+make register    # ビルドして登録
+make unregister  # 登録解除
+```

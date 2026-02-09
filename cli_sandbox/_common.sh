@@ -120,15 +120,21 @@ fi
 run_startup_scripts() {
     local output
     local exit_code
+    local temp_file
+    temp_file=$(mktemp)
 
-    output=$(docker-compose -f ./cli_sandbox/docker-compose.yml --project-directory . run --rm \
+    # Show output in real-time while capturing to temp file
+    # リアルタイムで出力を表示しながら一時ファイルにキャプチャ
+    docker-compose -f ./cli_sandbox/docker-compose.yml --project-directory . run --rm \
         -e SANDBOX_ENV -e STARTUP_VERBOSITY \
         --entrypoint bash cli-sandbox \
-        -c "/workspace/.sandbox/scripts/merge-claude-settings.sh && /workspace/.sandbox/scripts/compare-secret-config.sh && /workspace/.sandbox/scripts/validate-secrets.sh && /workspace/.sandbox/scripts/check-secret-sync.sh && /workspace/.sandbox/scripts/check-upstream-updates.sh" 2>&1)
-    exit_code=$?
+        -c "/workspace/.sandbox/scripts/startup.sh" 2>&1 | tee "$temp_file"
+    exit_code=${PIPESTATUS[0]}
 
-    # Show output
-    echo "$output"
+    # Read captured output for warning check
+    # 警告チェック用にキャプチャされた出力を読み取り
+    output=$(cat "$temp_file")
+    rm -f "$temp_file"
 
     # Check for warnings (⚠️ emoji)
     # 警告（⚠️ 絵文字）をチェック

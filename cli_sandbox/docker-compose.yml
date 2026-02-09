@@ -1,5 +1,6 @@
 services:
   cli-sandbox:
+    image: workspace-cli-sandbox:latest
     build:
       context: .
       dockerfile: .sandbox/Dockerfile
