@@ -1,6 +1,6 @@
 ---
 description: ローカルコードレビューを実行（Git リポジトリがなくても動作）
-argument-hint: [project-path]
+argument-hint: [project-path] [変更の概要]
 allowed-tools: [Read, Glob, Grep, Bash(git:*), Bash(ls:*), Bash(find:*), Task, AskUserQuestion, TodoWrite]
 ---
 
@@ -11,6 +11,10 @@ allowed-tools: [Read, Glob, Grep, Bash(git:*), Bash(ls:*), Bash(find:*), Task, A
 ## 引数
 
 ユーザーが指定した引数: $ARGUMENTS
+
+引数の解釈:
+- 第1引数: プロジェクトパス（省略時は対話的に選択）
+- 第2引数以降: 変更の概要（省略時は Step 3 で AskUserQuestion で確認）
 
 ## 実行手順
 
@@ -60,7 +64,9 @@ allowed-tools: [Read, Glob, Grep, Bash(git:*), Bash(ls:*), Bash(find:*), Task, A
 
 ### Step 3: 変更の概要入力
 
-AskUserQuestion ツールを使って以下を入力してもらう:
+第2引数以降が指定されている場合、それを変更の概要として使用し、AskUserQuestion をスキップする。
+
+第2引数が未指定の場合のみ、AskUserQuestion ツールを使って以下を入力してもらう:
 - **変更の概要**: この変更の目的や背景を簡潔に説明してもらう
   - 例: 「ユーザー認証機能の追加」「パフォーマンス改善」「バグ修正」
   - 非 Git モードの場合: 「新規実装のレビュー」「コード品質チェック」など

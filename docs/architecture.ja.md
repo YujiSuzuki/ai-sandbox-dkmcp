@@ -335,3 +335,36 @@ cd /workspace/.sandbox/sandbox-mcp
 make register    # ビルドして登録
 make unregister  # 登録解除
 ```
+
+### 自作ツールの追加
+
+Go ファイルを `.sandbox/tools/` に置くだけで、SandboxMCP が自動的に認識します。`package` 宣言前のコメントからメタデータが抽出されます。`// ---` 区切り線があると、そこでパースが停止します（日本語説明等を区切り線の下に書けます）：
+
+```go
+// Short description (最初のコメント行が description になります)
+//
+// Usage:
+//   go run .sandbox/tools/my-tool.go [options] <args>
+//
+// Examples:
+//   go run .sandbox/tools/my-tool.go "hello"
+//   go run .sandbox/tools/my-tool.go -verbose "world"
+//
+// --- 以下はパーサー対象外（任意） ---
+//
+// ツールの日本語説明
+package main
+```
+
+```
+┌───────────────────────────────────────────────────┐
+│ .sandbox/tools/                                   │
+│  ├── search-history.go   ← 組み込みツール         │
+│  └── my-tool.go          ← ファイルを置くだけ     │
+│                                                   │
+│ SandboxMCP が *.go ファイルを自動検出             │
+│ 登録や設定は不要                                  │
+└───────────────────────────────────────────────────┘
+```
+
+AI アシスタントは `list_tools` でツールを発見し、`get_tool_info` で使い方を確認し、`run_tool` で実行できます。

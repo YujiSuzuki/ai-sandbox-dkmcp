@@ -16,6 +16,11 @@
 .sandbox/.state/
 .sandbox/.host-os
 
+# Build artifacts (regenerate with: cd .sandbox/sandbox-mcp && make install)
+# ビルド成果物（再生成: cd .sandbox/sandbox-mcp && make install）
+.sandbox/sandbox-mcp/sandbox-mcp
+.sandbox/sandbox-mcp/search-history
+
 # DevContainer
 .env
 # Exclude env files, but allow samples

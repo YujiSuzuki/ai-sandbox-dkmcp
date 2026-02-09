@@ -335,3 +335,36 @@ cd /workspace/.sandbox/sandbox-mcp
 make register    # Build and register
 make unregister  # Remove registration
 ```
+
+### Adding Custom Tools
+
+Place a Go file in `.sandbox/tools/` and SandboxMCP will automatically discover it. The file header (comments before `package`) is parsed to extract metadata. A `// ---` separator line stops parsing, so localized descriptions below it are not included:
+
+```go
+// Short description (first comment line becomes the description)
+//
+// Usage:
+//   go run .sandbox/tools/my-tool.go [options] <args>
+//
+// Examples:
+//   go run .sandbox/tools/my-tool.go "hello"
+//   go run .sandbox/tools/my-tool.go -verbose "world"
+//
+// --- optional localized description (not parsed) ---
+//
+// ツールの日本語説明（任意）
+package main
+```
+
+```
+┌───────────────────────────────────────────────────┐
+│ .sandbox/tools/                                   │
+│  ├── search-history.go   ← built-in              │
+│  └── my-tool.go          ← just drop a file here │
+│                                                   │
+│ SandboxMCP auto-discovers *.go files              │
+│ No registration or configuration needed           │
+└───────────────────────────────────────────────────┘
+```
+
+AI assistants can then use `list_tools` to find it, `get_tool_info` to read its usage, and `run_tool` to execute it.

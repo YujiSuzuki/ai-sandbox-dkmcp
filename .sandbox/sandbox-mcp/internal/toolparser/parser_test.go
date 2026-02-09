@@ -3,6 +3,7 @@ package toolparser
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -127,6 +128,51 @@ func TestListToolsSkipsNonGo(t *testing.T) {
 	for _, tool := range tools {
 		if tool.Name == "readme.md" {
 			t.Error("Non-.go file should be excluded")
+		}
+	}
+}
+
+func TestParseGoHeaderSeparatorStopsParser(t *testing.T) {
+	dir := t.TempDir()
+	tool := filepath.Join(dir, "bilingual.go")
+	os.WriteFile(tool, []byte(`// A bilingual tool
+//
+// Usage:
+//   go run bilingual.go [options] <pattern>
+//
+// Examples:
+//   go run bilingual.go "hello"
+//   go run bilingual.go -i "world"
+//
+// --- localized description (not parsed) ---
+//
+// このツールは二言語対応です。
+//
+// 使い方:
+//   go run bilingual.go "こんにちは"
+//
+// 例:
+//   go run bilingual.go -i "世界"
+package main
+`), 0644)
+
+	info, err := parseGoHeader(tool)
+	if err != nil {
+		t.Fatalf("parseGoHeader: %v", err)
+	}
+	if info.Description != "A bilingual tool" {
+		t.Errorf("Description = %q, want %q", info.Description, "A bilingual tool")
+	}
+	if info.Usage == "" {
+		t.Error("Expected non-empty usage")
+	}
+	if len(info.Examples) != 2 {
+		t.Errorf("Examples count = %d, want 2", len(info.Examples))
+	}
+	// Japanese examples should NOT be included
+	for _, ex := range info.Examples {
+		if strings.Contains(ex, "こんにちは") || strings.Contains(ex, "世界") {
+			t.Errorf("Japanese example should not be parsed: %q", ex)
 		}
 	}
 }

@@ -1,19 +1,54 @@
-// search-history.go - Claude Code 会話履歴検索ツール (おまけツール)
+// search-history.go - Claude Code conversation history search tool
 //
 // Usage:
 //   go run .sandbox/tools/search-history.go [options] <pattern>
+//   go run .sandbox/tools/search-history.go -list [-after DATE] [-before DATE]
+//   go run .sandbox/tools/search-history.go -session <id>
+//
+//   Modes:    <pattern> (keyword/regex search), -list (sessions), -session <id> (view)
+//   Filters:  -role user|assistant|tool, -tool <name>, -after/-before <YYYY-MM-DD> (local TZ), -i
+//   Scope:    -project <name> (default: workspace, "all" for all projects)
+//   Display:  -max <n> (default: 50, 0=unlimited), -context <n> (default: 200, 0=full), -no-color
+//
+//   -list shows sessions sorted by last activity. Multi-day sessions display a date range.
+//   -after/-before filter by message timestamps (not session start), so they work with -list too.
 //
 // Examples:
 //   go run .sandbox/tools/search-history.go "DockMCP"
 //   go run .sandbox/tools/search-history.go -role user "docker"
-//   go run .sandbox/tools/search-history.go -role tool "npm test"
 //   go run .sandbox/tools/search-history.go -role tool -tool Bash "git"
 //   go run .sandbox/tools/search-history.go -after 2026-01-20 "secret"
 //   go run .sandbox/tools/search-history.go -project all "error"
 //   go run .sandbox/tools/search-history.go -list
-//   go run .sandbox/tools/search-history.go -session c01514d6
-//   go run .sandbox/tools/search-history.go -session c01514d6 -role tool
+//   go run .sandbox/tools/search-history.go -list -after 2026-02-08 -before 2026-02-08
+//   go run .sandbox/tools/search-history.go -session c01514d6 -context 0 -max 0
 //
+// --- 日本語 ---
+//
+// Claude Code の会話履歴をキーワード検索・セッション閲覧するツール。
+//
+// モード:
+//   <pattern>        キーワード検索（正規表現対応）
+//   -list            セッション一覧を表示（最終活動日順、複数日セッションは期間表示）
+//   -session <id>    指定セッションを時系列で閲覧（IDは先頭数文字の前方一致）
+//
+// フィルタ:
+//   -role <role>     ロールで絞り込み: user, assistant, tool
+//   -tool <name>     -role tool と併用。ツール名で絞り込み (Bash, Read, Edit, ...)
+//   -after <date>    指定日以降のみ (YYYY-MM-DD, ローカルTZ)。-list でも有効
+//   -before <date>   指定日以前のみ (YYYY-MM-DD, ローカルTZ)。-list でも有効
+//   -i               大文字小文字を無視
+//   -project <name>  プロジェクト指定 (デフォルト: workspace, "all" で全プロジェクト)
+//
+// 表示:
+//   -max <n>         最大表示件数 (デフォルト: 50, 0 = 無制限)
+//   -context <n>     1エントリの表示文字数 (デフォルト: 200, 0 = 全文)
+//   -no-color        カラー出力を無効化
+//
+// 日付フィルタの動作:
+//   -list と併用時、セッション内のメッセージ日時で判定する。
+//   複数日にまたがるセッションでも、指定日にメッセージがあれば表示される。
+
 package main
 
 import (
@@ -109,8 +144,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Parse date filters early (shared by search and list modes)
+	var afterTime, beforeTime time.Time
+	var err error
+	loc := time.Now().Location()
+	if afterDate != "" {
+		afterTime, err = time.ParseInLocation("2006-01-02", afterDate, loc)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid -after date: %v\n", err)
+			os.Exit(1)
+		}
+	}
+	if beforeDate != "" {
+		beforeTime, err = time.ParseInLocation("2006-01-02", beforeDate, loc)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid -before date: %v\n", err)
+			os.Exit(1)
+		}
+		beforeTime = beforeTime.Add(24 * time.Hour) // include the whole day
+	}
+
 	if listSessions {
-		listAllSessions(projectDirs)
+		listAllSessions(projectDirs, afterTime, beforeTime)
 		return
 	}
 
@@ -129,7 +184,6 @@ func main() {
 
 	pattern := flag.Arg(0)
 	var re *regexp.Regexp
-	var err error
 	if ignoreCase {
 		re, err = regexp.Compile("(?i)" + pattern)
 	} else {
@@ -138,23 +192,6 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid pattern: %v\n", err)
 		os.Exit(1)
-	}
-
-	var afterTime, beforeTime time.Time
-	if afterDate != "" {
-		afterTime, err = time.Parse("2006-01-02", afterDate)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid -after date: %v\n", err)
-			os.Exit(1)
-		}
-	}
-	if beforeDate != "" {
-		beforeTime, err = time.Parse("2006-01-02", beforeDate)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid -before date: %v\n", err)
-			os.Exit(1)
-		}
-		beforeTime = beforeTime.Add(24 * time.Hour) // include the whole day
 	}
 
 	var matches []Match
@@ -659,7 +696,7 @@ func countSessions(matches []Match) int {
 	return len(seen)
 }
 
-func listAllSessions(projectDirs []string) {
+func listAllSessions(projectDirs []string, after, before time.Time) {
 	type SessionInfo struct {
 		ID        string
 		Project   string
@@ -696,6 +733,7 @@ func listAllSessions(projectDirs []string) {
 				FileSize: info.Size(),
 			}
 
+			hasMatchingMsg := false
 			for scanner.Scan() {
 				var entry Entry
 				if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
@@ -721,6 +759,20 @@ func listAllSessions(projectDirs []string) {
 					si.LastTime = ts
 				}
 
+				// Check if any message falls within the date filter range
+				if !after.IsZero() || !before.IsZero() {
+					inRange := true
+					if !after.IsZero() && ts.Before(after) {
+						inRange = false
+					}
+					if !before.IsZero() && ts.After(before) {
+						inRange = false
+					}
+					if inRange {
+						hasMatchingMsg = true
+					}
+				}
+
 				// Capture first user message as summary
 				if si.FirstMsg == "" && entry.Message.Role == "user" {
 					text := extractText(entry.Message.Content)
@@ -733,28 +785,46 @@ func listAllSessions(projectDirs []string) {
 			}
 			f.Close()
 
-			if si.Messages > 0 {
-				sessions = append(sessions, si)
+			// Skip sessions with no messages
+			if si.Messages == 0 {
+				continue
 			}
+			// If date filter is active, skip sessions without matching messages
+			if (!after.IsZero() || !before.IsZero()) && !hasMatchingMsg {
+				continue
+			}
+			sessions = append(sessions, si)
 		}
 	}
 
-	// Sort by time (newest first)
+	// Sort by last activity (newest first)
 	sort.Slice(sessions, func(i, j int) bool {
 		return sessions[i].LastTime.After(sessions[j].LastTime)
 	})
 
 	for _, s := range sessions {
-		date := s.FirstTime.Local().Format("2006-01-02 15:04")
+		dateStr := formatDateRange(s.FirstTime, s.LastTime)
 		sizeKB := s.FileSize / 1024
-		fmt.Printf("%s%s%s  %s%-20s%s  %s%3d msgs%s  %s%4dKB%s  %s\n",
+		fmt.Printf("%s%s%s  %s%-20s%s  %s%4d msgs%s  %s%4dKB%s  %s\n",
 			colorCyan, shortID(s.ID), colorReset,
-			colorDim, date, colorReset,
+			colorDim, dateStr, colorReset,
 			colorGreen, s.Messages, colorReset,
 			colorDim, sizeKB, colorReset,
 			s.FirstMsg)
 	}
 	fmt.Printf("\n%s%d sessions%s\n", colorDim, len(sessions), colorReset)
+}
+
+// formatDateRange returns a compact date range string.
+// Same day:  "02/09 14:32"
+// Multi-day: "02/04 14:32 ~ 02/09"
+func formatDateRange(first, last time.Time) string {
+	f := first.Local()
+	l := last.Local()
+	if f.Year() == l.Year() && f.YearDay() == l.YearDay() {
+		return f.Format("01/02 15:04")
+	}
+	return f.Format("01/02 15:04") + " ~ " + l.Format("01/02")
 }
 
 func disableColors() {

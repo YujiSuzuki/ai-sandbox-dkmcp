@@ -1,6 +1,6 @@
 ---
 description: Run local code review (works even without a Git repository)
-argument-hint: [project-path]
+argument-hint: [project-path] [change summary]
 allowed-tools: [Read, Glob, Grep, Bash(git:*), Bash(ls:*), Bash(find:*), Task, AskUserQuestion, TodoWrite]
 ---
 
@@ -11,6 +11,10 @@ Performs code review on local code. If a Git repository exists, it reviews the d
 ## Arguments
 
 User-specified arguments: $ARGUMENTS
+
+Argument interpretation:
+- 1st argument: Project path (interactive selection if omitted)
+- 2nd argument onwards: Change summary (asked via AskUserQuestion in Step 3 if omitted)
 
 ## Execution Steps
 
@@ -60,7 +64,9 @@ Follow these steps precisely:
 
 ### Step 3: Change Summary Input
 
-Use the AskUserQuestion tool to get:
+If the 2nd argument onwards is provided, use it as the change summary and skip AskUserQuestion.
+
+Only if the 2nd argument is not provided, use the AskUserQuestion tool to get:
 - **Change summary**: A brief explanation of the purpose and background of the changes
   - Examples: "Adding user authentication", "Performance improvements", "Bug fix"
   - For Non-Git mode: "New implementation review", "Code quality check", etc.

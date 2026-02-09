@@ -48,7 +48,8 @@ This solves the common problem: "My API is in a separate container, how can AI h
 │   │   ├── run-all-tests.sh          # Run all test scripts
 │   │   └── test-*.sh                 # Test scripts for each utility
 │   ├── tools/               # Utility tools (extras)
-│   │   └── search-history.go         # Claude Code conversation history search
+│   │   ├── search-history.go         # Claude Code conversation history search
+│   │   └── usage-report.go           # Token usage report (model/period breakdown)
 │   └── sandbox-mcp/          # Sandbox-Tools MCP Server (stdio, Go)
 │       ├── cmd/sandbox-mcp/        # Entry point
 │       └── internal/                 # Implementation
@@ -595,6 +596,55 @@ cd /workspace/.sandbox/sandbox-mcp
 make register    # Build and register
 make unregister  # Remove registration
 ```
+
+### Adding Custom Tools
+
+You can extend SandboxMCP by placing Go files in `.sandbox/tools/`. They are automatically discovered and available to AI assistants via `list_tools`, `get_tool_info`, and `run_tool`.
+
+**Header format** (parsed from comments before `package`, stops at `// ---` separator):
+
+```go
+// Short description of the tool (first comment line = description)
+//
+// Usage:
+//   go run .sandbox/tools/my-tool.go [options] <args>
+//
+// Examples:
+//   go run .sandbox/tools/my-tool.go "hello"
+//   go run .sandbox/tools/my-tool.go -verbose "world"
+//
+// --- optional localized description (not parsed by SandboxMCP) ---
+//
+// ツールの日本語説明（任意）
+package main
+```
+
+**Parsing rules:**
+- First comment line → `description`
+- `Usage:` / `Examples:` sections → `usage` / `examples`
+- `// ---` line → stops parsing (everything below is for human readers only)
+- `package` line → stops parsing
+
+The `// ---` separator is optional. Use it when adding localized descriptions or other notes that should not be parsed by SandboxMCP.
+
+No registration or configuration needed — just drop a `.go` file and AI can use it.
+
+### Using Tools Proactively
+
+As an AI assistant, you can **discover and run** tools in `.sandbox/tools/` via SandboxMCP:
+
+1. **`list_tools`** → See what tools are available
+2. **`get_tool_info`** → Read usage and options for a tool
+3. **`run_tool`** → Execute the tool with arguments
+
+When a user's request can be fulfilled by an existing tool (e.g., searching conversation history), **run it on their behalf** via `run_tool`. Show the equivalent `go run` command as well, so the user can run it themselves later if they want. For example, if asked "find the conversation where we discussed MCP setup", execute `run_tool` with `search-history.go` and also mention the command line equivalent.
+
+**Cost estimation workflow:** When a user asks about usage cost or plan comparison:
+1. Run `usage-report.go -json` (with appropriate period flags) via `run_tool` to get token counts
+2. Use `WebFetch` to get current pricing from `https://docs.anthropic.com/en/docs/about-claude/pricing`
+3. Calculate API costs from the token data and fetched prices
+4. Compare with Pro ($20/mo) and Max ($100/mo, $200/mo) plan pricing
+5. Present a clear cost comparison table
 
 ### Difference from DockMCP
 

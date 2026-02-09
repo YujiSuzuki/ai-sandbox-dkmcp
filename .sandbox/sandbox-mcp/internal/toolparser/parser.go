@@ -79,12 +79,7 @@ func parseGoHeader(path string) (ToolInfo, error) {
 	var examples []string
 	section := "" // "", "usage", "examples"
 
-	lineNum := 0
 	for scanner.Scan() {
-		lineNum++
-		if lineNum > 30 {
-			break
-		}
 		line := scanner.Text()
 
 		// Stop at package declaration
@@ -97,6 +92,11 @@ func parseGoHeader(path string) (ToolInfo, error) {
 		}
 
 		content := strings.TrimSpace(strings.TrimPrefix(line, "//"))
+
+		// Stop at separator line (e.g. "// ---" marks start of localized/non-parsed section)
+		if strings.HasPrefix(content, "---") {
+			break
+		}
 
 		// First non-empty comment line is the description
 		if info.Description == "" && content != "" {

@@ -11,7 +11,7 @@ This template creates a Docker-based development environment where:
 - **Misconfigurations are caught automatically** — Startup validation checks that your deny rules and volume mounts are in sync, warning you before AI sees anything
 - **Code is fully accessible** — AI can read and edit all source code across multiple projects
 - **Other containers are reachable** — With DockMCP, AI can check logs and run tests in other containers safely
-- **Helper scripts are discoverable** — AI automatically finds and understands utility scripts in `.sandbox/`, with clear guidance for host-only operations
+- **Helper scripts and tools are discoverable** — AI automatically finds and understands scripts and tools in `.sandbox/`, and can run them or provide guidance
 
 All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](docs/reference.md#two-environments).
 
@@ -29,6 +29,7 @@ This project is designed for local development environments and is not intended 
 - [Use Cases](#use-cases)
 - [Quick Start](#quick-start)
 - [Commands](#commands)
+- [AI Sandbox Tools](#ai-sandbox-tools)
 - [Project Structure](#project-structure)
 - [Security Features](#security-features)
 - [Supported AI Tools](#supported-ai-tools)
@@ -107,7 +108,7 @@ AI Sandbox (container)  →  DockMCP (host OS)     →  Other containers (API, D
 
 Since AI runs inside a Docker container Sandbox, secret files become completely inaccessible — as if they don't exist. This doesn't hinder development, because AI can still check logs and run tests in other containers through DockMCP.
 
-**SandboxMCP** runs inside the container and lets AI discover available utility scripts automatically. Ask "What scripts can I use?" and AI will list them with descriptions. For host-only operations (like copying credentials between containers), AI provides clear instructions instead of confusing errors. Works with both Claude Code and Gemini CLI, auto-registered on startup.
+Separately from DockMCP, **SandboxMCP** runs inside the container and lets AI automatically discover and run scripts and tools in `.sandbox/`. See [AI Sandbox Tools](#ai-sandbox-tools) for details.
 
 → For detailed architecture diagrams, see [Architecture Details](docs/architecture.md)
 
@@ -260,11 +261,65 @@ docker-compose -f docker-compose.demo.yml up -d --build
 
 > For detailed command options, see [dkmcp/README.md](dkmcp/README.md#cli-commands)
 
-## Bonus: Conversation History Search
+# AI Sandbox Tools
 
-Not directly related to the Sandbox, but `.sandbox/tools/` includes a tool that searches Claude Code conversation history. Ask your AI something like "Did we discuss ○○ yesterday?" and it will search past conversations for you.
+## Conversation History Search
 
-> For details, see [docs/architecture.md](docs/architecture.md)
+A built-in tool lets you search past Claude Code conversations. Just ask your AI — it handles the rest automatically via SandboxMCP.
+
+**What you can ask:**
+
+| Question | What AI does |
+|----------|--------------|
+| "What did we work on yesterday?" | Searches yesterday's messages and summarizes them |
+| "Give me a summary of last week" | Looks up sessions day by day and creates an overview |
+| "Did we discuss DockMCP setup?" | Keyword search across past conversations |
+| "When did we fix that bug?" | Finds the relevant conversation by date and keyword |
+| "Where did this mystery file come from?" | Traces back through past AI session commands to find the cause |
+
+> For detailed usage and options, see [docs/search-history.md](docs/search-history.md)
+
+## Token Usage Report
+
+A built-in tool tracks how many tokens you're consuming in Claude Code. It breaks down usage by model and time period, and AI can estimate costs on the fly.
+
+**Example questions you can ask:**
+
+| What you say | What AI does |
+|--------------|--------------|
+| "How much did I use this week?" | Aggregates last 7 days of token usage by model |
+| "Show me last month's usage and cost" | 30-day summary + fetches latest pricing for cost estimate |
+| "How does this compare to a Pro plan?" | Calculates API cost and compares with Pro / Max plans |
+| "Show me daily breakdown" | Displays per-day token consumption |
+
+**How cost estimation works:**
+
+Prices are never hardcoded in the tool. When you ask about costs, AI fetches the latest pricing from [Anthropic's official pricing page](https://docs.anthropic.com/en/docs/about-claude/pricing) and calculates on the spot — always up to date.
+
+```
+You: "What did last month cost?"
+    ↓
+AI: ① Runs the tool to aggregate token counts
+    ② Fetches current pricing from docs.anthropic.com
+    ③ Outputs cost breakdown + Pro/Max plan comparison
+```
+
+## Adding Your Own Tools
+
+Place a Go file in `.sandbox/tools/` with a comment header, and AI will automatically discover it. No configuration needed.
+
+```go
+// my-tool.go - describe what this tool does
+//
+// Usage:
+//   go run .sandbox/tools/my-tool.go [options]
+//
+// Examples:
+//   go run .sandbox/tools/my-tool.go "hello"
+package main
+```
+
+> For SandboxMCP architecture details, see [docs/architecture.md](docs/architecture.md)
 
 
 # Project Structure
