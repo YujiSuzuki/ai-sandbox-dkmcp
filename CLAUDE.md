@@ -629,6 +629,19 @@ The `// ---` separator is optional. Use it when adding localized descriptions or
 
 No registration or configuration needed — just drop a `.go` file and AI can use it.
 
+### Adding Custom Scripts
+
+You can also place shell scripts in `.sandbox/scripts/` and they will be automatically discovered via `list_scripts`, `get_script_info`, and `run_script`. Add the following header:
+
+```bash
+#!/bin/bash
+# my-script.sh
+# English description
+# Japanese description
+```
+
+Since scripts can call other languages (Python, Node.js, etc.), you can build tools in any language, not just Go.
+
 ### Using Tools Proactively
 
 As an AI assistant, you can **discover and run** tools in `.sandbox/tools/` via SandboxMCP:

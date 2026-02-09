@@ -368,3 +368,76 @@ package main
 ```
 
 AI アシスタントは `list_tools` でツールを発見し、`get_tool_info` で使い方を確認し、`run_tool` で実行できます。
+
+### 自作スクリプトの追加
+
+`.sandbox/scripts/` にシェルスクリプトを置いても同様に認識されます。シェルスクリプトから Python や Node.js など他の言語を呼び出すこともできるため、Go 以外の言語でもツールを作成できます。
+
+**ヘッダー形式（先頭4行固定）：**
+
+```bash
+#!/bin/bash
+# my-script.sh
+# English description
+# 日本語の説明
+```
+
+- 1行目: シバン行
+- 2行目: ファイル名
+- 3行目: 英語の説明（`list_scripts` で表示される）
+- 4行目: 日本語の説明
+
+**Usage セクション（任意）：**
+
+先頭50行以内に `Usage:` または `使用法:` で始まるコメント行があると、`get_script_info` で使い方として表示されます。空のコメント行またはコメント以外の行でセクションが終了します。
+
+```bash
+#!/bin/bash
+# my-script.sh
+# English description
+# 日本語の説明
+#
+# Usage:
+#   my-script.sh [options] <args>
+#   my-script.sh --verbose "hello"
+```
+
+**スキップされるファイル：**
+
+| パターン | 理由 |
+|---|---|
+| `_` で始まるファイル | ライブラリ扱い（例: `_startup_common.sh`） |
+| `help.sh` | ヘルプスクリプト自体は一覧に含めない |
+| `.sh` 以外のファイル | 対象外 |
+
+**カテゴリの自動分類：**
+
+| ファイル名 | カテゴリ |
+|---|---|
+| `test-` で始まる | `test` |
+| それ以外 | `utility` |
+
+**実行環境の分類：**
+
+スクリプトは実行環境によって3種類に分類されます。ホスト専用スクリプトを `run_script` で実行しようとすると、ホスト OS での実行コマンドを案内するエラーが返されます。
+
+| 環境 | 対象スクリプト |
+|---|---|
+| `host`（ホスト専用） | `copy-credentials.sh`, `init-host-env.sh` |
+| `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh` |
+| `any`（どちらでも可） | 上記以外のすべて |
+
+```
+┌───────────────────────────────────────────────────┐
+│ .sandbox/scripts/                                 │
+│  ├── validate-secrets.sh  ← 組み込み（container） │
+│  ├── test-*.sh            ← テストカテゴリ        │
+│  ├── _startup_common.sh   ← スキップ（ライブラリ）│
+│  └── my-script.sh         ← ファイルを置くだけ    │
+│                                                   │
+│ SandboxMCP が *.sh ファイルを自動検出             │
+│ 登録や設定は不要                                  │
+└───────────────────────────────────────────────────┘
+```
+
+AI アシスタントは `list_scripts` でスクリプトを発見し、`get_script_info` で使い方を確認し、`run_script` で実行できます。

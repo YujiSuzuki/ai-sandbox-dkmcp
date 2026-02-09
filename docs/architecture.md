@@ -368,3 +368,76 @@ package main
 ```
 
 AI assistants can then use `list_tools` to find it, `get_tool_info` to read its usage, and `run_tool` to execute it.
+
+### Adding Custom Scripts
+
+You can also place shell scripts in `.sandbox/scripts/` and they will be automatically discovered. Since scripts can call other languages (Python, Node.js, etc.), you can build tools in any language, not just Go.
+
+**Header format (fixed 4-line format):**
+
+```bash
+#!/bin/bash
+# my-script.sh
+# English description
+# Japanese description
+```
+
+- Line 1: Shebang
+- Line 2: Filename
+- Line 3: English description (shown in `list_scripts`)
+- Line 4: Japanese description
+
+**Usage section (optional):**
+
+If a `Usage:` line appears within the first 50 lines of the script, it will be displayed by `get_script_info`. The section ends at an empty comment line or a non-comment line.
+
+```bash
+#!/bin/bash
+# my-script.sh
+# English description
+# Japanese description
+#
+# Usage:
+#   my-script.sh [options] <args>
+#   my-script.sh --verbose "hello"
+```
+
+**Skipped files:**
+
+| Pattern | Reason |
+|---|---|
+| Files starting with `_` | Treated as libraries (e.g., `_startup_common.sh`) |
+| `help.sh` | The help script itself is excluded from listings |
+| Non-`.sh` files | Not processed |
+
+**Automatic category classification:**
+
+| Filename | Category |
+|---|---|
+| Starts with `test-` | `test` |
+| All others | `utility` |
+
+**Environment classification:**
+
+Scripts are classified into three execution environments. Attempting to run a host-only script via `run_script` returns an error with guidance on how to run it on the host OS.
+
+| Environment | Scripts |
+|---|---|
+| `host` (host only) | `copy-credentials.sh`, `init-host-env.sh` |
+| `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh` |
+| `any` (either) | All others |
+
+```
+┌───────────────────────────────────────────────────┐
+│ .sandbox/scripts/                                 │
+│  ├── validate-secrets.sh  ← built-in (container)  │
+│  ├── test-*.sh            ← test category         │
+│  ├── _startup_common.sh   ← skipped (library)     │
+│  └── my-script.sh         ← just drop a file here │
+│                                                   │
+│ SandboxMCP auto-discovers *.sh files              │
+│ No registration or configuration needed           │
+└───────────────────────────────────────────────────┘
+```
+
+AI assistants can use `list_scripts` to find them, `get_script_info` to read usage, and `run_script` to execute them.

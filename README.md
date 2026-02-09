@@ -294,7 +294,7 @@ A built-in tool tracks how many tokens you're consuming in Claude Code. It break
 
 **How cost estimation works:**
 
-Prices are never hardcoded in the tool. When you ask about costs, AI fetches the latest pricing from [Anthropic's official pricing page](https://docs.anthropic.com/en/docs/about-claude/pricing) and calculates on the spot — always up to date.
+When you ask about costs, AI fetches the latest pricing from [Anthropic's official pricing page](https://docs.anthropic.com/en/docs/about-claude/pricing) and calculates on the spot, so it adapts easily to pricing changes.
 
 ```
 You: "What did last month cost?"
@@ -318,6 +318,19 @@ Place a Go file in `.sandbox/tools/` with a comment header, and AI will automati
 //   go run .sandbox/tools/my-tool.go "hello"
 package main
 ```
+
+### Adding Your Own Scripts
+
+You can also place shell scripts in `.sandbox/scripts/` and they will be automatically discovered. Add the following header to the top of the file:
+
+```bash
+#!/bin/bash
+# my-script.sh
+# English description
+# Japanese description
+```
+
+Since scripts can call other languages (Python, Node.js, etc.), you can build tools in any language, not just Go.
 
 > For SandboxMCP architecture details, see [docs/architecture.md](docs/architecture.md)
 
