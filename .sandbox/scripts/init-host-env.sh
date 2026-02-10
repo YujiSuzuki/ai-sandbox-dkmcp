@@ -1,22 +1,28 @@
 #!/bin/bash
 # init-host-env.sh
 # Host-side initialization: create env files from templates and write host OS info
-# ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
+#
+# Timezone behavior: Only offered when Japanese is selected (Asia/Tokyo default)
+# Architecture conversion: x86_64→amd64, aarch64→arm64 for cross-build compatibility
 #
 # Usage:
 #   Automatic (startup):  init-host-env.sh [project_root]
 #   Manual (interactive): init-host-env.sh -i [project_root]
-#                         init-host-env.sh --interactive [project_root]
-# 使用法:
-#   自動（起動時）:       init-host-env.sh [project_root]
-#   手動（対話式）:       init-host-env.sh -i [project_root]
 #                         init-host-env.sh --interactive [project_root]
 #
 # This script is called from:
 #   - cli_sandbox/_common.sh (CLI sandbox startup)
 #   - .devcontainer/devcontainer.json initializeCommand (DevContainer startup)
 #
-# Also writes host OS info to .sandbox/.host-os for cross-build support
+# Writes host OS info to .sandbox/.host-os for cross-build support (used by dkmcp/Makefile build-host)
+# ---
+# ホスト側の初期化: テンプレートからenvファイル作成、ホストOS情報の書き出し
+#
+# 使用法:
+#   自動（起動時）:       init-host-env.sh [project_root]
+#   手動（対話式）:       init-host-env.sh -i [project_root]
+#                         init-host-env.sh --interactive [project_root]
+#
 # クロスビルド用にホストOS情報を .sandbox/.host-os に書き出す
 
 set -euo pipefail

@@ -1,10 +1,11 @@
 #!/bin/bash
 # compare-secret-config.sh
 # Compare secret hiding configuration between DevContainer and CLI Sandbox
-# DevContainer と CLI Sandbox の秘匿設定を比較
 #
 # This script checks if both docker-compose.yml files have the same
 # secret hiding configuration (volumes with /dev/null and tmpfs mounts)
+# ---
+# DevContainer と CLI Sandbox の秘匿設定を比較
 # 両方の docker-compose.yml で秘匿設定（/dev/null volumes と tmpfs マウント）が
 # 同じであることを確認します
 

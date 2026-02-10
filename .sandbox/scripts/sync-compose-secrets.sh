@@ -1,10 +1,13 @@
 #!/bin/bash
 # sync-compose-secrets.sh
 # Sync secret hiding configuration between DevContainer and CLI Sandbox docker-compose.yml
-# DevContainer と CLI Sandbox の docker-compose.yml 間で秘匿設定を同期
 #
 # This script finds differences in secret hiding config between the two docker-compose.yml
 # files and offers to sync them (add missing entries to each file).
+#
+# IMPORTANT: Must run inside AI Sandbox container (not on host OS).
+# ---
+# DevContainer と CLI Sandbox の docker-compose.yml 間で秘匿設定を同期
 # 2つの docker-compose.yml 間の秘匿設定の差異を見つけ、同期を提案します
 # （不足しているエントリを各ファイルに追加）。
 

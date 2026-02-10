@@ -1,26 +1,31 @@
 #!/bin/bash
 # check-secret-sync.sh
 # Check if files blocked in AI settings are also hidden in docker-compose.yml
-# AI設定でブロックされたファイルが docker-compose.yml でも隠蔽されているかチェック
 #
 # This script runs at AI Sandbox startup and warns if there are files that should
 # be hidden from AI but are not configured in docker-compose.yml volume mounts.
-# このスクリプトは AI Sandbox 起動時に実行され、AI から隠すべきファイルが
-# docker-compose.yml のボリュームマウントに設定されていない場合に警告します。
 #
-# Supported AI settings files / 対応するAI設定ファイル:
+# Supported AI settings files:
 #   - .claude/settings.json  (Claude Code)
 #   - .aiexclude             (Gemini Code Assist)
 #   - .geminiignore          (Gemini CLI)
 #
-# NOTE: .gitignore is intentionally NOT supported.
+# .gitignore is intentionally NOT supported because it contains many non-secret patterns
+# (node_modules/, dist/, *.log, .DS_Store) that would create noise in the sync check.
+# AI exclusion files should explicitly list only secrets, keeping intent clear.
+# ---
+# AI設定でブロックされたファイルが docker-compose.yml でも隠蔽されているかチェック
+# このスクリプトは AI Sandbox 起動時に実行され、AI から隠すべきファイルが
+# docker-compose.yml のボリュームマウントに設定されていない場合に警告します。
+#
+# 対応するAI設定ファイル:
+#   - .claude/settings.json  (Claude Code)
+#   - .aiexclude             (Gemini Code Assist)
+#   - .geminiignore          (Gemini CLI)
+#
 # 注意: .gitignore は意図的にサポートしていません。
 #
-# Reason / 理由:
-#   .gitignore contains many non-secret patterns (node_modules/, dist/, *.log, etc.)
-#   that would create noise in the sync check. AI exclusion files should explicitly
-#   list only secrets, keeping the intent clear and maintenance easy.
-#
+# 理由:
 #   .gitignore には秘匿情報以外のパターン（node_modules/, dist/, *.log 等）が
 #   多く含まれ、同期チェックでノイズになります。AI除外ファイルには秘匿情報のみを
 #   明示的に記載することで、意図が明確になりメンテナンスも容易になります。

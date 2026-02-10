@@ -1,6 +1,7 @@
 #!/bin/bash
 # startup.sh
 # Orchestrate all startup scripts for AI Sandbox
+# ---
 # AI Sandbox の起動スクリプトを統合管理
 
 set -e  # Exit on error

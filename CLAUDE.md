@@ -637,8 +637,11 @@ You can also place shell scripts in `.sandbox/scripts/` and they will be automat
 #!/bin/bash
 # my-script.sh
 # English description
-# Japanese description
+# ---
+# Japanese description (optional, for human readers only, not parsed)
 ```
+
+The `# ---` separator marks the end of parsed content. Everything after it is ignored by the parser but kept for human readers (like Japanese documentation). This aligns with the Go tools' `// ---` separator pattern.
 
 Since scripts can call other languages (Python, Node.js, etc.), you can build tools in any language, not just Go.
 
@@ -667,6 +670,20 @@ When a user's request can be fulfilled by an existing tool (e.g., searching conv
 | Transport | stdio | SSE (HTTP) |
 | Purpose | Script/tool discovery | Container access |
 | Auto-start | By Claude Code | Manual (`dkmcp serve`) |
+
+### Shell-based Help (help.sh)
+
+For users working in shell environments (e.g., `cli_sandbox/ai_sandbox.sh`), there's also a lightweight **help.sh** script that provides a quick one-line summary of all scripts:
+
+```bash
+.sandbox/scripts/help.sh
+```
+
+**Role separation:**
+- **help.sh**: Shell users get a quick one-line summary of each script
+- **SandboxMCP**: AI assistants get detailed information (multi-line descriptions, usage, etc.)
+
+This design keeps the shell output concise while providing AI with full context. For detailed information, users can read the header comments in each script directly.
 
 ## Development Approach: Test-Driven Development (TDD)
 

@@ -2,14 +2,25 @@
 # copy-credentials.sh
 # Export/Import home directory (credentials, settings, history) using docker-compose.yml
 #
-# docker-compose.yml を使用してホームディレクトリ（認証情報・設定・履歴）を
-# エクスポート/インポートします。
+# Supports both workspace mode (auto-detect .devcontainer/ and cli_sandbox/) and single
+# docker-compose.yml mode. For cli_sandbox/, detects COMPOSE_PROJECT_NAME from all .sh files
+# (claude.sh, gemini.sh, ai_sandbox.sh, etc.) and exports/imports each separately.
+#
+# Manual testing on host OS (not in container):
+#   1) Help: ./copy-credentials.sh → Usage message, exit 1
+#   2) Missing args: ./copy-credentials.sh one-arg → Usage message, exit 1
+#   3) Non-existent volume: ./copy-credentials.sh --export nonexistent /tmp/test → "volume not found" error
+#   4) Actual copy (optional): ./copy-credentials.sh --export /path/to/workspace ~/backup
+#   5) Overwrite prompt: Run export twice → "already exists" warning, [y/N] prompt
 #
 # Usage:
 #   Export:
 #     ./copy-credentials.sh --export <workspace-or-yaml> <backup-path>
 #   Import:
 #     ./copy-credentials.sh --import <backup-path> <workspace-or-yaml>
+# ---
+# docker-compose.yml を使用してホームディレクトリ（認証情報・設定・履歴）を
+# エクスポート/インポートします。
 #
 # Manual testing (run on host OS / ホストOSで実行):
 #

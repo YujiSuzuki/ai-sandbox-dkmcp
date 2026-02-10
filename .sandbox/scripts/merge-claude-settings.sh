@@ -1,6 +1,13 @@
 #!/bin/bash
 # merge-claude-settings.sh
 # Merge .claude/settings.json from subprojects into workspace root
+#
+# Merge logic (4 cases):
+#   1) No workspace settings → Create by merging all subproject permissions
+#   2) Settings exist, no changes → Re-merge from subprojects and update backup
+#   3) Settings exist with manual changes → Disable auto-merge, preserve manual edits
+#   4) Settings exist without backup → Assume manual creation, skip merge
+# ---
 # サブプロジェクトの .claude/settings.json を workspace 直下にマージ
 
 set -e

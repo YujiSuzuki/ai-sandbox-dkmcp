@@ -1,10 +1,13 @@
 #!/bin/bash
 # help.sh
-# Display description of all scripts in .sandbox/scripts/
-# .sandbox/scripts/ 内の全スクリプトの説明を表示
+# Display one-line summary of all scripts in .sandbox/scripts/ (for shell users)
+# For detailed information, see the header comments in each script or use SandboxMCP tools
 #
 # Usage: .sandbox/scripts/help.sh [--list]
 #   --list: Show raw script list (for developers)
+# ---
+# .sandbox/scripts/ 内の全スクリプトの1行サマリーを表示（シェルユーザー向け）
+# 詳細は各スクリプトの冒頭コメントまたは SandboxMCP ツールを参照
 #
 # 使用法: .sandbox/scripts/help.sh [--list]
 #   --list: スクリプト一覧を表示（開発者向け）
@@ -50,14 +53,35 @@ show_script_list() {
     }
 
     get_desc() {
-        local script="$1" desc_en desc_ja
-        desc_en=$(sed -n '3p' "$script" | sed 's/^# *//')
-        desc_ja=$(sed -n '4p' "$script" | sed 's/^# *//')
-        if [[ "$LANG_JA" == true ]] && [[ -n "$desc_ja" ]] && [[ "$desc_ja" != "#"* ]]; then
-            echo "$desc_ja"
-        else
-            echo "$desc_en"
-        fi
+        local script="$1"
+        local desc_lines=()
+        local line_num=0
+
+        # Read script and parse description (first line only for --list view)
+        while IFS= read -r line; do
+            ((line_num++))
+
+            # Skip shebang and filename lines
+            [[ $line_num -le 2 ]] && continue
+
+            # Stop at non-comment lines
+            [[ ! "$line" =~ ^# ]] && break
+
+            # Extract content after '#'
+            local content="${line#\#}"
+            content="${content# }"
+
+            # Stop at # --- separator
+            [[ "$content" =~ ^--- ]] && break
+
+            # Collect first non-empty line only
+            if [[ -n "$content" ]] && [[ ${#desc_lines[@]} -eq 0 ]]; then
+                desc_lines+=("$content")
+                break
+            fi
+        done < "$script"
+
+        echo "${desc_lines[*]}"
     }
 
     echo ""
@@ -88,6 +112,14 @@ show_script_list() {
         name=$(basename "$script")
         printf "     %-32s %s\n" "$name" "$(get_desc "$script")"
     done
+    echo ""
+
+    # Footer message
+    if [[ "$LANG_JA" == true ]]; then
+        echo "💡 詳細は各スクリプトの冒頭コメントを参照してください"
+    else
+        echo "💡 For detailed information, see the header comments in each script"
+    fi
     echo ""
 }
 

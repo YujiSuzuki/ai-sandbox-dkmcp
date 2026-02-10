@@ -11,13 +11,12 @@ import (
 
 // ScriptInfo holds parsed metadata about a script.
 type ScriptInfo struct {
-	Name          string `json:"name"`
-	DescriptionEN string `json:"description_en"`
-	DescriptionJA string `json:"description_ja"`
-	Environment   string `json:"environment"` // "host", "container", "any"
-	Category      string `json:"category"`    // "utility", "test"
-	Usage         string `json:"usage,omitempty"`
-	Options       string `json:"options,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Environment string `json:"environment"` // "host", "container", "any"
+	Category    string `json:"category"`    // "utility", "test"
+	Usage       string `json:"usage,omitempty"`
+	Options     string `json:"options,omitempty"`
 }
 
 // Scripts that must run on host OS (from help.sh L40-41).
@@ -84,8 +83,12 @@ func GetDetailedInfo(dir, name string) (ScriptInfo, error) {
 //
 //	Line 1: #!/bin/bash
 //	Line 2: # filename.sh
-//	Line 3: # English description
-//	Line 4: # Japanese description
+//	Line 3+: # Description text (until # --- separator or end of comments)
+//
+// Parsing stops at:
+//   - # --- separator (content after this is ignored, similar to Go tools' // ---)
+//   - Non-comment line
+//   - End of file
 func parseHeader(path string) (ScriptInfo, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -102,21 +105,45 @@ func parseHeader(path string) (ScriptInfo, error) {
 
 	scanner := bufio.NewScanner(f)
 	lineNum := 0
-	for scanner.Scan() && lineNum < 4 {
+	var descLines []string
+
+	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
-		switch lineNum {
-		case 3:
-			info.DescriptionEN = stripComment(line)
-		case 4:
-			info.DescriptionJA = stripComment(line)
+
+		// Skip shebang and filename lines
+		if lineNum <= 2 {
+			continue
 		}
+
+		// Stop at non-comment lines
+		if !strings.HasPrefix(line, "#") {
+			break
+		}
+
+		content := stripComment(line)
+
+		// Stop at # --- separator
+		if strings.HasPrefix(content, "---") {
+			break
+		}
+
+		// Collect description lines (skip empty lines)
+		if content != "" {
+			descLines = append(descLines, content)
+		}
+	}
+
+	// Join description lines with space
+	if len(descLines) > 0 {
+		info.Description = strings.Join(descLines, " ")
 	}
 
 	return info, nil
 }
 
 // parseDetailedHeader reads more of the file to extract usage and options.
+// Parsing stops at # --- separator, aligning with Go tools' // --- pattern.
 func parseDetailedHeader(path string) (ScriptInfo, error) {
 	info, err := parseHeader(path)
 	if err != nil {
@@ -141,8 +168,19 @@ func parseDetailedHeader(path string) (ScriptInfo, error) {
 		}
 		line := scanner.Text()
 
-		// Detect usage section
+		// Stop at non-comment lines
+		if !strings.HasPrefix(line, "#") {
+			break
+		}
+
 		stripped := stripComment(line)
+
+		// Stop at # --- separator (aligns with Go tools' // --- pattern)
+		if strings.HasPrefix(stripped, "---") {
+			break
+		}
+
+		// Detect usage section
 		if strings.HasPrefix(strings.ToLower(stripped), "usage:") || strings.HasPrefix(stripped, "使用法:") {
 			inUsage = true
 			usageLines = append(usageLines, stripped)
@@ -150,17 +188,12 @@ func parseDetailedHeader(path string) (ScriptInfo, error) {
 		}
 
 		if inUsage {
-			// End of usage section: non-comment line or empty comment
-			if !strings.HasPrefix(line, "#") {
+			// End of usage section: empty comment
+			if stripped == "" {
 				inUsage = false
 				continue
 			}
-			content := stripComment(line)
-			if content == "" {
-				inUsage = false
-				continue
-			}
-			usageLines = append(usageLines, content)
+			usageLines = append(usageLines, stripped)
 		}
 	}
 

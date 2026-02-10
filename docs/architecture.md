@@ -373,33 +373,40 @@ AI assistants can then use `list_tools` to find it, `get_tool_info` to read its 
 
 You can also place shell scripts in `.sandbox/scripts/` and they will be automatically discovered. Since scripts can call other languages (Python, Node.js, etc.), you can build tools in any language, not just Go.
 
-**Header format (fixed 4-line format):**
+**Header format:**
 
 ```bash
 #!/bin/bash
 # my-script.sh
-# English description
-# Japanese description
+# English description (can be multi-line)
+# Additional description continues here
+# ---
+# Japanese description (optional, not parsed)
 ```
 
 - Line 1: Shebang
 - Line 2: Filename
-- Line 3: English description (shown in `list_scripts`)
-- Line 4: Japanese description
+- Line 3+: English description (can span multiple lines, shown to AI in `list_scripts`)
+- Line N: `# ---` separator (parsing stops here)
+- Line N+1 onwards: Japanese description, etc. (for human readers, not passed to AI)
+
+The `# ---` separator marks the end of parsed content. Everything after it is ignored by the parser but kept for human readers. This aligns with the Go tools' `// ---` separator pattern.
 
 **Usage section (optional):**
 
-If a `Usage:` line appears within the first 50 lines of the script, it will be displayed by `get_script_info`. The section ends at an empty comment line or a non-comment line.
+If a `Usage:` line appears before the `# ---` separator, it will be displayed by `get_script_info`. The section ends at an empty comment line. This aligns with the Go tools pattern where Usage/Examples come before `// ---`.
 
 ```bash
 #!/bin/bash
 # my-script.sh
 # English description
-# Japanese description
 #
 # Usage:
 #   my-script.sh [options] <args>
 #   my-script.sh --verbose "hello"
+#
+# ---
+# 日本語の説明
 ```
 
 **Skipped files:**

@@ -1,10 +1,14 @@
 #!/bin/bash
 # sync-secrets.sh
 # Interactive script to sync secret files from .claude/settings.json to docker-compose.yml
-# .claude/settings.json から docker-compose.yml へ秘匿ファイルを同期する対話式スクリプト
 #
 # This script finds files blocked in Claude settings that are not hidden in docker-compose.yml,
-# and offers to add them interactively. Both DevContainer and CLI Sandbox configs are updated.
+# and offers to add them interactively. Updates both DevContainer and CLI Sandbox configs.
+#
+# IMPORTANT: Must run inside AI Sandbox container (not on host OS). Auto-detects which
+# environment to use ($SANDBOX_ENV: devcontainer, cli_claude, cli_gemini, cli_ai_sandbox).
+# ---
+# .claude/settings.json から docker-compose.yml へ秘匿ファイルを同期する対話式スクリプト
 # このスクリプトは Claude 設定でブロックされているが docker-compose.yml で隠蔽されていない
 # ファイルを見つけ、対話式で追加を提案します。DevContainer と CLI Sandbox の両方を更新します。
 

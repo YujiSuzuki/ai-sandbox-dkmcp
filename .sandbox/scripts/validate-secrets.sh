@@ -1,10 +1,12 @@
 #!/bin/bash
 # validate-secrets.sh
 # Validate that secret files are properly hidden from AI
-# シークレットファイルがAIから適切に隠蔽されているか検証
 #
-# This script automatically reads secret paths from docker-compose.yml
-# and checks if they are actually inaccessible (empty, /dev/null mounted, or tmpfs mounted)
+# This script automatically reads secret paths from docker-compose.yml and checks if they
+# are actually inaccessible (empty, /dev/null mounted, or tmpfs mounted). Auto-detects which
+# docker-compose.yml to use based on $SANDBOX_ENV (devcontainer, cli_claude, cli_gemini, cli_ai_sandbox).
+# ---
+# シークレットファイルがAIから適切に隠蔽されているか検証
 # このスクリプトは docker-compose.yml から秘匿パスを自動で読み込み、
 # 実際にアクセス不可（空、/dev/nullマウント、tmpfsマウント）であることを確認します
 

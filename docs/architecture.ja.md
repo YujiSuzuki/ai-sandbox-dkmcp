@@ -373,33 +373,40 @@ AI アシスタントは `list_tools` でツールを発見し、`get_tool_info`
 
 `.sandbox/scripts/` にシェルスクリプトを置いても同様に認識されます。シェルスクリプトから Python や Node.js など他の言語を呼び出すこともできるため、Go 以外の言語でもツールを作成できます。
 
-**ヘッダー形式（先頭4行固定）：**
+**ヘッダー形式：**
 
 ```bash
 #!/bin/bash
 # my-script.sh
-# English description
-# 日本語の説明
+# English description (can be multi-line)
+# Additional description continues here
+# ---
+# 日本語の説明（任意、パースされない）
 ```
 
 - 1行目: シバン行
 - 2行目: ファイル名
-- 3行目: 英語の説明（`list_scripts` で表示される）
-- 4行目: 日本語の説明
+- 3行目以降: 英語の説明（複数行可、`list_scripts` で AI に表示される）
+- N行目: `# ---` 区切り（パースはここで停止）
+- N+1行目以降: 日本語説明など（AI には渡されない）
+
+`# ---` 区切り以降はパーサーが無視しますが、人間が読むための情報として残せます。これは Go ツールの `// ---` パターンと同じ設計です。
 
 **Usage セクション（任意）：**
 
-先頭50行以内に `Usage:` または `使用法:` で始まるコメント行があると、`get_script_info` で使い方として表示されます。空のコメント行またはコメント以外の行でセクションが終了します。
+`# ---` 区切りの前に `Usage:` または `使用法:` で始まるコメント行があると、`get_script_info` で使い方として表示されます。空のコメント行でセクションが終了します。これは Go ツールで Usage/Examples が `// ---` の前に来るパターンと同じです。
 
 ```bash
 #!/bin/bash
 # my-script.sh
 # English description
-# 日本語の説明
 #
 # Usage:
 #   my-script.sh [options] <args>
 #   my-script.sh --verbose "hello"
+#
+# ---
+# 日本語の説明
 ```
 
 **スキップされるファイル：**

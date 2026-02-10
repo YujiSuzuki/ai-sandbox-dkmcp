@@ -1,10 +1,11 @@
 #!/bin/bash
 # check-upstream-updates.sh
 # Check for updates to the upstream repository
-# アップストリームリポジトリの更新をチェック
 #
 # This script checks GitHub releases API for new versions
 # and notifies the user if updates are available.
+# ---
+# アップストリームリポジトリの更新をチェック
 # このスクリプトはGitHub releases APIをチェックし、
 # 更新があればユーザーに通知します。
 

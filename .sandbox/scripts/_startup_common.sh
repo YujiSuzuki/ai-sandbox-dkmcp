@@ -1,12 +1,13 @@
 #!/bin/bash
 # _startup_common.sh
 # Common functions for startup scripts with verbosity support
-# 詳細度サポート付き起動スクリプト用共通関数
 #
 # Usage: source this file at the beginning of startup scripts
-# 使用法: 起動スクリプトの冒頭でこのファイルを source する
 #
 #   source "${WORKSPACE:-/workspace}/.sandbox/scripts/_startup_common.sh"
+# ---
+# 詳細度サポート付き起動スクリプト用共通関数
+# 使用法: 起動スクリプトの冒頭でこのファイルを source する
 
 # Configuration paths
 # 設定パス

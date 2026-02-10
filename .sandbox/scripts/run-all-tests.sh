@@ -1,12 +1,13 @@
 #!/bin/bash
 # run-all-tests.sh
 # Run all test scripts in .sandbox/scripts/
-# .sandbox/scripts/ 内の全テストスクリプトを実行
 #
 # Usage: ./.sandbox/scripts/run-all-tests.sh
-# 使用方法: ./.sandbox/scripts/run-all-tests.sh
 #
 # Environment: AI Sandbox (requires /workspace)
+# ---
+# .sandbox/scripts/ 内の全テストスクリプトを実行
+# 使用方法: ./.sandbox/scripts/run-all-tests.sh
 # 実行環境: AI Sandbox（/workspace が必要）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
