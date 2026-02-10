@@ -38,6 +38,31 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 - [ドキュメント](#ドキュメント)
 
 
+<details>
+<summary>📚 ドキュメントへのリンク（クリックで展開）</summary>
+
+### 📖 はじめに
+- [既存ソリューションとの比較](docs/comparison.ja.md) — Claude Code Sandbox、Docker AI Sandboxes等との比較
+- [ハンズオン](docs/hands-on.ja.md) — セキュリティ機能を実際に体験する演習
+
+### 🔧 セットアップ・運用
+- [自分のプロジェクトへの適用](docs/customization.ja.md) — テンプレートのカスタマイズ手順
+- [リファレンス](docs/reference.ja.md) — 環境設定、オプション、トラブルシューティング
+
+### 🏗️ アーキテクチャ
+- [アーキテクチャ詳細](docs/architecture.ja.md) — セキュリティの仕組みと構成図
+- [ネットワーク制限](docs/network-firewall.ja.md) — ファイアウォールの導入方法
+
+### 📦 コンポーネント
+- [DockMCP ドキュメント](dkmcp/README.ja.md) — MCPサーバーの詳細
+- [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) — なぜDockMCPはコンテナ操作をサポートしないのか
+- [プラグインガイド](docs/plugins.ja.md) — マルチリポ構成でのClaude Codeプラグイン活用
+- [デモアプリガイド](demo-apps/README.ja.md) — SecureNoteデモの実行方法
+- [CLI Sandbox ガイド](cli_sandbox/README.ja.md) — ターミナルベースのサンドボックス
+
+</details>
+
+----
 
 # この環境が解決する実際の課題
 

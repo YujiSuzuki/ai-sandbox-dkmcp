@@ -36,7 +36,31 @@ This project is designed for local development environments and is not intended 
 - [FAQ](#faq)
 - [Documentation](#documentation)
 
+<details>
+<summary>📚 Documentation Links (Click to expand)</summary>
 
+### 📖 Getting Started
+- [Comparison with Existing Solutions](docs/comparison.md) — How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc.
+- [Hands-on Guide](docs/hands-on.md) — Hands-on exercises for security features
+
+### 🔧 Setup & Operations
+- [Customization Guide](docs/customization.md) — How to adapt this template to your project
+- [Reference](docs/reference.md) — Environment settings, options, troubleshooting
+
+### 🏗️ Architecture
+- [Architecture Details](docs/architecture.md) — Security mechanisms and architecture diagrams
+- [Network Restrictions](docs/network-firewall.md) — How to add firewall to AI Sandbox
+
+### 📦 Components
+- [DockMCP Documentation](dkmcp/README.md) — MCP server details
+- [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) — Why DockMCP doesn't support container lifecycle operations
+- [Plugin Guide](docs/plugins.md) — Claude Code plugins for multi-repo setups
+- [Demo App Guide](demo-apps/README.md) — Running the SecureNote demo
+- [CLI Sandbox Guide](cli_sandbox/README.md) — Terminal-based sandbox
+
+</details>
+
+----
 
 # Problems This Solves
 
