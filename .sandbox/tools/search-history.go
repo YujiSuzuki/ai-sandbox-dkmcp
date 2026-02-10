@@ -3,7 +3,7 @@
 // Usage:
 //   go run .sandbox/tools/search-history.go [options] <pattern>
 //   go run .sandbox/tools/search-history.go -list [-after DATE] [-before DATE]
-//   go run .sandbox/tools/search-history.go -session <id>
+//   go run .sandbox/tools/search-history.go -session <id> [-after DATE] [-before DATE]
 //
 //   Modes:    <pattern> (keyword/regex search), -list (sessions), -session <id> (view)
 //   Filters:  -role user|assistant|tool, -tool <name>, -after/-before <YYYY-MM-DD> (local TZ), -i
@@ -11,7 +11,7 @@
 //   Display:  -max <n> (default: 50, 0=unlimited), -context <n> (default: 200, 0=full), -no-color
 //
 //   -list shows sessions sorted by last activity. Multi-day sessions display a date range.
-//   -after/-before filter by message timestamps (not session start), so they work with -list too.
+//   -after/-before filter by message timestamps (not session start), so they work with -list and -session too.
 //
 // Examples:
 //   go run .sandbox/tools/search-history.go "DockMCP"
@@ -35,8 +35,8 @@
 // フィルタ:
 //   -role <role>     ロールで絞り込み: user, assistant, tool
 //   -tool <name>     -role tool と併用。ツール名で絞り込み (Bash, Read, Edit, ...)
-//   -after <date>    指定日以降のみ (YYYY-MM-DD, ローカルTZ)。-list でも有効
-//   -before <date>   指定日以前のみ (YYYY-MM-DD, ローカルTZ)。-list でも有効
+//   -after <date>    指定日以降のみ (YYYY-MM-DD, ローカルTZ)。-list, -session でも有効
+//   -before <date>   指定日以前のみ (YYYY-MM-DD, ローカルTZ)。-list, -session でも有効
 //   -i               大文字小文字を無視
 //   -project <name>  プロジェクト指定 (デフォルト: workspace, "all" で全プロジェクト)
 //
@@ -46,7 +46,7 @@
 //   -no-color        カラー出力を無効化
 //
 // 日付フィルタの動作:
-//   -list と併用時、セッション内のメッセージ日時で判定する。
+//   -list, -session と併用時、セッション内のメッセージ日時で判定する。
 //   複数日にまたがるセッションでも、指定日にメッセージがあれば表示される。
 
 package main
@@ -170,7 +170,7 @@ func main() {
 	}
 
 	if sessionFilter != "" {
-		viewSession(projectDirs, sessionFilter, roleFilter, toolFilter, maxResults, contextChars)
+		viewSession(projectDirs, sessionFilter, roleFilter, toolFilter, maxResults, contextChars, afterTime, beforeTime)
 		return
 	}
 
@@ -257,7 +257,7 @@ func main() {
 	}
 }
 
-func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter string, maxResults, contextChars int) {
+func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter string, maxResults, contextChars int, after, before time.Time) {
 	// Find session file by prefix match
 	var sessionPath string
 	for _, dir := range projectDirs {
@@ -317,8 +317,20 @@ func viewSession(projectDirs []string, sessionPrefix, roleFilter, toolFilter str
 
 		ts, err := time.Parse(time.RFC3339Nano, entry.Timestamp)
 		if err != nil {
-			ts, _ = time.Parse(time.RFC3339, entry.Timestamp)
+			ts, err = time.Parse(time.RFC3339, entry.Timestamp)
+			if err != nil {
+				continue
+			}
 		}
+
+		// Date filter
+		if !after.IsZero() && ts.Before(after) {
+			continue
+		}
+		if !before.IsZero() && ts.After(before) {
+			continue
+		}
+
 		tsStr := ts.Local().Format("01/02 15:04:05")
 
 		// Show tool_use blocks
