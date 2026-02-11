@@ -104,6 +104,7 @@ env/
 *.swp
 *.swo
 *~
+ReleaseNotes-draft.md
 
 # Test artifacts (from .sandbox/scripts/test-*.sh)
 .test-secrets-*
