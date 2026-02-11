@@ -1,14 +1,20 @@
 # Customization Guide
 
-This repository is designed as a **GitHub template repository**. You can create your own project from this template.
+There are three ways to get started with this project. Choose the one that fits your situation.
 
 [← Back to README](../README.md)
 
 ---
 
-## Use as a Template
+## How to Get This Project
 
-### Step 1: Create from template
+| Method | GitHub account | How to update |
+|---|---|---|
+| **Use this template** | Required | See [Updating Guide](updating.md) |
+| **git clone** | Not required | `git pull origin main` |
+| **ZIP download** | Not required | Download new ZIP, apply changes manually |
+
+### Option 1: Use as a GitHub Template (recommended)
 
 On GitHub, click **"Use this template"** → **"Create a new repository"**.
 
@@ -17,76 +23,51 @@ The created repository will have:
 - A fresh Git history
 - Independent from upstream (no automatic sync)
 
-### Step 2: Clone your new repository
+Then clone your new repository:
 
 ```bash
 git clone https://github.com/your-username/your-new-repo.git
 cd your-new-repo
 ```
 
-### Check for Updates
+Since template repositories have no automatic upstream connection, an **update notification feature** is included. It checks for new GitHub releases at AI Sandbox startup. See [Updating Guide](updating.md) for how to apply updates.
 
-Repositories created from the template cannot automatically receive upstream updates, so an **update notification feature** is included. It checks for new GitHub releases at AI Sandbox startup and notifies you if a new version is available.
+### Option 2: Direct Clone
 
-<details>
-<summary>Notification examples and configuration details</summary>
-
-**How it works:**
-- By default, checks **all releases including pre-releases** so you can receive bug fixes and improvements quickly
-- On first startup, it only records the latest version without showing notifications
-- On subsequent checks, if a new version is found, a notification like this appears:
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 Update Check
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Current version:  v0.1.0
-  Latest version:   v0.2.0
-
-  How to update:
-    1. Check release notes for changes
-    2. Manually apply necessary changes
-
-  Release notes:
-    https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
-**How to apply updates:**
-1. Check [release notes](https://github.com/YujiSuzuki/ai-sandbox-dkmcp/releases) for changes
-2. Manually apply necessary changes to your project
-
-**Configuration file:** `.sandbox/config/template-source.conf`
-```bash
-TEMPLATE_REPO="YujiSuzuki/ai-sandbox-dkmcp"
-CHECK_CHANNEL="all"            # "all" = including pre-releases, "stable" = stable releases only
-CHECK_UPDATES="true"           # "false" to disable
-CHECK_INTERVAL_HOURS="24"      # Check interval (0 = every time)
-```
-
-| `CHECK_CHANNEL` | Behavior | Use Case |
-|---|---|---|
-| `"all"` (default) | Checks all releases including pre-releases | Want bug fixes and improvements ASAP |
-| `"stable"` | Checks stable releases only | Only want to track stable milestones |
-
-</details>
-
----
-
-## Alternative: Direct Clone
-
-If you want to track upstream changes with Git (e.g., for contributing):
+If you want to track upstream changes directly with Git (e.g., for contributing):
 
 ```bash
 git clone https://github.com/YujiSuzuki/ai-sandbox-dkmcp.git
 cd ai-sandbox-dkmcp
 ```
 
+Updates are available via `git pull origin main`.
+
+### Option 3: ZIP Download
+
+If you don't use Git, download the ZIP from GitHub (**"Code"** → **"Download ZIP"**) and extract it.
+
+Note: With this method, you'll need to download a new ZIP and manually apply changes when updating. The built-in update notification will still alert you when new versions are available.
+
 ---
 
 ## Project Customization
 
 Whether you used the template or cloned directly, follow these steps to customize the environment.
+
+### AI-assisted setup
+
+Since this is an AI Sandbox, you can ask your AI assistant to handle most of the customization. Open the AI Sandbox and describe your project:
+
+> "Customize this template for my project. My projects are:
+> - `my-api/` (Node.js API with `.env` and `secrets/` directory)
+> - `my-web/` (React frontend, no secrets)
+>
+> Container names: `my-api`, `my-web`. Allowed commands for my-api: `npm test`, `npm run lint`"
+
+The AI will edit docker-compose.yml, create dkmcp.yaml, update AI configuration files, and run validation scripts. You only need to rebuild the DevContainer and start DockMCP yourself.
+
+The sections below describe each step for manual setup.
 
 ### Replace demo-apps with your projects
 

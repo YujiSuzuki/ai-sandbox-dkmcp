@@ -87,8 +87,8 @@ func TestToolsListAfterInit(t *testing.T) {
 	if !ok {
 		t.Fatal("Expected tools array")
 	}
-	if len(tools) != 6 {
-		t.Errorf("Expected 6 tools, got %d", len(tools))
+	if len(tools) != 7 {
+		t.Errorf("Expected 7 tools, got %d", len(tools))
 	}
 }
 
@@ -392,6 +392,31 @@ func TestToolsCallInvalidParams(t *testing.T) {
 	}
 	if resp.Error.Code != jsonrpc.CodeInvalidParams {
 		t.Errorf("Error code = %d, want %d", resp.Error.Code, jsonrpc.CodeInvalidParams)
+	}
+}
+
+func TestToolsCallGetUpdateStatus(t *testing.T) {
+	srv := initServer()
+	resp := callTool(srv, "get_update_status", "")
+	if resp.Error != nil {
+		t.Fatalf("Unexpected error: %v", resp.Error)
+	}
+
+	result, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatal("Expected map result")
+	}
+	content, ok := result["content"].([]map[string]any)
+	if !ok || len(content) == 0 {
+		t.Fatal("Expected content array with at least one entry")
+	}
+	text, _ := content[0]["text"].(string)
+	if text == "" {
+		t.Error("Expected non-empty text content")
+	}
+	// Should contain update status header
+	if !strings.Contains(text, "Template Update Status") {
+		t.Error("Expected response to contain 'Template Update Status'")
 	}
 }
 

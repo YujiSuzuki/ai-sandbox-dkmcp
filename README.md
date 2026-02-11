@@ -45,6 +45,7 @@ This project is designed for local development environments and is not intended 
 
 ### 🔧 Setup & Operations
 - [Customization Guide](docs/customization.md) — How to adapt this template to your project
+- [Updating Guide](docs/updating.md) — How to apply updates from new template releases
 - [Reference](docs/reference.md) — Environment settings, options, troubleshooting
 
 ### 🏗️ Architecture
@@ -272,6 +273,15 @@ docker-compose -f docker-compose.demo.yml up -d --build
 
 ---
 
+## Updating This Template
+
+New versions are checked automatically on startup. When an update is available, you'll see a notification with the version info and a link to the release notes.
+
+**Easiest way:** Ask your AI assistant — `"Please update to the latest version"`. It handles version checks, conflict detection, and rebuilds for you.
+
+**Manual update:** See [Updating Guide](docs/updating.md) for step-by-step instructions (both clone and template users).
+
+---
 
 # Commands
 

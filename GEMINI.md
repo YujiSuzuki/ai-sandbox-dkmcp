@@ -141,6 +141,35 @@ Files hidden by Docker volume mounts (`/dev/null`) or `tmpfs` will appear empty 
 2. If it matches a hidden path, inform the user it is likely sandbox-hidden
 3. Ask the user to verify on the host OS, since you cannot see the real contents from inside the sandbox
 
+## When User Wants to Customize
+
+When a user wants to adapt this template for their own projects, **do the work yourself** — don't just list instructions.
+
+1. **Gather information** — Ask the user for:
+   - Project directories (e.g., `my-api/`, `my-web/`)
+   - Secret files/directories to hide (e.g., `.env`, `secrets/`)
+   - Container names for DockMCP (e.g., `my-api`, `my-web-*`)
+   - Allowed commands per container (e.g., `npm test`)
+
+2. **Edit configuration files:**
+   - `.devcontainer/docker-compose.yml` — Remove demo mounts, add user's secret hiding config
+   - `cli_sandbox/docker-compose.yml` — Same configuration (must match)
+   - `dkmcp.yaml` — Copy from `dkmcp/configs/dkmcp.example.yaml` and update
+   - `.aiexclude` / `.geminiignore` — Update secret patterns
+   - `GEMINI.md` — Rewrite project-specific sections, remove demo references
+
+3. **Run validation:**
+   - `.sandbox/scripts/validate-secrets.sh`
+   - `.sandbox/scripts/compare-secret-config.sh`
+   - `.sandbox/scripts/check-secret-sync.sh`
+
+4. **Tell user to:**
+   - Rebuild DevContainer (VS Code Command Palette → "Dev Containers: Rebuild Container")
+   - Start DockMCP on host OS (`cd dkmcp && make install && dkmcp serve`)
+   - Verify secrets are hidden and DockMCP is accessible
+
+You CANNOT rebuild the DevContainer or start DockMCP — the user must do these on the host OS.
+
 ## DockMCP MCP Tools
 
 | Tool | Description |

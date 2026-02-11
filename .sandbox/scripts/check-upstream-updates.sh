@@ -75,6 +75,8 @@ setup_messages() {
         MSG_HOW_TO_UPDATE="更新方法"
         MSG_HOW_TO_UPDATE_1="1. リリースノートで変更内容を確認"
         MSG_HOW_TO_UPDATE_2="2. 必要な変更を手動で適用"
+        MSG_AI_HINT="💡 AIに更新を依頼できます"
+        MSG_AI_HINT_EXAMPLE="例: 「最新バージョンに更新して」"
     else
         MSG_TITLE="📦 Update Check"
         MSG_UPDATE_AVAILABLE="Update available"
@@ -84,6 +86,8 @@ setup_messages() {
         MSG_HOW_TO_UPDATE="How to update"
         MSG_HOW_TO_UPDATE_1="1. Check release notes for changes"
         MSG_HOW_TO_UPDATE_2="2. Manually apply relevant updates"
+        MSG_AI_HINT="💡 You can ask your AI assistant to help"
+        MSG_AI_HINT_EXAMPLE="Example: \"Please update to the latest version\""
     fi
 }
 
@@ -358,6 +362,9 @@ show_update_notification() {
         echo "  $MSG_LATEST:   $latest"
         echo "  $MSG_RELEASE_NOTES:"
         echo "    $url"
+        echo ""
+        echo "  $MSG_AI_HINT"
+        echo "    $MSG_AI_HINT_EXAMPLE"
 
         print_footer
         return
@@ -376,6 +383,9 @@ show_update_notification() {
     echo "  $MSG_HOW_TO_UPDATE:"
     echo "    $MSG_HOW_TO_UPDATE_1"
     echo "    $MSG_HOW_TO_UPDATE_2"
+    echo ""
+    echo "  $MSG_AI_HINT"
+    echo "    $MSG_AI_HINT_EXAMPLE"
     echo ""
     echo "  $MSG_RELEASE_NOTES:"
     echo "    $url"

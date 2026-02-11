@@ -341,6 +341,165 @@ However, I can still help develop because:
 - I can run tests via DockMCP
 - The actual containers have full access to secrets"
 
+### Updating This Template
+
+When a user asks you to update to the latest version, or when you detect an update is available, follow this procedure:
+
+#### Detecting Updates
+
+**Method 1: Read the state file** (if available)
+```bash
+cat .sandbox/.state/update-check
+# Format: <unix_timestamp>:<version>
+# Example: 1705315800:v1.2.0
+```
+
+**Method 2: Check directly with git**
+```bash
+git fetch origin main
+git log HEAD..origin/main --oneline
+```
+
+**Method 3: Use SandboxMCP tool**
+- Use `get_update_status` to check update status
+
+#### Update Procedure
+
+When an update is available, follow these steps:
+
+**1. Check what changed**
+```bash
+# Fetch latest changes
+git fetch origin main
+
+# Show summary of changes
+git log HEAD..origin/main --oneline
+
+# Show detailed diff
+git diff HEAD..origin/main --stat
+```
+
+**2. Identify affected components**
+
+Look for changes in these critical areas:
+- `.sandbox/sandbox-mcp/` → SandboxMCP needs rebuild
+- `dkmcp/` → DockMCP needs rebuild (user must do this on host OS)
+- `.devcontainer/` or `cli_sandbox/` → Container config changed (restart required)
+- `.sandbox/scripts/` → Scripts updated (may need re-run)
+- `demo-apps/` → Demo apps updated
+
+**3. Detect potential conflicts**
+
+Check if the user has customized these files:
+```bash
+# Check for local modifications
+git status
+
+# Files commonly customized by users:
+# - .devcontainer/docker-compose.yml (secret hiding config)
+# - cli_sandbox/docker-compose.yml (secret hiding config)
+# - dkmcp/configs/dkmcp.yaml (security policy)
+# - .claude/settings.json (AI file access)
+```
+
+If conflicts are detected, **warn the user** before proceeding.
+
+**4. Explain changes to the user**
+
+Provide a clear summary:
+```
+📦 Update available: v1.1.0 → v1.2.0
+
+Changes:
+- SandboxMCP: Added update check tools
+- DockMCP: Improved log masking
+- Scripts: Fixed secret sync validation
+
+Impact:
+- SandboxMCP will be rebuilt automatically
+- DockMCP requires manual rebuild on host OS
+- No config file conflicts detected
+
+Risks:
+- Low risk: Only tool improvements, no breaking changes
+```
+
+**5. Get user confirmation**
+
+Use `AskUserQuestion` if you need clarification on:
+- How to handle conflicts (merge vs. overwrite)
+- Whether to apply optional changes
+- Timing (apply now vs. later)
+
+**6. Apply the update**
+
+```bash
+# Pull changes
+git pull origin main
+
+# Rebuild SandboxMCP (if affected)
+cd /workspace/.sandbox/sandbox-mcp
+make clean
+make register
+
+# Inform user about DockMCP rebuild (if affected)
+# User must run this on host OS:
+# cd /workspace/dkmcp && make install
+```
+
+**7. Verify and complete**
+
+```bash
+# Check that SandboxMCP is rebuilt
+ls -lh /workspace/.sandbox/sandbox-mcp/sandbox-mcp
+
+# Inform user to reconnect MCP or restart VS Code
+# Option A: /mcp → "Reconnect" (quick)
+# Option B: Restart VS Code completely (thorough)
+```
+
+**8. Post-update checks**
+
+After the update:
+- Verify SandboxMCP tools are available
+- Check if DockMCP is still accessible (if used)
+- Run basic sanity checks (e.g., `git status`, `ls .sandbox/`)
+
+#### When Updates Are Detected Automatically
+
+The startup script (`check-upstream-updates.sh`) runs on every container start. If you notice a user just started their session and an update notification might have been shown, you can proactively offer help:
+
+```
+I noticed this project checks for updates on startup. Would you like me to
+check if there are any updates available and help you apply them?
+```
+
+However, **do not** check for updates at the start of every conversation unless:
+- The user explicitly asks
+- You notice they're experiencing issues that might be fixed in a newer version
+
+#### Important Notes
+
+**What you CAN do:**
+- ✅ Read state files and check for updates
+- ✅ Run `git fetch` and `git diff` to analyze changes
+- ✅ Pull updates with `git pull`
+- ✅ Rebuild SandboxMCP inside the container
+- ✅ Explain changes and risks to the user
+- ✅ Build DockMCP **client** inside the container (`cd /workspace/dkmcp && make install`)
+
+**What you CANNOT do:**
+- ❌ Rebuild/restart DockMCP **server** (runs on host OS, user must do this)
+- ❌ Restart the DevContainer (user must do this)
+- ❌ Run `docker` or `docker-compose` commands
+- ❌ Modify files without user approval if conflicts exist
+
+**Always prioritize safety:**
+- Explain risks before applying updates
+- Warn about potential conflicts
+- Get explicit user approval for significant changes
+- Provide rollback instructions if something goes wrong
+
 ## What Runs Where
 
 Understanding the separation between AI Sandbox and Host OS is critical:
@@ -868,18 +1027,107 @@ This is especially important when investigating issues related to `.env` files, 
 
 ### When User Wants to Customize
 
-If user says: "I want to hide my actual secrets"
+When a user wants to adapt this template for their own projects (e.g., "customize this for my project", "set up secret hiding for my app", "configure DockMCP for my containers"), follow this workflow. **Do the work yourself** — don't just list instructions for the user.
 
-Guide them:
-1. Identify secret files in their project (e.g., `my-app/.env`, `my-app/keys/`)
-2. Update `.devcontainer/docker-compose.yml`:
-   ```yaml
-   volumes:
-     - /dev/null:/workspace/my-app/.env:ro
-   tmpfs:
-     - /workspace/my-app/keys:ro
-   ```
-3. Restart DevContainer
+#### Step 1: Gather project information
+
+Use `AskUserQuestion` or follow-up questions to collect:
+
+1. **Project paths** — What directories will be in `/workspace/`?
+   - Example: `my-api/`, `my-web/`
+2. **Secret files** — Which files contain secrets?
+   - Example: `.env`, `config/secrets.json`
+3. **Secret directories** — Which directories should appear empty?
+   - Example: `secrets/`, `keys/`
+4. **Container names** — Docker container names for DockMCP?
+   - Example: `my-api`, `my-web-*`
+5. **Allowed commands** — What commands should AI be able to run per container?
+   - Example: `npm test`, `npm run lint`
+
+At minimum, you need project paths and secret files. If the user only mentions some items, ask about the rest.
+
+#### Step 2: Remove demo content
+
+Remove demo-specific entries from both docker-compose files:
+
+- **`.devcontainer/docker-compose.yml`** — Remove volume mounts and tmpfs entries referencing `demo-apps/` and `demo-apps-ios/`, remove `extra_hosts` for `securenote.test`
+- **`cli_sandbox/docker-compose.yml`** — Same removals
+
+Keep the general structure (env_file, home volume, resource limits) intact.
+
+#### Step 3: Configure secret hiding
+
+Edit **both** docker-compose files with the user's secret paths:
+
+```yaml
+volumes:
+  # Secret files → /dev/null
+  - /dev/null:/workspace/my-api/.env:ro
+
+tmpfs:
+  # Secret directories → empty
+  - /workspace/my-api/secrets:ro
+```
+
+**Important:** Both `.devcontainer/docker-compose.yml` and `cli_sandbox/docker-compose.yml` must have identical secret hiding configuration.
+
+#### Step 4: Configure DockMCP
+
+```bash
+cp dkmcp/configs/dkmcp.example.yaml dkmcp.yaml
+```
+
+Edit `dkmcp.yaml`:
+- Update `allowed_containers` with user's container name patterns
+- Update `exec_whitelist` with allowed commands per container
+- Keep security mode as `moderate` unless user requests otherwise
+
+#### Step 5: Update AI configuration
+
+- **`.claude/settings.json`** — Replace demo deny patterns with user's secret file patterns
+- **`.aiexclude` / `.geminiignore`** — Update secret patterns for Gemini
+- **`CLAUDE.md`** — Rewrite project-specific sections (Project Structure, Common Tasks examples), remove SecureNote demo references
+- **`GEMINI.md`** — Same updates in shorter format
+
+#### Step 6: Run validation
+
+```bash
+.sandbox/scripts/validate-secrets.sh
+.sandbox/scripts/compare-secret-config.sh
+.sandbox/scripts/check-secret-sync.sh
+```
+
+If `check-secret-sync.sh` reports issues, run `.sandbox/scripts/sync-secrets.sh` to fix.
+
+#### Step 7: Hand off to user
+
+Tell the user what you've done and what they need to do:
+
+```
+Configuration complete:
+- Secret hiding in both docker-compose.yml files
+- DockMCP configuration (dkmcp.yaml)
+- AI settings (.claude/settings.json, .aiexclude)
+- Updated CLAUDE.md and GEMINI.md
+
+You need to:
+1. Rebuild DevContainer (Cmd/Ctrl+Shift+P → "Dev Containers: Rebuild Container")
+2. Start DockMCP on host OS:
+   cd dkmcp && make install && dkmcp serve --config ../dkmcp.yaml
+3. After rebuild, ask me to verify (container list, secret hiding check)
+```
+
+#### What you CAN do:
+- ✅ Edit both docker-compose.yml files (secret hiding)
+- ✅ Copy and edit `dkmcp.yaml`
+- ✅ Edit `CLAUDE.md`, `GEMINI.md`, `.claude/settings.json`, `.aiexclude`, `.geminiignore`
+- ✅ Run validation scripts
+
+#### What you CANNOT do:
+- ❌ Rebuild the DevContainer (user must do via VS Code)
+- ❌ Start/restart DockMCP server (runs on host OS)
+- ❌ Run `docker` or `docker-compose` commands
+- ❌ Add/remove user's project files (user must clone/copy)
 
 ## Testing & Verification
 
@@ -941,6 +1189,7 @@ The patterns shown here work for any multi-container setup.
 **What you can do:**
 - Read code in `/workspace/`
 - Use DockMCP MCP to access other containers
+- Use `dkmcp client` commands as a fallback when MCP is unavailable
 - Help develop across multiple projects
 
 **What you cannot do:**

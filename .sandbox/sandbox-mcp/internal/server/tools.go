@@ -9,6 +9,7 @@ import (
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/sandbox-mcp/internal/jsonrpc"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/sandbox-mcp/internal/scriptparser"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/sandbox-mcp/internal/toolparser"
+	"github.com/YujiSuzuki/ai-sandbox-dkmcp/sandbox-mcp/internal/updatecheck"
 )
 
 // Tool definitions for MCP tools/list response.
@@ -108,6 +109,14 @@ func (s *Server) toolDefinitions() []toolDef {
 				"required": []string{"name"},
 			},
 		},
+		{
+			Name:        "get_update_status",
+			Description: "Check if template updates are available by reading the update check state file",
+			InputSchema: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{},
+			},
+		},
 	}
 }
 
@@ -137,6 +146,8 @@ func (s *Server) handleToolsCall(req *jsonrpc.Request) *jsonrpc.Response {
 		return s.handleGetToolInfo(req.ID, params.Arguments)
 	case "run_tool":
 		return s.handleRunTool(req.ID, params.Arguments)
+	case "get_update_status":
+		return s.handleGetUpdateStatus(req.ID)
 	default:
 		return jsonrpc.NewResponse(req.ID, errorContent(fmt.Sprintf("Unknown tool: %s", params.Name)))
 	}
@@ -266,4 +277,39 @@ func (s *Server) handleRunTool(id any, args json.RawMessage) *jsonrpc.Response {
 	}
 
 	return jsonrpc.NewResponse(id, textContent(result.String()))
+}
+
+// --- Update check handlers ---
+
+func (s *Server) handleGetUpdateStatus(id any) *jsonrpc.Response {
+	// Default paths
+	stateFile := "/workspace/.sandbox/.state/update-check"
+	configFile := "/workspace/.sandbox/config/template-source.conf"
+
+	// Get update status
+	status, err := updatecheck.GetUpdateStatus(stateFile, configFile)
+	if err != nil {
+		return jsonrpc.NewResponse(id, errorContent(fmt.Sprintf("Failed to get update status: %v", err)))
+	}
+
+	// Format response
+	var output strings.Builder
+	output.WriteString("📦 Template Update Status\n\n")
+
+	if status.LatestVersion != "" {
+		output.WriteString(fmt.Sprintf("Latest version: %s\n", status.LatestVersion))
+	} else {
+		output.WriteString("Latest version: (not yet checked)\n")
+	}
+
+	output.WriteString(fmt.Sprintf("Repository: %s\n", status.Repo))
+	output.WriteString(fmt.Sprintf("Channel: %s\n", status.Channel))
+	output.WriteString(fmt.Sprintf("Updates enabled: %v\n", status.Enabled))
+	output.WriteString(fmt.Sprintf("\nRelease notes: %s\n", status.ReleaseURL))
+
+	if status.LatestVersion != "" {
+		output.WriteString("\n💡 To update, ask: \"Please update to the latest version\"\n")
+	}
+
+	return jsonrpc.NewResponse(id, textContent(output.String()))
 }
