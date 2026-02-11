@@ -17,11 +17,11 @@ type Server struct {
 }
 
 // New creates a new MCP server.
-func New(scriptsDir, toolsDir string) *Server {
+func New(scriptsDir, toolsDir, version string) *Server {
 	return &Server{
 		scriptsDir: scriptsDir,
 		toolsDir:   toolsDir,
-		version:    "0.1.0",
+		version:    version,
 	}
 }
 

@@ -4,6 +4,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -11,7 +12,18 @@ import (
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/sandbox-mcp/internal/server"
 )
 
+// version is set at build time via ldflags.
+// ビルド時に ldflags で設定されます。
+//
+// go build -ldflags "-X main.version=1.0.0"
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		fmt.Println("sandbox-mcp " + version)
+		return
+	}
+
 	// Log to stderr only (stdout is reserved for JSON-RPC)
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelWarn,
@@ -20,6 +32,7 @@ func main() {
 	srv := server.New(
 		"/workspace/.sandbox/scripts",
 		"/workspace/.sandbox/tools",
+		version,
 	)
 
 	scanner := bufio.NewScanner(os.Stdin)

@@ -9,7 +9,7 @@ import (
 )
 
 func newTestServer() *Server {
-	return New("/workspace/.sandbox/scripts", "/workspace/.sandbox/tools")
+	return New("/workspace/.sandbox/scripts", "/workspace/.sandbox/tools", "test")
 }
 
 func TestInitialize(t *testing.T) {

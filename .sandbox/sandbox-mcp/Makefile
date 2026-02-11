@@ -1,7 +1,12 @@
 BINARY = sandbox-mcp
 CMD_DIR = ./cmd/sandbox-mcp
 
-.PHONY: build test install register unregister clean
+# Versioning: get the version from the latest git tag
+# バージョン管理: 最新のgitタグからバージョンを取得
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+LDFLAGS := -ldflags="-X 'main.version=$(VERSION)'"
+
+.PHONY: build test test-version install register unregister clean
 
 build:
 	@if [ ! -f $(BINARY) ]; then \
@@ -10,11 +15,25 @@ build:
 		else \
 			echo "⏳ First time build - this may take a moment..."; \
 		fi; \
-		CGO_ENABLED=0 go build -o $(BINARY) $(CMD_DIR); \
+		CGO_ENABLED=0 go build $(LDFLAGS) -o $(BINARY) $(CMD_DIR); \
 	fi
 
 test:
 	go test ./...
+
+# Build integration test: verify ldflags version injection
+# ビルド統合テスト: ldflags によるバージョン注入の検証
+test-version:
+	@TEST_BIN=$$(mktemp) && \
+	TEST_VER="0.0.0-test" && \
+	CGO_ENABLED=0 go build -ldflags="-X 'main.version=$$TEST_VER'" -o "$$TEST_BIN" $(CMD_DIR) && \
+	GOT=$$($$TEST_BIN version) && \
+	rm -f "$$TEST_BIN" && \
+	if [ "$$GOT" = "sandbox-mcp $$TEST_VER" ]; then \
+		echo "PASS: $$GOT"; \
+	else \
+		echo "FAIL: got='$$GOT', want='sandbox-mcp $$TEST_VER'"; exit 1; \
+	fi
 
 install: build
 	@if [ -d "$(HOME)/.local/bin" ]; then \
