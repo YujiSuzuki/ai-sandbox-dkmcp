@@ -561,6 +561,174 @@ EOF
     cleanup
 }
 
+# Test 14: Root-level glob pattern only matches workspace root
+# テスト14: ルートレベルのglobパターンはワークスペース直下のみマッチ
+test_root_glob_only_matches_root() {
+    echo ""
+    echo "=== Test: Root-level glob (*.key) only matches workspace root ==="
+
+    setup
+
+    # Create .key files at root and in subdirectory
+    # ルートとサブディレクトリに .key ファイルを作成
+    touch "$TEST_WORKSPACE/root-secret.key"
+    mkdir -p "$TEST_WORKSPACE/subdir"
+    touch "$TEST_WORKSPACE/subdir/nested-secret.key"
+
+    # Use .aiexclude with *.key (no **/ prefix)
+    # .aiexclude に *.key を設定（**/ プレフィックスなし）
+    cat > "$TEST_WORKSPACE/.aiexclude" << 'EOF'
+*.key
+EOF
+
+    # No Claude settings
+    mkdir -p "$TEST_WORKSPACE/.claude"
+    echo '{}' > "$TEST_WORKSPACE/.claude/settings.json"
+
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$SCRIPT" 2>&1) || true
+
+    local has_root=false
+    local has_nested=false
+
+    if echo "$output" | grep -q "root-secret.key"; then
+        has_root=true
+    fi
+    if echo "$output" | grep -q "nested-secret.key"; then
+        has_nested=true
+    fi
+
+    if $has_root && ! $has_nested; then
+        pass "Root glob *.key only matches root-level files"
+    elif $has_root && $has_nested; then
+        fail "Root glob *.key should NOT match subdirectory files (found nested-secret.key)"
+        echo "Output: $output"
+    elif ! $has_root && ! $has_nested; then
+        fail "Root glob *.key should match at least root-level files"
+        echo "Output: $output"
+    else
+        fail "Unexpected: found nested but not root"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
+# Test 15: Recursive glob pattern matches subdirectories
+# テスト15: 再帰的globパターンはサブディレクトリもマッチ
+test_recursive_glob_matches_subdirs() {
+    echo ""
+    echo "=== Test: Recursive glob (**/*.key) matches subdirectories ==="
+
+    setup
+
+    # Create .key files at root and in subdirectory
+    # ルートとサブディレクトリに .key ファイルを作成
+    touch "$TEST_WORKSPACE/root-secret.key"
+    mkdir -p "$TEST_WORKSPACE/subdir"
+    touch "$TEST_WORKSPACE/subdir/nested-secret.key"
+
+    # Use Claude settings with **/*.key (recursive)
+    # Claude settings に **/*.key（再帰的）を設定
+    create_claude_settings '"Read(**/*.key)"'
+
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$SCRIPT" 2>&1) || true
+
+    local has_root=false
+    local has_nested=false
+
+    if echo "$output" | grep -q "root-secret.key"; then
+        has_root=true
+    fi
+    if echo "$output" | grep -q "nested-secret.key"; then
+        has_nested=true
+    fi
+
+    if $has_root && $has_nested; then
+        pass "Recursive glob **/*.key matches both root and subdirectory files"
+    else
+        fail "Recursive glob **/*.key should match all levels (root=$has_root, nested=$has_nested)"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
+# Test 16: Directory pattern with trailing slash from .aiexclude
+# テスト16: .aiexclude のディレクトリパターン（末尾スラッシュ付き）
+test_aiexclude_directory_trailing_slash() {
+    echo ""
+    echo "=== Test: .aiexclude directory pattern with trailing slash (secrets/) ==="
+
+    setup
+
+    # Create secrets directory with files at workspace root
+    # ワークスペースルートに secrets ディレクトリとファイルを作成
+    mkdir -p "$TEST_WORKSPACE/secrets"
+    touch "$TEST_WORKSPACE/secrets/api-key.txt"
+
+    cat > "$TEST_WORKSPACE/.aiexclude" << 'EOF'
+secrets/
+EOF
+
+    mkdir -p "$TEST_WORKSPACE/.claude"
+    echo '{}' > "$TEST_WORKSPACE/.claude/settings.json"
+
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "secrets/api-key.txt"; then
+        pass "Directory pattern secrets/ detects files in root-level secrets directory"
+    else
+        fail "Directory pattern secrets/ should detect files in root-level secrets directory"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
+# Test 17: Recursive directory pattern (**/secrets/) from .aiexclude
+# テスト17: .aiexclude の再帰ディレクトリパターン（**/secrets/）
+test_aiexclude_recursive_directory_pattern() {
+    echo ""
+    echo "=== Test: .aiexclude recursive directory pattern (**/secrets/) ==="
+
+    setup
+
+    # Create nested secrets directory
+    # ネストされた secrets ディレクトリを作成
+    mkdir -p "$TEST_WORKSPACE/app/secrets"
+    touch "$TEST_WORKSPACE/app/secrets/db-password.txt"
+
+    cat > "$TEST_WORKSPACE/.aiexclude" << 'EOF'
+**/secrets/
+EOF
+
+    mkdir -p "$TEST_WORKSPACE/.claude"
+    echo '{}' > "$TEST_WORKSPACE/.claude/settings.json"
+
+    create_compose_file "" ""
+
+    local output
+    output=$(WORKSPACE="$TEST_WORKSPACE" SANDBOX_ENV=devcontainer "$SCRIPT" 2>&1) || true
+
+    if echo "$output" | grep -q "db-password.txt"; then
+        pass "Recursive directory pattern **/secrets/ detects files in nested secrets directory"
+    else
+        fail "Recursive directory pattern **/secrets/ should detect files in nested secrets directory"
+        echo "Output: $output"
+    fi
+
+    cleanup
+}
+
 # Run all tests
 # 全テストを実行
 main() {
@@ -582,6 +750,10 @@ main() {
     test_aiexclude_patterns
     test_geminiignore_patterns
     test_combined_patterns
+    test_root_glob_only_matches_root
+    test_recursive_glob_matches_subdirs
+    test_aiexclude_directory_trailing_slash
+    test_aiexclude_recursive_directory_pattern
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

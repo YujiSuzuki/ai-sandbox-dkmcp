@@ -151,6 +151,29 @@ find_matching_files() {
     local ignore_opts
     read -ra ignore_opts <<< "$(build_ignore_opts)"
 
+    # Handle trailing slash = directory pattern (e.g., secrets/, **/secrets/)
+    # 末尾スラッシュ = ディレクトリパターンの処理（例: secrets/, **/secrets/）
+    if [[ "$pattern" == */ ]]; then
+        local dir_pattern="${pattern%/}"  # Remove trailing slash / 末尾スラッシュを除去
+
+        if [[ "$dir_pattern" == **/* ]]; then
+            # Recursive directory pattern like **/secrets/
+            # **/secrets/ のような再帰ディレクトリパターン
+            local dir_name="${dir_pattern##**/}"
+            find "$WORKSPACE" -type d -name "$dir_name" "${ignore_opts[@]}" 2>/dev/null | while read -r dir; do
+                find "$dir" -type f "${ignore_opts[@]}" 2>/dev/null
+            done
+        else
+            # Root-level directory pattern like secrets/
+            # secrets/ のようなルートレベルディレクトリパターン
+            local full_dir="$WORKSPACE/$dir_pattern"
+            if [ -d "$full_dir" ]; then
+                find "$full_dir" -type f "${ignore_opts[@]}" 2>/dev/null
+            fi
+        fi
+        return
+    fi
+
     # Convert glob pattern to find-compatible format
     # グロブパターンを find 互換形式に変換
     # **/ -> recursive, * -> single level
