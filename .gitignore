@@ -105,6 +105,7 @@ env/
 *.swo
 *~
 ReleaseNotes-draft.md
+CommitMsg-draft.md
 
 # Test artifacts (from .sandbox/scripts/test-*.sh)
 .test-secrets-*
