@@ -11,7 +11,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 - **設定ミスを自動検出** — 起動時にdenyルールとボリュームマウントの整合性をチェックし、隠し忘れがあればAIがアクセスする前に警告
 - **コードは完全にアクセス可能** — 複数プロジェクトのソースコードをAIが読み書きできる
 - **他のコンテナにもアクセスできる** — DockMCPを使えば、AIが別コンテナのログ確認やテスト実行を安全に行える
-- **ヘルパースクリプトやツールを自動発見** — `.sandbox/` のスクリプトやツールをAIが自動で認識し、実行やガイダンス表示まで対応
+- **ヘルパースクリプトやツールを自動発見** — SandboxMCPにより、`.sandbox/` のスクリプトやツールをAIが自動で認識・実行
 
 
 必要なものは **Docker** と **VS Code** だけ。[CLIだけでも使えます](docs/reference.ja.md#2つの環境)。
@@ -19,7 +19,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 本プロジェクトはローカル開発環境での使用を想定しており、本番環境での使用は想定されていません。制約事項については「[制約事項](#制約事項)」と「[よくある質問](#よくある質問)」を参照してください。
 
 > [!NOTE]
-> **DockMCP単体での利用は非推奨です。** ホストOSでAIを実行する場合、AIはユーザーと同じ権限を持つため DockMCP を経由するメリットがありません。スタンドアロンセットアップについては [dkmcp/README.ja.md](dkmcp/README.ja.md) を参照してください。
+> **CLI ツール（Claude Code, Gemini CLI 等）での DockMCP 単体利用は非推奨です。** ホスト OS で動く CLI は `docker` コマンドを直接実行できるため、DockMCP を経由するメリットがありません。一方、**Claude Desktop** のように MCP 経由でしか外部アクセスできないアプリでは、DockMCP 単体でもコンテナ操作に有用です。スタンドアロンセットアップについては [dkmcp/README.ja.md](dkmcp/README.ja.md) を参照してください。
 
 
 ---
@@ -139,6 +139,7 @@ DockMCP とは別に **SandboxMCP** がコンテナ内で動作し、`.sandbox/`
 
 → 詳しい構成図は [アーキテクチャ詳細](docs/architecture.ja.md) を参照
 
+> [!TIP]
 > **💡 日本語環境にする場合:** DevContainer（または cli_sandbox）を開く前に、ホストOS上で以下を実行：
 > ```bash
 > .sandbox/scripts/init-host-env.sh -i
@@ -300,7 +301,26 @@ docker-compose -f docker-compose.demo.yml up -d --build
 
 # AI SandBox 内部ツール
 
-## 会話履歴の検索
+## 内部ツール とは
+
+AI Sandbox の内部には **SandboxMCP** という軽量な MCP サーバー（stdio）が組み込まれています。コンテナ起動時に自動でビルド・登録され、`.sandbox/` 配下のスクリプトやツールを AI が検出・実行できるようにする仕組みです。
+
+| 比較 | SandboxMCP | DockMCP |
+|------|-----------|---------|
+| 動作場所 | コンテナ内部（stdio） | ホスト OS（SSE / HTTP） |
+| 目的 | スクリプト・ツールの検出と実行 | 他コンテナへのアクセス |
+| 起動 | 自動（コンテナ起動時） | 手動（`dkmcp serve`） |
+
+AI に「使えるスクリプトある？」「会話履歴を検索して」と聞くだけで、SandboxMCP 経由で適切なツールが実行されます。
+
+> [!TIP]
+> SandboxMCP の仕組みについては [docs/architecture.ja.md](docs/architecture.ja.md) を参照
+
+## 付属ツール
+
+すぐに使えるツールが２つ付属しています。
+
+### 会話履歴の検索
 
 Claude Code の過去の会話を検索できるツールが付属しています。AIに話しかけるだけで、過去の会話を横断的に検索して答えてくれます。
 
@@ -315,9 +335,10 @@ Claude Code の過去の会話を検索できるツールが付属していま�
 | 「この謎のファイル、誰が作った？」 | 過去のAIセッションのコマンド履歴から原因を特定 |
 
 
+> [!TIP]
 > 詳しい使い方やオプションは [docs/search-history.ja.md](docs/search-history.ja.md) を参照
 
-## トークン使用量レポート
+### トークン使用量レポート
 
 Claude Code でどれくらいトークンを使っているか確認できるツールです。モデル別・期間別に集計して、API で使った場合のコスト見積もりもAIに聞けます。
 
@@ -342,36 +363,20 @@ AI: ① ツールでトークン数を集計
     ③ コスト計算 + Pro/Max プランとの比較表を出力
 ```
 
-## 自作ツールの追加
+## 自作ツール・スクリプトの追加
+
+### 自作ツール
 
 `.sandbox/tools/` に Go ファイルを置くだけで、AI が自動的に認識します。設定は不要です。
 
-```go
-// my-tool.go - ツールの説明
-//
-// Usage:
-//   go run .sandbox/tools/my-tool.go [options]
-//
-// Examples:
-//   go run .sandbox/tools/my-tool.go "hello"
-package main
-```
+### 自作スクリプト
 
-### 自作スクリプトの追加
+`.sandbox/scripts/` にシェルスクリプトを置いても同様に認識されます。
+シェルスクリプトから Python や Node.js など他の言語を呼び出せるため、Go 以外の言語でもツールを作成できます。
 
-`.sandbox/scripts/` にシェルスクリプトを置いても同様に認識されます。先頭に以下のヘッダーを記述してください。
-
-```bash
-#!/bin/bash
-# my-script.sh
-# English description
-# 日本語の説明
-```
-
-シェルスクリプトから Python や Node.js など他の言語を呼び出すこともできるため、Go 以外の言語でもツールを作成できます。
-
-> SandboxMCP の仕組みについては [docs/architecture.ja.md](docs/architecture.ja.md) を参照
-
+> [!TIP]
+> ファイル先頭のコメントに説明や使い方を書いておくと、AI がそれを読み取って活用します。
+> ヘッダーコメントの書き方など詳細は [アーキテクチャ詳細](docs/architecture.ja.md#自作ツールの追加) を参照
 
 
 # プロジェクト構造
@@ -454,6 +459,9 @@ A: 補完関係にあります。Claude Code Sandboxは実行を制限し、Dock
 
 **Q: DockMCPを使う必要がありますか？**
 A: いいえ。DockMCPなしでも通常のサンドボックスとして機能します。DockMCPはクロスコンテナアクセスを可能にします。
+
+**Q: Docker ソケットをコンテナに渡せば DockMCP は不要では？**
+A: ソケットを渡すと AI がすべてのコンテナを自由に操作でき、秘匿情報の隠蔽も回避できてしまいます。DockMCP は「必要な操作だけ」を安全に提供するためのゲートウェイです。詳しくは [アーキテクチャ詳細](docs/architecture.ja.md#5-docker-ソケットを渡さない理由) を参照。
 
 **Q: なぜAIに `docker-compose up/down` を頼めないの？**
 A: これは意図的な設計です。AIは「観察と提案」、人間は「インフラ操作の実行」という責任分離をしています。詳細は [DockMCP設計思想](dkmcp/README.ja.md#設計思想) を参照してください。

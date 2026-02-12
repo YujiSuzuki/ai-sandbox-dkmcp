@@ -11,14 +11,14 @@ This template creates a Docker-based development environment where:
 - **Misconfigurations are caught automatically** — Startup validation checks that your deny rules and volume mounts are in sync, warning you before AI sees anything
 - **Code is fully accessible** — AI can read and edit all source code across multiple projects
 - **Other containers are reachable** — With DockMCP, AI can check logs and run tests in other containers safely
-- **Helper scripts and tools are discoverable** — AI automatically finds and understands scripts and tools in `.sandbox/`, and can run them or provide guidance
+- **Helper scripts and tools are discoverable** — Via SandboxMCP, AI automatically discovers and runs scripts and tools in `.sandbox/`
 
 All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](docs/reference.md#two-environments).
 
 This project is designed for local development environments and is not intended for production use. See "[Limitations](#limitations)" and "[FAQ](#faq)" for details.
 
 > [!NOTE]
-> **Using DockMCP standalone is not recommended.** When running AI on the host OS, it already has the same permissions as the user, so there is no benefit to routing through DockMCP. For standalone setup, see [dkmcp/README.md](dkmcp/README.md).
+> **Using DockMCP standalone with CLI tools (Claude Code, Gemini CLI, etc.) is not recommended.** CLI tools running on the host OS can execute `docker` commands directly, so there is no benefit to routing through DockMCP. However, for apps like **Claude Desktop** that can only access external systems via MCP, DockMCP standalone is useful for container operations. For standalone setup, see [dkmcp/README.md](dkmcp/README.md).
 
 
 ---
@@ -137,6 +137,7 @@ Separately from DockMCP, **SandboxMCP** runs inside the container and lets AI au
 
 → For detailed architecture diagrams, see [Architecture Details](docs/architecture.md)
 
+> [!TIP]
 > **💡 To use Japanese locale:** Before opening DevContainer (or cli_sandbox), run on the host OS:
 > ```bash
 > .sandbox/scripts/init-host-env.sh -i
@@ -297,7 +298,26 @@ New versions are checked automatically on startup. When an update is available, 
 
 # AI Sandbox Tools
 
-## Conversation History Search
+## What are AI Sandbox Tools?
+
+The AI Sandbox includes a lightweight MCP server called **SandboxMCP** (stdio). It is automatically built and registered at container startup, enabling AI to discover and run scripts and tools under `.sandbox/`.
+
+| | SandboxMCP | DockMCP |
+|---|-----------|---------|
+| Runs on | Inside the container (stdio) | Host OS (SSE / HTTP) |
+| Purpose | Discover and run scripts/tools | Access other containers |
+| Startup | Automatic (container start) | Manual (`dkmcp serve`) |
+
+Just ask AI things like "What scripts are available?" or "Search my conversation history" — SandboxMCP routes it to the right tool automatically.
+
+> [!TIP]
+> For SandboxMCP architecture details, see [docs/architecture.md](docs/architecture.md)
+
+## Bundled Tools
+
+Two tools are included out of the box.
+
+### Conversation History Search
 
 A built-in tool lets you search past Claude Code conversations. Just ask your AI — it handles the rest automatically via SandboxMCP.
 
@@ -311,9 +331,10 @@ A built-in tool lets you search past Claude Code conversations. Just ask your AI
 | "When did we fix that bug?" | Finds the relevant conversation by date and keyword |
 | "Where did this mystery file come from?" | Traces back through past AI session commands to find the cause |
 
+> [!TIP]
 > For detailed usage and options, see [docs/search-history.md](docs/search-history.md)
 
-## Token Usage Report
+### Token Usage Report
 
 A built-in tool tracks how many tokens you're consuming in Claude Code. It breaks down usage by model and time period, and AI can estimate costs on the fly.
 
@@ -338,35 +359,20 @@ AI: ① Runs the tool to aggregate token counts
     ③ Outputs cost breakdown + Pro/Max plan comparison
 ```
 
-## Adding Your Own Tools
+## Adding Your Own Tools and Scripts
 
-Place a Go file in `.sandbox/tools/` with a comment header, and AI will automatically discover it. No configuration needed.
+### Your Own Tools
 
-```go
-// my-tool.go - describe what this tool does
-//
-// Usage:
-//   go run .sandbox/tools/my-tool.go [options]
-//
-// Examples:
-//   go run .sandbox/tools/my-tool.go "hello"
-package main
-```
+Place a Go file in `.sandbox/tools/` and AI will automatically discover it. No configuration needed.
 
-### Adding Your Own Scripts
+### Your Own Scripts
 
-You can also place shell scripts in `.sandbox/scripts/` and they will be automatically discovered. Add the following header to the top of the file:
-
-```bash
-#!/bin/bash
-# my-script.sh
-# English description
-# Japanese description
-```
-
+Place shell scripts in `.sandbox/scripts/` and they will be discovered the same way.
 Since scripts can call other languages (Python, Node.js, etc.), you can build tools in any language, not just Go.
 
-> For SandboxMCP architecture details, see [docs/architecture.md](docs/architecture.md)
+> [!TIP]
+> Adding a comment header with a description and usage info helps AI understand and use your tool effectively.
+> For header format details, see [Architecture Details](docs/architecture.md#adding-custom-tools)
 
 
 # Project Structure
@@ -449,6 +455,9 @@ A: They're complementary. Claude Code's sandbox restricts execution; Docker AI S
 
 **Q: Do I need to use DockMCP?**
 A: No. It works as a regular sandbox without DockMCP. DockMCP enables cross-container access.
+
+**Q: Why not just mount the Docker socket so AI can access containers directly?**
+A: Docker socket access is essentially host admin privileges — AI could read secrets from any container, bypassing all hiding. DockMCP exists to provide only the operations AI needs (logs, tests) in a safe, controlled way. See [Architecture Details](docs/architecture.md#5-why-no-docker-socket-access) for details.
 
 **Q: Why can't I ask AI to run `docker-compose up/down`?**
 A: This is by design. AI handles "observation and suggestions" while humans handle "infrastructure operations". See [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) for details.

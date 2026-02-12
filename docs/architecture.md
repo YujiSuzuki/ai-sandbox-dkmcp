@@ -235,6 +235,29 @@ DATABASE_URL=[MASKED]db:5432/app
 
 Detects passwords, API keys, Bearer tokens, database URLs with credentials, and more by default. For configuration details, see [dkmcp/README.md "Output Masking"](../dkmcp/README.md#output-masking).
 
+### 5. Why No Docker Socket Access
+
+You might wonder: "Why not just mount the Docker socket (`/var/run/docker.sock`) into the AI Sandbox so AI can access containers directly without DockMCP?"
+
+This must not be done because **Docker socket access is essentially host administrator privileges**. If AI had the socket, it could:
+
+- Use `docker exec` to **read `.env` and `secrets/` from other containers** (bypassing all hiding)
+- Use `docker run -v /:/host` to **mount the entire host filesystem**
+- Stop, delete, or manipulate any container or image
+
+In other words, hiding secrets with volume mounts becomes pointless — AI could simply read the real files through Docker commands.
+
+**DockMCP exists to solve this problem:**
+
+| | Direct Docker Socket | Via DockMCP |
+|---|---|---|
+| Secret files | Readable | **Blocked** |
+| Commands | Unrestricted | **Whitelist only** |
+| Secrets in logs | Visible as-is | **Auto-masked** |
+| Stop/delete containers | Possible | **Not possible** |
+
+DockMCP is a gateway that provides only the operations AI actually needs (log checking, test execution, etc.) in a safe, controlled way.
+
 ---
 
 ## Multi-Project Workspace
