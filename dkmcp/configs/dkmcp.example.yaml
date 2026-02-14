@@ -520,30 +520,40 @@ host_access:
     # ホワイトリストコマンド（ベースコマンド → 許可された引数パターン）
     #
     # Use "*" suffix for prefix matching:
-    #   "diff *" matches "diff HEAD~1", "diff --stat", etc.
+    #   "-i *" matches "-i :8080", "-i tcp", etc.
     #
     # "*"サフィックスでプレフィックスマッチング:
-    #   "diff *" は "diff HEAD~1", "diff --stat" 等にマッチ
+    #   "-i *" は "-i :8080", "-i tcp" 等にマッチ
     #
     # Note: docker/docker-compose commands are NOT needed here.
-    # DockMCP already provides equivalent MCP tools:
-    #   docker ps     → list_containers
-    #   docker logs   → get_logs
-    #   docker stats  → get_stats
+    #
+    # For inspection/monitoring, DockMCP already provides MCP tools:
+    #   docker ps      → list_containers
+    #   docker logs    → get_logs
+    #   docker stats   → get_stats
     #   docker inspect → inspect_container
     #
-    # Similarly, git commands are available inside the AI Sandbox
-    # (workspace is mounted), so they don't need to be here either.
+    # For lifecycle operations (docker-compose up/down/build),
+    # use host-tools (.sandbox/host-tools/) instead.
+    # Host-tools run scripts on the host OS where Docker is available:
+    #   demo-up.sh     → docker compose up -d
+    #   demo-down.sh   → docker compose down
+    #   demo-build.sh  → docker compose build
     #
     # 注意: docker/docker-compose コマンドはここでは不要です。
-    # DockMCPの既存MCPツールで同等の操作が可能です:
-    #   docker ps     → list_containers
-    #   docker logs   → get_logs
-    #   docker stats  → get_stats
+    #
+    # 監視・調査系はDockMCPの既存MCPツールで対応できます:
+    #   docker ps      → list_containers
+    #   docker logs    → get_logs
+    #   docker stats   → get_stats
     #   docker inspect → inspect_container
     #
-    # 同様に、gitコマンドもAI Sandbox内で利用可能です
-    # （ワークスペースがマウントされているため）。ここに登録する必要はありません。
+    # ライフサイクル操作（docker-compose up/down/build）は
+    # host-tools（.sandbox/host-tools/）を使ってください。
+    # host-toolsはDockerが利用可能なホストOS上でスクリプトを実行します:
+    #   demo-up.sh     → docker compose up -d
+    #   demo-down.sh   → docker compose down
+    #   demo-build.sh  → docker compose build
     whitelist:
       "df":
         - "-h"

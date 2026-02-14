@@ -200,13 +200,13 @@ volumes:
 
 ```bash
 # ワークスペース全体をエクスポート（devcontainer と cli_sandbox の両方）
-./.sandbox/scripts/copy-credentials.sh --export /path/to/workspace ~/backup
+./.sandbox/host-tools/copy-credentials.sh --export /path/to/workspace ~/backup
 
 # 特定の docker-compose.yml からエクスポート
-./.sandbox/scripts/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
+./.sandbox/host-tools/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
 
 # ワークスペースにインポート
-./.sandbox/scripts/copy-credentials.sh --import ~/backup /path/to/workspace
+./.sandbox/host-tools/copy-credentials.sh --import ~/backup /path/to/workspace
 ```
 
 **注意:** インポート先のボリュームが存在しない場合、先に環境を一度起動してボリュームを作成する必要があります。

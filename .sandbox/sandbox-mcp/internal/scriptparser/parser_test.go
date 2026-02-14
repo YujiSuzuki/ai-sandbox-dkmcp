@@ -28,7 +28,7 @@ func TestListScripts(t *testing.T) {
 		found[s.Name] = true
 	}
 
-	expected := []string{"validate-secrets.sh", "copy-credentials.sh", "check-secret-sync.sh"}
+	expected := []string{"validate-secrets.sh", "check-secret-sync.sh"}
 	for _, name := range expected {
 		if !found[name] {
 			t.Errorf("Expected script %s not found in list", name)
@@ -57,7 +57,7 @@ func TestListScriptsEnvironment(t *testing.T) {
 
 	for _, s := range scripts {
 		switch s.Name {
-		case "copy-credentials.sh", "init-host-env.sh":
+		case "init-host-env.sh":
 			if s.Environment != "host" {
 				t.Errorf("%s: environment = %q, want %q", s.Name, s.Environment, "host")
 			}
@@ -126,8 +126,8 @@ func TestGetDetailedInfoPathTraversal(t *testing.T) {
 }
 
 func TestIsHostOnly(t *testing.T) {
-	if !IsHostOnly("copy-credentials.sh") {
-		t.Error("copy-credentials.sh should be host-only")
+	if !IsHostOnly("init-host-env.sh") {
+		t.Error("init-host-env.sh should be host-only")
 	}
 	if IsHostOnly("validate-secrets.sh") {
 		t.Error("validate-secrets.sh should not be host-only")

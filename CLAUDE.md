@@ -44,9 +44,13 @@ This solves the common problem: "My API is in a separate container, how can AI h
 │   │   ├── sync-compose-secrets.sh   # 🐳 Sync secret config between DevContainer/CLI compose
 │   │   ├── merge-claude-settings.sh  # Merge subproject .claude/settings.json
 │   │   ├── init-host-env.sh           # Host-side init: env files from templates + host OS info
-│   │   ├── copy-credentials.sh       # 🖥️ Copy home directory between compose projects
 │   │   ├── run-all-tests.sh          # Run all test scripts
 │   │   └── test-*.sh                 # Test scripts for each utility
+│   ├── host-tools/            # 🖥️ Host-only tool scripts (run on host OS)
+│   │   ├── copy-credentials.sh       # Export/Import home directory between compose projects
+│   │   ├── demo-build.sh             # Build demo app Docker images
+│   │   ├── demo-up.sh                # Start demo apps
+│   │   └── demo-down.sh              # Stop demo apps
 │   ├── tools/               # Utility tools (extras)
 │   │   ├── search-history.go         # Claude Code conversation history search
 │   │   └── usage-report.go           # Token usage report (model/period breakdown)
@@ -693,11 +697,11 @@ If users need to run multiple DevContainer instances (e.g., separate client proj
 Use the provided script to copy the home directory from one project to another:
 
 ```bash
-# On Host OS
-./.sandbox/scripts/copy-credentials.sh <source-project> <target-project>
+# On Host OS - Export from workspace
+./.sandbox/host-tools/copy-credentials.sh --export /path/to/workspace ~/backup
 
-# Example: Copy from default "devcontainer" to "client-b"
-./.sandbox/scripts/copy-credentials.sh devcontainer client-b
+# Import to another workspace
+./.sandbox/host-tools/copy-credentials.sh --import ~/backup /path/to/workspace
 ```
 
 **Note:** If the target DevContainer is already running, it needs to be restarted for the changes to take effect.
@@ -744,7 +748,7 @@ In addition to DockMCP (host-side), there's **SandboxMCP** that runs **inside th
 ### Key Features
 
 - **Auto-registered**: Builds and registers automatically on container startup
-- **Host-only rejection**: Scripts like `copy-credentials.sh` that require Docker socket are rejected with guidance on how to run them on the host OS
+- **Host-only rejection**: Scripts like `init-host-env.sh` that require host OS access are rejected with guidance on how to run them on the host OS
 - **Script metadata**: Returns description (EN/JA), execution environment (host/container/any), category (utility/test)
 
 ### Manual Registration

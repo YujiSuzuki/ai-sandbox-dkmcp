@@ -200,13 +200,13 @@ You can backup or migrate the home directory (credentials, settings, history):
 
 ```bash
 # Export entire workspace (both devcontainer and cli_sandbox)
-./.sandbox/scripts/copy-credentials.sh --export /path/to/workspace ~/backup
+./.sandbox/host-tools/copy-credentials.sh --export /path/to/workspace ~/backup
 
 # Export from specific docker-compose.yml
-./.sandbox/scripts/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
+./.sandbox/host-tools/copy-credentials.sh --export .devcontainer/docker-compose.yml ~/backup
 
 # Import to workspace
-./.sandbox/scripts/copy-credentials.sh --import ~/backup /path/to/workspace
+./.sandbox/host-tools/copy-credentials.sh --import ~/backup /path/to/workspace
 ```
 
 **Note:** If target volumes don't exist, start the environment once first to create them.

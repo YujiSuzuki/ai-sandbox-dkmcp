@@ -20,9 +20,9 @@ type ScriptInfo struct {
 }
 
 // Scripts that must run on host OS (from help.sh L40-41).
+// Note: copy-credentials.sh moved to .sandbox/host-tools/ (DockMCP host tools)
 var hostOnly = map[string]bool{
-	"copy-credentials.sh": true,
-	"init-host-env.sh":    true,
+	"init-host-env.sh": true,
 }
 
 // Scripts that must run in container (from help.sh L42-43).

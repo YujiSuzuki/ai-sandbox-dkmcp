@@ -324,17 +324,17 @@ In addition to DockMCP (host-side), **SandboxMCP** runs inside the container.
 
 ### Host-Only Script Handling
 
-Some scripts (like `copy-credentials.sh`) require Docker socket access and cannot run inside the container.
+Some scripts (like `init-host-env.sh`) require host OS access and cannot run inside the container.
 
 ```
-When AI calls run_script("copy-credentials.sh"):
+When AI calls run_script("init-host-env.sh"):
 
 ┌────────────────────────────────────────────────────────────┐
-│ ❌ This script (copy-credentials.sh) must be run           │
+│ ❌ This script (init-host-env.sh) must be run              │
 │    on the host OS, not inside the AI Sandbox.              │
 │                                                            │
 │ To run it on your host machine:                            │
-│   .sandbox/scripts/copy-credentials.sh                     │
+│   .sandbox/scripts/init-host-env.sh                        │
 │                                                            │
 │ I cannot execute host-only scripts because the AI Sandbox  │
 │ does not have Docker socket access.                        │

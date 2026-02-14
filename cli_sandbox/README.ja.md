@@ -108,7 +108,7 @@ deploy:
 
 認証情報（`.claude.json`、`.claude/` 等）は名前付きボリューム `cli-sandbox-home` に保存されます。`COMPOSE_PROJECT_NAME` が異なると別のボリュームになるため、ツール間でホームディレクトリは共有されません。
 
-ボリューム間のコピーが必要な場合は `.sandbox/scripts/copy-credentials.sh` を使えます。詳細は [ルートの README.ja.md](../README.ja.md#ホームディレクトリのエクスポートインポート) を参照してください。
+ボリューム間のコピーが必要な場合は `.sandbox/host-tools/copy-credentials.sh` を使えます。詳細は [docs/reference.ja.md](../docs/reference.ja.md#ホームディレクトリのエクスポートインポート) を参照してください。
 
 ## セキュリティテスト
 

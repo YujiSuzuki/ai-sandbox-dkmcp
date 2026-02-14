@@ -108,7 +108,7 @@ You can change `SANDBOX_MEMORY_LIMIT` and `SANDBOX_CPU_LIMIT` in `.env`.
 
 Credentials (`.claude.json`, `.claude/`, etc.) are stored in a named volume `cli-sandbox-home`. Different `COMPOSE_PROJECT_NAME` values result in different volumes, so the home directory is not shared between tools.
 
-To copy between volumes, use `.sandbox/scripts/copy-credentials.sh`. See the [root README.md](../README.md#exportingimporting-the-home-directory) for details.
+To copy between volumes, use `.sandbox/host-tools/copy-credentials.sh`. See [docs/reference.md](../docs/reference.md#home-directory-exportimport) for details.
 
 ## Security Testing
 

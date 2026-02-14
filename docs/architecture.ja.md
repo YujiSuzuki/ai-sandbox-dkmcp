@@ -324,17 +324,17 @@ DockMCP（ホストOS側）とは別に、**SandboxMCP** がコンテナ内で�
 
 ### ホスト専用スクリプトの取り扱い
 
-一部のスクリプト（`copy-credentials.sh` など）はDocker ソケットが必要なため、コンテナ内では実行できません。
+一部のスクリプト（`init-host-env.sh` など）はホスト OS で実行する必要があるため、コンテナ内では実行できません。
 
 ```
-AIが run_script("copy-credentials.sh") を呼び出すと:
+AIが run_script("init-host-env.sh") を呼び出すと:
 
 ┌────────────────────────────────────────────────────────────┐
-│ ❌ このスクリプト (copy-credentials.sh) は                  │
+│ ❌ このスクリプト (init-host-env.sh) は                     │
 │    ホストOSで実行する必要があります。                        │
 │                                                            │
 │ ホストマシンで以下を実行してください:                        │
-│   .sandbox/scripts/copy-credentials.sh                     │
+│   .sandbox/scripts/init-host-env.sh                        │
 │                                                            │
 │ AI Sandbox にはDockerソケットへのアクセス権がないため、      │
 │ ホスト専用スクリプトは実行できません。                       │

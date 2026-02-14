@@ -785,7 +785,7 @@ test_cli_sandbox_project_isolation() {
 test_copy_credentials_script_exists() {
     info "copy-credentials.sh script exists"
 
-    if [ -f "$SCRIPT_DIR/copy-credentials.sh" ]; then
+    if [ -f "$SCRIPT_DIR/../host-tools/copy-credentials.sh" ]; then
         pass "copy-credentials.sh exists"
     else
         fail "copy-credentials.sh not found"
@@ -795,7 +795,7 @@ test_copy_credentials_script_exists() {
 test_copy_credentials_help() {
     info "copy-credentials.sh shows help"
 
-    local script="$SCRIPT_DIR/copy-credentials.sh"
+    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
 
     if [ ! -f "$script" ]; then
         skip "copy-credentials.sh not found"
@@ -815,7 +815,7 @@ test_copy_credentials_help() {
 test_copy_credentials_export_import() {
     info "copy-credentials.sh supports --export and --import"
 
-    local script="$SCRIPT_DIR/copy-credentials.sh"
+    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
 
     if [ ! -f "$script" ]; then
         skip "copy-credentials.sh not found"
@@ -835,7 +835,7 @@ test_copy_credentials_export_import() {
 test_copy_credentials_workspace_mode() {
     info "copy-credentials.sh supports workspace mode"
 
-    local script="$SCRIPT_DIR/copy-credentials.sh"
+    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
 
     if [ ! -f "$script" ]; then
         skip "copy-credentials.sh not found"
@@ -1021,7 +1021,7 @@ test_env_file_multiple_projects() {
 test_copy_credentials_export_dry_run() {
     info "[File Test] copy-credentials.sh export (dry run validation)"
 
-    local script="$SCRIPT_DIR/copy-credentials.sh"
+    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
     local test_backup="/tmp/test-backup-$$"
     local cleanup_files=("$test_backup")
 
@@ -1093,7 +1093,7 @@ test_copy_credentials_backup_structure() {
 test_copy_credentials_import_validation() {
     info "[File Test] copy-credentials.sh import validates backup path"
 
-    local script="$SCRIPT_DIR/copy-credentials.sh"
+    local script="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
 
     if [ ! -f "$script" ]; then
         skip "copy-credentials.sh not found"

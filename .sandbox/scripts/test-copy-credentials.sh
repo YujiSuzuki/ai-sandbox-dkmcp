@@ -21,7 +21,7 @@ if [ ! -d "/workspace" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT="$SCRIPT_DIR/copy-credentials.sh"
+SCRIPT="$SCRIPT_DIR/../host-tools/copy-credentials.sh"
 WORKSPACE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Colors for output

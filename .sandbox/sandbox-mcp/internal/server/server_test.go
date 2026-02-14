@@ -147,7 +147,7 @@ func TestHostOnlyScriptRejection(t *testing.T) {
 		JSONRPC: "2.0",
 		ID:      float64(2),
 		Method:  "tools/call",
-		Params:  json.RawMessage(`{"name":"run_script","arguments":{"name":"copy-credentials.sh"}}`),
+		Params:  json.RawMessage(`{"name":"run_script","arguments":{"name":"init-host-env.sh"}}`),
 	}
 	resp := srv.HandleRequest(callReq)
 

@@ -25,19 +25,19 @@
 # Manual testing (run on host OS / ホストOSで実行):
 #
 #   1. Help display / ヘルプ表示:
-#      ./.sandbox/scripts/copy-credentials.sh
+#      ./.sandbox/host-tools/copy-credentials.sh
 #      → Usage message, exit code 1
 #
 #   2. Missing args / 引数不足:
-#      ./.sandbox/scripts/copy-credentials.sh only-one-arg
+#      ./.sandbox/host-tools/copy-credentials.sh only-one-arg
 #      → Usage message, exit code 1
 #
 #   3. Non-existent volume / 存在しないボリューム:
-#      ./.sandbox/scripts/copy-credentials.sh --export nonexistent-project /tmp/test
+#      ./.sandbox/host-tools/copy-credentials.sh --export nonexistent-project /tmp/test
 #      → "volume ... not found" error, exit code 1
 #
 #   4. Actual copy / 実際のコピー (optional):
-#      ./.sandbox/scripts/copy-credentials.sh --export /path/to/workspace ~/backup
+#      ./.sandbox/host-tools/copy-credentials.sh --export /path/to/workspace ~/backup
 #      docker volume ls | grep backup
 #      # Cleanup: docker volume rm <created-volumes>
 #

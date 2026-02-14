@@ -41,7 +41,7 @@ show_script_list() {
     fi
 
     # Scripts that must run on host OS
-    local host_only="copy-credentials.sh init-host-env.sh"
+    local host_only="init-host-env.sh"
     # Scripts that must run in container
     local container_only="sync-secrets.sh validate-secrets.sh sync-compose-secrets.sh"
 
