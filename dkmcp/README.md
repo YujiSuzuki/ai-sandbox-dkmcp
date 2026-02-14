@@ -693,7 +693,7 @@ Human = hands (execute infrastructure changes)
 
 **What AI can do (opt-in):**
 - Start/stop/restart containers (`lifecycle: true`)
-- Run approved host tools (host_tools)
+- Run approved host tools (host_tools — enabled by default)
 - Execute whitelisted host commands (host_commands)
 
 **What humans do:**
@@ -711,9 +711,10 @@ DockMCP provides four levels of access, each more permissive than the last:
 | **Read** | Logs, stats, inspect, file listing | Enabled | None |
 | **Execute** | Whitelisted commands in containers | Enabled (moderate mode) | Low |
 | **Lifecycle** | Start/stop/restart containers | **Disabled** | Medium |
-| **Host access** | Host tools, host commands | **Disabled** | Medium-High |
+| **Host tools** | Approved host tool scripts | Enabled | Medium |
+| **Host commands** | Whitelisted host CLI commands | **Disabled** | High |
 
-Higher levels are disabled by default and require explicit opt-in via `dkmcp.yaml`.
+Lifecycle and host commands are disabled by default and require explicit opt-in via `dkmcp.yaml`. Host tools are enabled by default but require human approval (`dkmcp tools sync`) before any tool can run.
 
 ### Why Build/Recreate Remains Human-Only
 
@@ -730,7 +731,9 @@ docker-compose build myapp
 docker-compose up -d myapp
 ```
 
-Container restart is useful for recovering a crashed container or applying config changes, but it cannot replace a full rebuild. DockMCP intentionally does not support `docker-compose build` or `docker-compose up` to prevent the false assumption that restart solves everything.
+Container restart is useful for recovering a crashed container or applying config changes, but it cannot replace a full rebuild. DockMCP does not provide raw `docker-compose build` or `docker-compose up` as MCP tools to prevent the false assumption that restart solves everything.
+
+> **Note:** Host tools can wrap these operations in human-reviewed scripts (e.g., `demo-build.sh`, `demo-up.sh`). This gives AI controlled access while ensuring the scripts are explicitly approved.
 
 #### 2. Most Development Work Doesn't Need Container Operations
 
@@ -798,7 +801,8 @@ DockMCP's design provides graduated access:
 - **Controlled command execution** via whitelists
 - **File access** with `blocked_paths` protection
 - **Container lifecycle** (start/stop/restart) — opt-in, disabled by default
-- **Host access** (tools, commands) — opt-in, disabled by default
+- **Host tools** — enabled by default (requires human approval per tool)
+- **Host commands** — opt-in, disabled by default
 - **No image build/recreate operations** — always human-only
 
 Each level can be enabled independently, letting you choose the right balance of AI autonomy and human control for your environment.

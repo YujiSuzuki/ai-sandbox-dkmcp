@@ -650,7 +650,7 @@ dkmcp client logs --tail 50 securenote-api
 # Execute a whitelisted command
 dkmcp client exec securenote-api "npm test"
 
-# List host tools (if host_tools enabled)
+# List host tools
 dkmcp client host-tools list
 
 # Get info about a host tool

@@ -8,6 +8,9 @@ import (
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/config"
 )
 
+// TestManager_Disabled verifies that Manager correctly rejects all operations when disabled.
+//
+// TestManager_Disabledは、無効化されたManagerがすべての操作を適切に拒否することを確認します。
 func TestManager_Disabled(t *testing.T) {
 	cfg := &config.HostToolsConfig{Enabled: false}
 	m := NewManager(cfg, "/tmp")
@@ -32,6 +35,9 @@ func TestManager_Disabled(t *testing.T) {
 	}
 }
 
+// TestManager_NilConfig verifies that Manager handles nil config safely by reporting as disabled.
+//
+// TestManager_NilConfigは、Managerがnil設定を安全に処理し、無効状態を返すことを確認します。
 func TestManager_NilConfig(t *testing.T) {
 	m := NewManager(nil, "/tmp")
 
@@ -40,6 +46,9 @@ func TestManager_NilConfig(t *testing.T) {
 	}
 }
 
+// TestManager_ListTools verifies that Manager correctly discovers and lists tools from configured directories.
+//
+// TestManager_ListToolsは、Managerが設定されたディレクトリからツールを正しく検出してリスト化することを確認します。
 func TestManager_ListTools(t *testing.T) {
 	dir := t.TempDir()
 	toolsDir := filepath.Join(dir, "tools")
@@ -67,6 +76,9 @@ func TestManager_ListTools(t *testing.T) {
 	}
 }
 
+// TestManager_GetToolInfo verifies that Manager retrieves tool metadata correctly.
+//
+// TestManager_GetToolInfoは、Managerがツールのメタデータを正しく取得することを確認します。
 func TestManager_GetToolInfo(t *testing.T) {
 	dir := t.TempDir()
 	toolsDir := filepath.Join(dir, "tools")
@@ -95,6 +107,9 @@ func TestManager_GetToolInfo(t *testing.T) {
 	}
 }
 
+// TestManager_GetToolInfo_NotFound verifies that Manager returns an error for nonexistent tools.
+//
+// TestManager_GetToolInfo_NotFoundは、存在しないツールに対してManagerがエラーを返すことを確認します。
 func TestManager_GetToolInfo_NotFound(t *testing.T) {
 	dir := t.TempDir()
 	toolsDir := filepath.Join(dir, "tools")
@@ -114,6 +129,9 @@ func TestManager_GetToolInfo_NotFound(t *testing.T) {
 	}
 }
 
+// TestManager_RunTool verifies that Manager executes tools with arguments correctly.
+//
+// TestManager_RunToolは、Managerが引数付きでツールを正しく実行することを確認します。
 func TestManager_RunTool(t *testing.T) {
 	dir := t.TempDir()
 	toolsDir := filepath.Join(dir, "tools")
@@ -139,6 +157,9 @@ func TestManager_RunTool(t *testing.T) {
 	}
 }
 
+// TestManager_RunTool_NotFound verifies that Manager returns an error when attempting to run nonexistent tools.
+//
+// TestManager_RunTool_NotFoundは、存在しないツールの実行時にManagerがエラーを返すことを確認します。
 func TestManager_RunTool_NotFound(t *testing.T) {
 	dir := t.TempDir()
 	toolsDir := filepath.Join(dir, "tools")
@@ -158,6 +179,9 @@ func TestManager_RunTool_NotFound(t *testing.T) {
 	}
 }
 
+// TestManager_MultipleDirectories verifies that Manager correctly aggregates tools from multiple configured directories.
+//
+// TestManager_MultipleDirectoriesは、Managerが複数の設定されたディレクトリからツールを正しく集約することを確認します。
 func TestManager_MultipleDirectories(t *testing.T) {
 	dir := t.TempDir()
 	dir1 := filepath.Join(dir, "tools1")
@@ -186,6 +210,9 @@ func TestManager_MultipleDirectories(t *testing.T) {
 	}
 }
 
+// TestManager_NonexistentDirectory verifies that Manager gracefully skips nonexistent directories without errors.
+//
+// TestManager_NonexistentDirectoryは、Managerが存在しないディレクトリをエラーなく適切にスキップすることを確認します。
 func TestManager_NonexistentDirectory(t *testing.T) {
 	dir := t.TempDir()
 
@@ -209,6 +236,9 @@ func TestManager_NonexistentDirectory(t *testing.T) {
 
 // --- Secure mode tests ---
 
+// TestManager_SecureMode_ListTools verifies that Manager in secure mode only lists approved tools from project-specific directories.
+//
+// TestManager_SecureMode_ListToolsは、セキュアモードのManagerがプロジェクト固有のディレクトリから承認済みツールのみをリストすることを確認します。
 func TestManager_SecureMode_ListTools(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -246,6 +276,9 @@ func TestManager_SecureMode_ListTools(t *testing.T) {
 	}
 }
 
+// TestManager_SecureMode_WithCommon verifies that Manager includes both project-specific and common tools when common mode is enabled.
+//
+// TestManager_SecureMode_WithCommonは、共通モードが有効な場合にManagerがプロジェクト固有のツールと共通ツールの両方を含めることを確認します。
 func TestManager_SecureMode_WithCommon(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -281,6 +314,9 @@ func TestManager_SecureMode_WithCommon(t *testing.T) {
 	}
 }
 
+// TestManager_SecureMode_ProjectOverridesCommon verifies that project-specific tools take priority over same-named common tools.
+//
+// TestManager_SecureMode_ProjectOverridesCommonは、プロジェクト固有のツールが同名の共通ツールよりも優先されることを確認します。
 func TestManager_SecureMode_ProjectOverridesCommon(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -319,6 +355,9 @@ func TestManager_SecureMode_ProjectOverridesCommon(t *testing.T) {
 	}
 }
 
+// TestManager_SecureMode_StagingNotExecuted verifies that staging tools are not listed or executed in secure mode without dev mode enabled.
+//
+// TestManager_SecureMode_StagingNotExecutedは、開発モードが無効な場合にステージングツールがリストや実行の対象外となることを確認します。
 func TestManager_SecureMode_StagingNotExecuted(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -356,6 +395,9 @@ func TestManager_SecureMode_StagingNotExecuted(t *testing.T) {
 
 // --- Dev mode tests ---
 
+// TestManager_DevMode_StagingOverridesApproved verifies that staging tools override approved tools when dev mode is enabled.
+//
+// TestManager_DevMode_StagingOverridesApprovedは、開発モードが有効な場合にステージングツールが承認済みツールを上書きすることを確認します。
 func TestManager_DevMode_StagingOverridesApproved(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -400,6 +442,9 @@ func TestManager_DevMode_StagingOverridesApproved(t *testing.T) {
 	}
 }
 
+// TestManager_DevMode_StagingNewTool verifies that new tools in staging are available alongside approved tools when dev mode is enabled.
+//
+// TestManager_DevMode_StagingNewToolは、開発モードが有効な場合にステージングの新規ツールが承認済みツールと並行して利用可能になることを確認します。
 func TestManager_DevMode_StagingNewTool(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -437,6 +482,9 @@ func TestManager_DevMode_StagingNewTool(t *testing.T) {
 	}
 }
 
+// TestManager_DevMode_Disabled_StagingNotIncluded verifies that staging tools are excluded when dev mode is disabled.
+//
+// TestManager_DevMode_Disabled_StagingNotIncludedは、開発モードが無効な場合にステージングツールが除外されることを確認します。
 func TestManager_DevMode_Disabled_StagingNotIncluded(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -471,6 +519,9 @@ func TestManager_DevMode_Disabled_StagingNotIncluded(t *testing.T) {
 	}
 }
 
+// TestManager_LegacyMode verifies that Manager operates in legacy mode when ApprovedDir is not configured.
+//
+// TestManager_LegacyModeは、ApprovedDirが設定されていない場合にManagerがレガシーモードで動作することを確認します。
 func TestManager_LegacyMode(t *testing.T) {
 	dir := t.TempDir()
 	toolsDir := filepath.Join(dir, "tools")

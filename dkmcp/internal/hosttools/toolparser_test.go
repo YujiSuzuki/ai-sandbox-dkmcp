@@ -6,6 +6,11 @@ import (
 	"testing"
 )
 
+// TestParseGoHeader verifies that Go header comments are parsed correctly,
+// including description, usage, and examples sections, and stops at the "---" separator.
+//
+// TestParseGoHeaderは、Go headerのコメントが正しくパースされることを確認します。
+// description、usage、examplesの各セクション、および "---" 区切り文字での停止を検証します。
 func TestParseGoHeader(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-tool.go")
@@ -46,6 +51,11 @@ package main
 	}
 }
 
+// TestParseShellHeader verifies that shell script header comments are parsed correctly,
+// extracting the description and stopping at the "---" separator.
+//
+// TestParseShellHeaderは、シェルスクリプトのheaderコメントが正しくパースされることを確認します。
+// descriptionの抽出と "---" 区切り文字での停止を検証します。
 func TestParseShellHeader(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "my-tool.sh")
@@ -74,6 +84,11 @@ echo "hello"
 	}
 }
 
+// TestParsePythonHeader verifies that Python header comments are parsed correctly,
+// extracting the description while ignoring shebang and encoding declarations.
+//
+// TestParsePythonHeaderは、Pythonのheaderコメントが正しくパースされることを確認します。
+// shebangやエンコーディング宣言を無視しつつ、descriptionを抽出できることを検証します。
 func TestParsePythonHeader(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tool.py")
@@ -97,6 +112,11 @@ import sys
 	}
 }
 
+// TestListTools_FiltersExtensions verifies that ListTools only includes files
+// with allowed extensions and excludes underscore-prefixed files.
+//
+// TestListTools_FiltersExtensionsは、ListToolsが許可された拡張子のファイルのみを含み、
+// アンダースコアで始まるファイルを除外することを確認します。
 func TestListTools_FiltersExtensions(t *testing.T) {
 	dir := t.TempDir()
 
@@ -133,6 +153,11 @@ func TestListTools_FiltersExtensions(t *testing.T) {
 	}
 }
 
+// TestGetToolInfo_PathTraversal verifies that GetToolInfo rejects path traversal
+// attempts and paths containing slashes.
+//
+// TestGetToolInfo_PathTraversalは、GetToolInfoがパストラバーサル攻撃や
+// スラッシュを含むパスを拒否することを確認します。
 func TestGetToolInfo_PathTraversal(t *testing.T) {
 	dir := t.TempDir()
 
@@ -147,6 +172,11 @@ func TestGetToolInfo_PathTraversal(t *testing.T) {
 	}
 }
 
+// TestGetToolInfo_ExtensionNotAllowed verifies that GetToolInfo rejects files
+// with extensions not in the allowed list.
+//
+// TestGetToolInfo_ExtensionNotAllowedは、GetToolInfoが許可リストに含まれない
+// 拡張子のファイルを拒否することを確認します。
 func TestGetToolInfo_ExtensionNotAllowed(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "tool.rb"), []byte("# Ruby\n"), 0644)
@@ -157,6 +187,11 @@ func TestGetToolInfo_ExtensionNotAllowed(t *testing.T) {
 	}
 }
 
+// TestValidateName verifies that validateName correctly accepts valid filenames
+// and rejects empty names, path traversal attempts, and paths with slashes.
+//
+// TestValidateNameは、validateNameが正しいファイル名を受け入れ、
+// 空の名前、パストラバーサル、スラッシュを含むパスを拒否することを確認します。
 func TestValidateName(t *testing.T) {
 	tests := []struct {
 		name    string

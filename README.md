@@ -57,7 +57,7 @@ This project is designed for local development environments and is not intended 
 ### 📦 Components
 - [DockMCP Documentation](dkmcp/README.md) — MCP server details
 - [DockMCP Host Access](docs/host-access.md) — Host tools, container lifecycle, and host command execution
-- [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) — Graduated access model and why build/recreate is human-only
+- [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) — Graduated access model and AI-human responsibility separation
 - [Plugin Guide](docs/plugins.md) — Claude Code plugins for multi-repo setups
 - [Demo App Guide](demo-apps/README.md) — Running the SecureNote demo
 - [CLI Sandbox Guide](cli_sandbox/README.md) — Terminal-based sandbox
@@ -508,8 +508,8 @@ A: No. It works as a regular sandbox without DockMCP. DockMCP enables cross-cont
 **Q: Why not just mount the Docker socket so AI can access containers directly?**
 A: Docker socket access is essentially host admin privileges — AI could read secrets from any container, bypassing all hiding. DockMCP exists to provide only the operations AI needs (logs, tests) in a safe, controlled way. See [Architecture Details](docs/architecture.md#5-why-no-docker-socket-access) for details.
 
-**Q: Why can't I ask AI to run `docker-compose up/down`?**
-A: DockMCP provides graduated access — AI can restart containers (opt-in), but image builds and `docker-compose up/down` remain human-only. This prevents AI from making infrastructure changes that are hard to undo. See [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) for details.
+**Q: Can AI run `docker-compose up/down`?**
+A: Not directly — but AI can run approved host tools (e.g., `demo-up.sh`, `demo-down.sh`) that wrap these commands. Raw `docker-compose` and image builds remain human-only, while host tools provide controlled access through human-reviewed scripts. See [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) for details.
 
 **Q: Can I use a different secret management solution?**
 A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other tools. This project handles development-time protection; use dedicated tools for production.
@@ -529,7 +529,7 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 | [Network Restrictions](docs/network-firewall.md) | How to add firewall to AI Sandbox |
 | [DockMCP Documentation](dkmcp/README.md) | MCP server details |
 | [DockMCP Host Access](docs/host-access.md) | Host tools, container lifecycle, and host command execution |
-| [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) | Graduated access model and why build/recreate is human-only |
+| [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) | Graduated access model and AI-human responsibility separation |
 | [Plugin Guide](docs/plugins.md) | Claude Code plugins for multi-repo setups |
 | [Demo App Guide](demo-apps/README.md) | Running the SecureNote demo |
 | [CLI Sandbox Guide](cli_sandbox/README.md) | Terminal-based sandbox |

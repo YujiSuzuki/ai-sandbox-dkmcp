@@ -1,3 +1,10 @@
+// host_policy_test.go contains tests for host command policy enforcement.
+// These tests verify command whitelisting, dangerous mode, container restrictions,
+// and pipe/redirect rejection for host OS command execution.
+//
+// host_policy_test.goはホストコマンドポリシーの適用テストを含みます。
+// コマンドホワイトリスト、危険モード、コンテナ制限、
+// パイプ/リダイレクト拒否の検証を行います。
 package security
 
 import (
@@ -6,6 +13,13 @@ import (
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/config"
 )
 
+// newTestHostConfig creates a test configuration for host command policy tests.
+// It includes basic whitelisted commands (docker, git, df, free), denied commands,
+// and dangerous mode with lifecycle commands enabled.
+//
+// newTestHostConfigはホストコマンドポリシーテスト用の設定を作成します。
+// 基本的なホワイトリストコマンド（docker、git、df、free）、拒否コマンド、
+// ライフサイクルコマンドを有効にした危険モードを含みます。
 func newTestHostConfig() *config.HostCommandsConfig {
 	return &config.HostCommandsConfig{
 		Enabled:           true,
@@ -32,6 +46,13 @@ func newTestHostConfig() *config.HostCommandsConfig {
 
 // --- Normal mode tests ---
 
+// TestHostCommandPolicy_NormalMode_Allowed verifies that whitelisted commands
+// are accepted in normal mode. Tests docker, git, df, and free commands
+// with various arguments matching the whitelist patterns.
+//
+// TestHostCommandPolicy_NormalMode_Allowedは通常モードでホワイトリストコマンドが
+// 許可されることを検証します。ホワイトリストパターンに一致する
+// docker、git、df、freeコマンドを様々な引数でテストします。
 func TestHostCommandPolicy_NormalMode_Allowed(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -60,6 +81,13 @@ func TestHostCommandPolicy_NormalMode_Allowed(t *testing.T) {
 	}
 }
 
+// TestHostCommandPolicy_NormalMode_Denied verifies that non-whitelisted commands
+// and explicitly denied commands are rejected in normal mode.
+// Tests commands not in the whitelist and those in the deny list.
+//
+// TestHostCommandPolicy_NormalMode_Deniedは通常モードで非ホワイトリストコマンドと
+// 明示的に拒否されたコマンドが拒否されることを検証します。
+// ホワイトリストに無いコマンドと拒否リストのコマンドをテストします。
 func TestHostCommandPolicy_NormalMode_Denied(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -86,6 +114,13 @@ func TestHostCommandPolicy_NormalMode_Denied(t *testing.T) {
 	}
 }
 
+// TestHostCommandPolicy_NormalMode_PipeRejected verifies that commands containing
+// pipes, redirects, command separators, command substitution, or newlines are rejected
+// in normal mode to prevent shell injection attacks.
+//
+// TestHostCommandPolicy_NormalMode_PipeRejectedは通常モードでパイプ、リダイレクト、
+// コマンド区切り、コマンド置換、改行を含むコマンドがシェルインジェクション攻撃を
+// 防ぐために拒否されることを検証します。
 func TestHostCommandPolicy_NormalMode_PipeRejected(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -112,6 +147,13 @@ func TestHostCommandPolicy_NormalMode_PipeRejected(t *testing.T) {
 	}
 }
 
+// TestHostCommandPolicy_NormalMode_HintForDangerous verifies that when a dangerous
+// command is rejected in normal mode, the error message hints about using dangerous mode.
+// This helps users understand that the command is available with --dangerously flag.
+//
+// TestHostCommandPolicy_NormalMode_HintForDangerousは通常モードで危険なコマンドが
+// 拒否された際、エラーメッセージに危険モードの使用をヒントすることを検証します。
+// これにより、--dangerouslyフラグでコマンドが利用可能であることをユーザーに伝えます。
 func TestHostCommandPolicy_NormalMode_HintForDangerous(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -130,6 +172,13 @@ func TestHostCommandPolicy_NormalMode_HintForDangerous(t *testing.T) {
 
 // --- Dangerous mode tests ---
 
+// TestHostCommandPolicy_DangerousMode_Allowed verifies that both dangerous commands
+// (docker restart, stop, git checkout, pull) and normal whitelisted commands
+// are accepted when using dangerous mode.
+//
+// TestHostCommandPolicy_DangerousMode_Allowedは危険モード使用時に
+// 危険コマンド（docker restart、stop、git checkout、pull）と
+// 通常のホワイトリストコマンドの両方が許可されることを検証します。
 func TestHostCommandPolicy_DangerousMode_Allowed(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -158,6 +207,13 @@ func TestHostCommandPolicy_DangerousMode_Allowed(t *testing.T) {
 	}
 }
 
+// TestHostCommandPolicy_DangerousMode_Denied verifies that commands not in either
+// the whitelist or dangerous list are still rejected in dangerous mode.
+// Dangerous mode expands allowed commands but does not permit arbitrary execution.
+//
+// TestHostCommandPolicy_DangerousMode_Deniedはホワイトリストにも危険リストにも
+// 無いコマンドが危険モードでも拒否されることを検証します。
+// 危険モードは許可コマンドを拡張しますが、任意のコマンド実行は許可しません。
 func TestHostCommandPolicy_DangerousMode_Denied(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -182,6 +238,13 @@ func TestHostCommandPolicy_DangerousMode_Denied(t *testing.T) {
 	}
 }
 
+// TestHostCommandPolicy_DangerousMode_Disabled verifies that dangerous commands
+// are rejected when dangerous mode is disabled in the configuration.
+// This ensures the dangerously.enabled setting is respected.
+//
+// TestHostCommandPolicy_DangerousMode_Disabledは設定で危険モードが無効の場合に
+// 危険コマンドが拒否されることを検証します。
+// dangerously.enabled設定が尊重されることを確認します。
 func TestHostCommandPolicy_DangerousMode_Disabled(t *testing.T) {
 	cfg := newTestHostConfig()
 	cfg.Dangerously.Enabled = false
@@ -193,6 +256,13 @@ func TestHostCommandPolicy_DangerousMode_Disabled(t *testing.T) {
 	}
 }
 
+// TestHostCommandPolicy_DangerousMode_PathTraversal verifies that path traversal
+// attempts (../) are rejected even in dangerous mode to prevent unauthorized
+// file system access.
+//
+// TestHostCommandPolicy_DangerousMode_PathTraversalは危険モードでも
+// パストラバーサル（../）が不正なファイルシステムアクセスを防ぐために
+// 拒否されることを検証します。
 func TestHostCommandPolicy_DangerousMode_PathTraversal(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -204,6 +274,13 @@ func TestHostCommandPolicy_DangerousMode_PathTraversal(t *testing.T) {
 
 // --- Disabled tests ---
 
+// TestHostCommandPolicy_Disabled verifies that all host commands are rejected
+// when host command execution is disabled in the configuration.
+// Both normal and dangerous mode should fail when enabled=false.
+//
+// TestHostCommandPolicy_Disabledは設定でホストコマンド実行が無効の場合に
+// すべてのホストコマンドが拒否されることを検証します。
+// enabled=falseの場合、通常モードと危険モードの両方が失敗すべきです。
 func TestHostCommandPolicy_Disabled(t *testing.T) {
 	cfg := newTestHostConfig()
 	cfg.Enabled = false
@@ -222,6 +299,13 @@ func TestHostCommandPolicy_Disabled(t *testing.T) {
 
 // --- GetAllowedHostCommands ---
 
+// TestHostCommandPolicy_GetAllowedHostCommands verifies that GetAllowedHostCommands
+// returns the complete whitelist mapping from the configuration.
+// Tests that all expected commands (docker, git, df, free) are included.
+//
+// TestHostCommandPolicy_GetAllowedHostCommandsはGetAllowedHostCommandsが
+// 設定からホワイトリストマッピング全体を返すことを検証します。
+// 期待されるすべてのコマンド（docker、git、df、free）が含まれることをテストします。
 func TestHostCommandPolicy_GetAllowedHostCommands(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 	cmds := p.GetAllowedHostCommands()
@@ -240,6 +324,13 @@ func TestHostCommandPolicy_GetAllowedHostCommands(t *testing.T) {
 
 // --- Wildcard pattern tests ---
 
+// TestHostCommandPolicy_WildcardPatterns verifies that wildcard patterns (*)
+// in the whitelist correctly match arbitrary arguments.
+// Tests "logs *" and "inspect *" patterns with container names.
+//
+// TestHostCommandPolicy_WildcardPatternsはホワイトリストのワイルドカードパターン（*）が
+// 任意の引数に正しくマッチすることを検証します。
+// コンテナ名を使った「logs *」と「inspect *」パターンをテストします。
 func TestHostCommandPolicy_WildcardPatterns(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 
@@ -258,6 +349,13 @@ func TestHostCommandPolicy_WildcardPatterns(t *testing.T) {
 
 // --- Container restriction tests ---
 
+// TestHostCommandPolicy_ContainerRestrictions verifies that container name restrictions
+// are enforced for docker commands. Only containers matching allowed_containers patterns
+// should be accessible, rejecting unauthorized container names.
+//
+// TestHostCommandPolicy_ContainerRestrictionsはdockerコマンドに対してコンテナ名制限が
+// 適用されることを検証します。allowed_containersパターンにマッチするコンテナのみが
+// アクセス可能で、不正なコンテナ名は拒否されるべきです。
 func TestHostCommandPolicy_ContainerRestrictions(t *testing.T) {
 	p := NewHostCommandPolicy(newTestHostConfig())
 

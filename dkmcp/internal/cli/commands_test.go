@@ -158,7 +158,7 @@ func TestExecCommand(t *testing.T) {
 func TestRootCommandSubcommands(t *testing.T) {
 	// Define the list of expected subcommands.
 	// 期待されるサブコマンドのリストを定義します。
-	expectedSubcommands := []string{"serve", "list", "logs", "exec", "stats", "inspect", "use", "client", "version"}
+	expectedSubcommands := []string{"serve", "list", "logs", "exec", "stats", "inspect", "use", "client", "tools", "version"}
 
 	// Get all registered subcommands.
 	// 登録されたすべてのサブコマンドを取得します。

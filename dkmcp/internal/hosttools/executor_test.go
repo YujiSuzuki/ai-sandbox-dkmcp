@@ -1,3 +1,8 @@
+// Package hosttools tests verify host tool execution, argument parsing,
+// timeout handling, and working directory management.
+//
+// hosttoolsパッケージのテストはホストツールの実行、引数の解析、
+// タイムアウト処理、作業ディレクトリ管理を検証します。
 package hosttools
 
 import (
@@ -7,6 +12,11 @@ import (
 	"time"
 )
 
+// TestRunTool_ShellScript verifies basic shell script execution.
+// Tests that a simple shell script runs successfully and produces expected output.
+//
+// TestRunTool_ShellScriptは基本的なシェルスクリプトの実行を検証します。
+// シンプルなシェルスクリプトが正常に実行され、期待される出力を生成することをテストします。
 func TestRunTool_ShellScript(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "hello.sh")
@@ -25,6 +35,11 @@ func TestRunTool_ShellScript(t *testing.T) {
 	}
 }
 
+// TestRunTool_WithArgs verifies that arguments are passed correctly to tools.
+// Tests that tools receive and process command-line arguments as expected.
+//
+// TestRunTool_WithArgsは引数がツールに正しく渡されることを検証します。
+// ツールがコマンドライン引数を期待通りに受け取り処理することをテストします。
 func TestRunTool_WithArgs(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "echo-args.sh")
@@ -40,6 +55,11 @@ func TestRunTool_WithArgs(t *testing.T) {
 	}
 }
 
+// TestRunTool_PathTraversal verifies that path traversal attempts are rejected.
+// Tests that tools cannot access files outside the tool directory using ".." paths.
+//
+// TestRunTool_PathTraversalはパストラバーサル攻撃が拒否されることを検証します。
+// ツールが".."パスを使ってツールディレクトリ外のファイルにアクセスできないことをテストします。
 func TestRunTool_PathTraversal(t *testing.T) {
 	dir := t.TempDir()
 
@@ -49,6 +69,11 @@ func TestRunTool_PathTraversal(t *testing.T) {
 	}
 }
 
+// TestRunTool_UnsupportedExtension verifies that unsupported file types are rejected.
+// Tests that only whitelisted file extensions (.sh, .py, etc.) can be executed.
+//
+// TestRunTool_UnsupportedExtensionは非対応のファイルタイプが拒否されることを検証します。
+// ホワイトリストに登録された拡張子(.sh、.pyなど)のみ実行可能であることをテストします。
 func TestRunTool_UnsupportedExtension(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "tool.rb"), []byte("# ruby\n"), 0755)
@@ -59,6 +84,11 @@ func TestRunTool_UnsupportedExtension(t *testing.T) {
 	}
 }
 
+// TestRunTool_Timeout verifies that long-running tools are terminated.
+// Tests that tools exceeding the timeout limit are killed and return an error.
+//
+// TestRunTool_Timeoutは長時間実行されるツールが終了されることを検証します。
+// タイムアウト制限を超えたツールが強制終了され、エラーが返されることをテストします。
 func TestRunTool_Timeout(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "slow.sh")
@@ -73,6 +103,11 @@ func TestRunTool_Timeout(t *testing.T) {
 	}
 }
 
+// TestRunTool_NonZeroExitCode verifies that non-zero exit codes are captured.
+// Tests that tools exiting with non-zero codes return the correct ExitCode without error.
+//
+// TestRunTool_NonZeroExitCodeは非ゼロ終了コードがキャプチャされることを検証します。
+// 非ゼロコードで終了したツールがエラーではなく正しいExitCodeを返すことをテストします。
 func TestRunTool_NonZeroExitCode(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "fail.sh")
@@ -88,6 +123,11 @@ func TestRunTool_NonZeroExitCode(t *testing.T) {
 	}
 }
 
+// TestRunTool_WorkDir verifies that tools run in the specified working directory.
+// Tests that the workDir parameter correctly sets the tool's execution directory.
+//
+// TestRunTool_WorkDirは指定された作業ディレクトリでツールが実行されることを検証します。
+// workDirパラメータがツールの実行ディレクトリを正しく設定することをテストします。
 func TestRunTool_WorkDir(t *testing.T) {
 	toolDir := t.TempDir()
 	workDir := t.TempDir()
@@ -105,6 +145,11 @@ func TestRunTool_WorkDir(t *testing.T) {
 	}
 }
 
+// TestRunTool_WorkDir_Empty_FallsBackToToolDir verifies workDir fallback behavior.
+// Tests that when workDir is empty, the tool runs in the tool directory instead.
+//
+// TestRunTool_WorkDir_Empty_FallsBackToToolDirは作業ディレクトリのフォールバック動作を検証します。
+// workDirが空の場合、ツールディレクトリで実行されることをテストします。
 func TestRunTool_WorkDir_Empty_FallsBackToToolDir(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "pwd.sh")
@@ -121,6 +166,11 @@ func TestRunTool_WorkDir_Empty_FallsBackToToolDir(t *testing.T) {
 	}
 }
 
+// TestExecHostCommand verifies basic host command execution.
+// Tests that simple shell commands run successfully and produce expected output.
+//
+// TestExecHostCommandは基本的なホストコマンドの実行を検証します。
+// シンプルなシェルコマンドが正常に実行され、期待される出力を生成することをテストします。
 func TestExecHostCommand(t *testing.T) {
 	dir := t.TempDir()
 
@@ -137,6 +187,11 @@ func TestExecHostCommand(t *testing.T) {
 	}
 }
 
+// TestExecHostCommand_WorkingDirectory verifies working directory handling.
+// Tests that host commands execute in the specified working directory.
+//
+// TestExecHostCommand_WorkingDirectoryは作業ディレクトリの処理を検証します。
+// ホストコマンドが指定された作業ディレクトリで実行されることをテストします。
 func TestExecHostCommand_WorkingDirectory(t *testing.T) {
 	dir := t.TempDir()
 
@@ -154,6 +209,11 @@ func TestExecHostCommand_WorkingDirectory(t *testing.T) {
 	}
 }
 
+// TestExecHostCommand_EmptyCommand verifies empty command rejection.
+// Tests that empty command strings are rejected with an error.
+//
+// TestExecHostCommand_EmptyCommandは空のコマンドの拒否を検証します。
+// 空のコマンド文字列がエラーとして拒否されることをテストします。
 func TestExecHostCommand_EmptyCommand(t *testing.T) {
 	_, err := ExecHostCommand("", "/tmp", 10*time.Second)
 	if err == nil {
@@ -161,6 +221,11 @@ func TestExecHostCommand_EmptyCommand(t *testing.T) {
 	}
 }
 
+// TestParseCommandArgs verifies command string parsing into argument arrays.
+// Tests various quoting styles, escaping, and error cases for shell command parsing.
+//
+// TestParseCommandArgsはコマンド文字列の引数配列への解析を検証します。
+// シェルコマンド解析における様々なクォート形式、エスケープ、エラーケースをテストします。
 func TestParseCommandArgs(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -197,6 +262,11 @@ func TestParseCommandArgs(t *testing.T) {
 	}
 }
 
+// TestResultString verifies that Result.String() produces output.
+// Tests that the string representation of execution results is non-empty.
+//
+// TestResultStringはResult.String()が出力を生成することを検証します。
+// 実行結果の文字列表現が空でないことをテストします。
 func TestResultString(t *testing.T) {
 	r := &Result{Stdout: "output", Stderr: "error", ExitCode: 1}
 	s := r.String()

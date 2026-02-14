@@ -59,7 +59,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 ### 📦 コンポーネント
 - [DockMCP ドキュメント](dkmcp/README.ja.md) — MCPサーバーの詳細
 - [DockMCP ホストアクセス](docs/host-access.ja.md) — ホストツール、コンテナライフサイクル、ホストコマンド実行
-- [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) — 段階的アクセスモデルとビルド/再作成が人間のみの理由
+- [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) — 段階的アクセスモデルとAI・人の役割分担
 - [プラグインガイド](docs/plugins.ja.md) — マルチリポ構成でのClaude Codeプラグイン活用
 - [デモアプリガイド](demo-apps/README.ja.md) — SecureNoteデモの実行方法
 - [CLI Sandbox ガイド](cli_sandbox/README.ja.md) — ターミナルベースのサンドボックス
@@ -512,8 +512,8 @@ A: いいえ。DockMCPなしでも通常のサンドボックスとして機能�
 **Q: Docker ソケットをコンテナに渡せば DockMCP は不要では？**
 A: ソケットを渡すと AI がすべてのコンテナを自由に操作でき、秘匿情報の隠蔽も回避できてしまいます。DockMCP は「必要な操作だけ」を安全に提供するためのゲートウェイです。詳しくは [アーキテクチャ詳細](docs/architecture.ja.md#5-docker-ソケットを渡さない理由) を参照。
 
-**Q: なぜAIに `docker-compose up/down` を頼めないの？**
-A: DockMCP は段階的なアクセスを提供しています。コンテナの再起動はオプトインで可能ですが、イメージのビルドや `docker-compose up/down` は人間のみが実行します。取り消しが難しいインフラ変更を AI が行うことを防ぐためです。詳細は [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) を参照してください。
+**Q: AI に `docker-compose up/down` を頼める？**
+A: 直接は実行できませんが、承認済みホストツール（`demo-up.sh`、`demo-down.sh` など）を通じて同等の操作が可能です。`docker-compose` コマンドやイメージのビルドは人のみですが、ホストツールにより人がレビューしたスクリプト経由で制御されたアクセスを提供します。詳細は [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) を参照してください。
 
 **Q: 別の秘匿情報管理を使えますか？**
 A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられます。本プロジェクトは開発時の保護を担い、本番環境では専用ツールをお使いください。
@@ -533,7 +533,7 @@ A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられま�
 | [ネットワーク制限](docs/network-firewall.ja.md) | ファイアウォールの導入方法 |
 | [DockMCP ドキュメント](dkmcp/README.ja.md) | MCPサーバーの詳細 |
 | [DockMCP ホストアクセス](docs/host-access.ja.md) | ホストツール、コンテナライフサイクル、ホストコマンド実行 |
-| [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) | 段階的アクセスモデルとビルド/再作成が人間のみの理由 |
+| [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) | 段階的アクセスモデルとビルド/人の役割分担 |
 | [プラグインガイド](docs/plugins.ja.md) | マルチリポ構成でのClaude Codeプラグイン活用 |
 | [デモアプリガイド](demo-apps/README.ja.md) | SecureNoteデモの実行方法 |
 | [CLI Sandbox ガイド](cli_sandbox/README.ja.md) | ターミナルベースのサンドボックス |

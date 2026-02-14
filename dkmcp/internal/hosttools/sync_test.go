@@ -9,6 +9,11 @@ import (
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/config"
 )
 
+// TestProjectID verifies that project IDs are generated correctly with proper prefix and length.
+// Tests edge cases like special characters and root path.
+//
+// TestProjectIDはプロジェクトIDが適切な接頭辞と長さで生成されることを確認します。
+// 特殊文字やルートパスなどのエッジケースをテストします。
 func TestProjectID(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -49,6 +54,9 @@ func TestProjectID(t *testing.T) {
 	}
 }
 
+// TestProjectID_Deterministic verifies that ProjectID returns the same ID for identical paths.
+//
+// TestProjectID_Deterministicは同じパスに対して同じIDを返すことを確認します。
 func TestProjectID_Deterministic(t *testing.T) {
 	id1 := ProjectID("/home/user/workspace")
 	id2 := ProjectID("/home/user/workspace")
@@ -57,6 +65,9 @@ func TestProjectID_Deterministic(t *testing.T) {
 	}
 }
 
+// TestProjectID_DifferentPaths verifies that different paths produce different project IDs.
+//
+// TestProjectID_DifferentPathsは異なるパスから異なるプロジェクトIDが生成されることを確認します。
 func TestProjectID_DifferentPaths(t *testing.T) {
 	id1 := ProjectID("/home/user/project-a")
 	id2 := ProjectID("/home/user/project-b")
@@ -65,6 +76,11 @@ func TestProjectID_DifferentPaths(t *testing.T) {
 	}
 }
 
+// TestResolveApprovedDir verifies that approved directory paths are resolved correctly.
+// Tests tilde expansion, absolute paths, and relative paths.
+//
+// TestResolveApprovedDirは承認済みディレクトリのパスが正しく解決されることを確認します。
+// チルダ展開、絶対パス、相対パスをテストします。
 func TestResolveApprovedDir(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -111,6 +127,11 @@ func TestResolveApprovedDir(t *testing.T) {
 	}
 }
 
+// TestCompareFiles verifies file comparison logic for sync status detection.
+// Tests new files, unchanged files, and updated files with different content or size.
+//
+// TestCompareFilesは同期ステータス検出のためのファイル比較ロジックを確認します。
+// 新規ファイル、未変更ファイル、内容やサイズが異なる更新ファイルをテストします。
 func TestCompareFiles(t *testing.T) {
 	dir := t.TempDir()
 
@@ -166,6 +187,11 @@ func TestCompareFiles(t *testing.T) {
 	})
 }
 
+// TestCopyFile verifies that files are copied with correct content and permissions.
+// Tests that parent directories are created and file mode is preserved.
+//
+// TestCopyFileはファイルが正しい内容とパーミッションでコピーされることを確認します。
+// 親ディレクトリの作成とファイルモードの保持をテストします。
 func TestCopyFile(t *testing.T) {
 	dir := t.TempDir()
 
@@ -197,6 +223,11 @@ func TestCopyFile(t *testing.T) {
 	}
 }
 
+// TestSyncManager_DetectChanges verifies that SyncManager correctly identifies new, updated, and unchanged tools.
+// Creates staging and approved directories with different file states.
+//
+// TestSyncManager_DetectChangesはSyncManagerが新規、更新、未変更のツールを正しく識別することを確認します。
+// ステージングと承認済みディレクトリに異なる状態のファイルを作成してテストします。
 func TestSyncManager_DetectChanges(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -257,6 +288,11 @@ func TestSyncManager_DetectChanges(t *testing.T) {
 	}
 }
 
+// TestSyncManager_RunInteractiveSync_ApproveAll verifies that tools are synced when user approves.
+// Simulates user input "y" and verifies the tool is copied to approved directory.
+//
+// TestSyncManager_RunInteractiveSync_ApproveAllはユーザーが承認した場合にツールが同期されることを確認します。
+// ユーザー入力"y"をシミュレートし、ツールが承認済みディレクトリにコピーされることを検証します。
 func TestSyncManager_RunInteractiveSync_ApproveAll(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -295,6 +331,11 @@ func TestSyncManager_RunInteractiveSync_ApproveAll(t *testing.T) {
 	}
 }
 
+// TestSyncManager_RunInteractiveSync_DenyAll verifies that tools are not synced when user denies.
+// Simulates user input "n" and verifies the tool is not copied.
+//
+// TestSyncManager_RunInteractiveSync_DenyAllはユーザーが拒否した場合にツールが同期されないことを確認します。
+// ユーザー入力"n"をシミュレートし、ツールがコピーされないことを検証します。
 func TestSyncManager_RunInteractiveSync_DenyAll(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -332,6 +373,11 @@ func TestSyncManager_RunInteractiveSync_DenyAll(t *testing.T) {
 	}
 }
 
+// TestSyncManager_RunInteractiveSync_NoChanges verifies that no sync occurs when all tools are unchanged.
+// Creates identical tools in both staging and approved directories.
+//
+// TestSyncManager_RunInteractiveSync_NoChangesはすべてのツールが未変更の場合に同期が発生しないことを確認します。
+// ステージングと承認済みディレクトリに同一のツールを作成してテストします。
 func TestSyncManager_RunInteractiveSync_NoChanges(t *testing.T) {
 	workspaceDir := t.TempDir()
 	approvedBaseDir := t.TempDir()
@@ -366,6 +412,9 @@ func TestSyncManager_RunInteractiveSync_NoChanges(t *testing.T) {
 	}
 }
 
+// TestWriteProjectMeta verifies that project metadata file is created with workspace path information.
+//
+// TestWriteProjectMetaはプロジェクトメタデータファイルがワークスペースパス情報とともに作成されることを確認します。
 func TestWriteProjectMeta(t *testing.T) {
 	dir := t.TempDir()
 
