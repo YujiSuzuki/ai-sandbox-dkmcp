@@ -30,6 +30,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 - [ユースケース](#ユースケース)
 - [クイックスタート](#クイックスタート)
 - [コマンド](#コマンド)
+- [DockMCP ホストアクセス](#dockmcp-ホストアクセス)
 - [AI SandBox 内部ツール](#ai-sandbox-内部ツール)
 - [プロジェクト構造](#プロジェクト構造)
 - [セキュリティ機能](#セキュリティ機能)
@@ -42,6 +43,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 <summary>📚 ドキュメントへのリンク（クリックで展開）</summary>
 
 ### 📖 はじめに
+- [はじめてのセットアップガイド](docs/getting-started.ja.md) — ゼロから動く状態まで一歩ずつ案内
 - [既存ソリューションとの比較](docs/comparison.ja.md) — Claude Code Sandbox、Docker AI Sandboxes等との比較
 - [ハンズオン](docs/hands-on.ja.md) — セキュリティ機能を実際に体験する演習
 
@@ -56,7 +58,8 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 
 ### 📦 コンポーネント
 - [DockMCP ドキュメント](dkmcp/README.ja.md) — MCPサーバーの詳細
-- [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) — なぜDockMCPはコンテナ操作をサポートしないのか
+- [DockMCP ホストアクセス](docs/host-access.ja.md) — ホストツール、コンテナライフサイクル、ホストコマンド実行
+- [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) — 段階的アクセスモデルとビルド/再作成が人間のみの理由
 - [プラグインガイド](docs/plugins.ja.md) — マルチリポ構成でのClaude Codeプラグイン活用
 - [デモアプリガイド](demo-apps/README.ja.md) — SecureNoteデモの実行方法
 - [CLI Sandbox ガイド](cli_sandbox/README.ja.md) — ターミナルベースのサンドボックス
@@ -194,8 +197,10 @@ AIに他コンテナのログ確認やテスト実行もさせたい場合：
 ```bash
 cd dkmcp
 make install        # ~/go/bin/ にインストール
-dkmcp serve --config configs/dkmcp.example.yaml
+dkmcp serve --config configs/dkmcp.example.yaml --sync
 ```
+
+`--sync` フラグを付けると、起動時に[ホストツールの承認ワークフロー](#ホストツール)が実行され、付属のデモツールをすぐ AI に使わせることができます。ホストツールが不要なら省略可能です。
 
 > Go環境の構築は [Go公式サイト](https://go.dev/dl/) を参照。`make build` ではなく `make install` を使用してください。
 
@@ -257,6 +262,9 @@ cd demo-apps
 docker-compose -f docker-compose.demo.yml up -d --build
 ```
 
+ステップ 1 で `--sync` を付けてホストツールを承認済みなら、AI に頼むこともできます:
+- `デモアプリをビルドして起動して` — AI が DockMCP 経由で `demo-build.sh`、`demo-up.sh` を実行
+
 **アクセス:**
 - Web: http://securenote.test:8000
 - API: http://api.securenote.test:8000/api/health
@@ -298,6 +306,47 @@ docker-compose -f docker-compose.demo.yml up -d --build
 | `dkmcp client exec <container> "cmd"` | AI Sandbox | HTTP経由でコマンド実行 |
 
 > 詳細なコマンドオプションについては [dkmcp/README.ja.md](dkmcp/README.ja.md#cliコマンド) を参照
+
+# DockMCP ホストアクセス
+
+DockMCP は他のコンテナだけでなく、**ホスト OS** へのアクセスも制御付きで AI に提供できます。3 つの機能があり、すべて `dkmcp.yaml` で設定可能です。
+
+### ホストツール
+
+`.sandbox/host-tools/` に配置されたスクリプトを AI が発見・実行できます。新しいツールは **承認ワークフロー** を経由します — `dkmcp tools sync` でレビュー後に初めて実行可能になります。
+
+```
+.sandbox/host-tools/         ← AI がツールを提案する場所（ステージング）
+~/.dkmcp/host-tools/<id>/    ← 承認済みツールだけがここから実行される
+```
+
+デモ用のツールが 3 つ付属しています: `demo-build.sh`、`demo-up.sh`、`demo-down.sh` — 生の Docker コマンドではなく、承認されたスクリプトを通じてデモアプリのコンテナを管理できます。
+
+### コンテナライフサイクル
+
+Docker API を直接使って、コンテナの起動・停止・再起動を AI が行えます。デフォルトは無効（`lifecycle: false`）で、`allowed_containers` ポリシーに従います。
+
+```yaml
+# dkmcp.yaml 内
+security:
+  permissions:
+    lifecycle: true  # 起動/停止/再起動を許可
+```
+
+### ホストコマンド
+
+ホスト OS 上でホワイトリスト登録されたCLI コマンド（例: `git status`、`df -h`）を AI が実行できます。ベースコマンド＋引数パターンでマッチングし、拒否リストや危険モードにも対応しています。
+
+```yaml
+# dkmcp.yaml 内
+host_access:
+  host_commands:
+    enabled: true
+    whitelist:
+      "git": ["status", "diff *", "log --oneline *"]
+```
+
+> 設定の詳細、承認ワークフロー、セキュリティ上の注意点は [DockMCP ホストアクセス](docs/host-access.ja.md) を参照
 
 # AI SandBox 内部ツール
 
@@ -464,7 +513,7 @@ A: いいえ。DockMCPなしでも通常のサンドボックスとして機能�
 A: ソケットを渡すと AI がすべてのコンテナを自由に操作でき、秘匿情報の隠蔽も回避できてしまいます。DockMCP は「必要な操作だけ」を安全に提供するためのゲートウェイです。詳しくは [アーキテクチャ詳細](docs/architecture.ja.md#5-docker-ソケットを渡さない理由) を参照。
 
 **Q: なぜAIに `docker-compose up/down` を頼めないの？**
-A: これは意図的な設計です。AIは「観察と提案」、人間は「インフラ操作の実行」という責任分離をしています。詳細は [DockMCP設計思想](dkmcp/README.ja.md#設計思想) を参照してください。
+A: DockMCP は段階的なアクセスを提供しています。コンテナの再起動はオプトインで可能ですが、イメージのビルドや `docker-compose up/down` は人間のみが実行します。取り消しが難しいインフラ変更を AI が行うことを防ぐためです。詳細は [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) を参照してください。
 
 **Q: 別の秘匿情報管理を使えますか？**
 A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられます。本プロジェクトは開発時の保護を担い、本番環境では専用ツールをお使いください。
@@ -475,6 +524,7 @@ A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられま�
 
 | ドキュメント | 内容 |
 |-------------|------|
+| [はじめてのセットアップガイド](docs/getting-started.ja.md) | ゼロから動く状態まで一歩ずつ案内 |
 | [既存ソリューションとの比較](docs/comparison.ja.md) | Claude Code Sandbox、Docker AI Sandboxes等との比較 |
 | [ハンズオン](docs/hands-on.ja.md) | セキュリティ機能を実際に体験する演習 |
 | [自分のプロジェクトへの適用](docs/customization.ja.md) | テンプレートのカスタマイズ手順 |
@@ -482,7 +532,8 @@ A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられま�
 | [アーキテクチャ詳細](docs/architecture.ja.md) | セキュリティの仕組みと構成図 |
 | [ネットワーク制限](docs/network-firewall.ja.md) | ファイアウォールの導入方法 |
 | [DockMCP ドキュメント](dkmcp/README.ja.md) | MCPサーバーの詳細 |
-| [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) | なぜDockMCPはコンテナ操作をサポートしないのか |
+| [DockMCP ホストアクセス](docs/host-access.ja.md) | ホストツール、コンテナライフサイクル、ホストコマンド実行 |
+| [DockMCP 設計思想](dkmcp/README.ja.md#設計思想) | 段階的アクセスモデルとビルド/再作成が人間のみの理由 |
 | [プラグインガイド](docs/plugins.ja.md) | マルチリポ構成でのClaude Codeプラグイン活用 |
 | [デモアプリガイド](demo-apps/README.ja.md) | SecureNoteデモの実行方法 |
 | [CLI Sandbox ガイド](cli_sandbox/README.ja.md) | ターミナルベースのサンドボックス |

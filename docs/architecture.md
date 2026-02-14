@@ -326,6 +326,8 @@ In addition to DockMCP (host-side), **SandboxMCP** runs inside the container.
 
 Some scripts (like `init-host-env.sh`) require host OS access and cannot run inside the container.
 
+> **Note:** `copy-credentials.sh` has been moved to `.sandbox/host-tools/` and can now be executed via DockMCP's `run_host_tool` MCP tool.
+
 ```
 When AI calls run_script("init-host-env.sh"):
 
@@ -453,7 +455,7 @@ Scripts are classified into three execution environments. Attempting to run a ho
 
 | Environment | Scripts |
 |---|---|
-| `host` (host only) | `copy-credentials.sh`, `init-host-env.sh` |
+| `host` (host only) | `init-host-env.sh` |
 | `container` (container only) | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh` |
 | `any` (either) | All others |
 

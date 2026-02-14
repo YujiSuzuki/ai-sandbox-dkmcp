@@ -326,6 +326,8 @@ DockMCP（ホストOS側）とは別に、**SandboxMCP** がコンテナ内で�
 
 一部のスクリプト（`init-host-env.sh` など）はホスト OS で実行する必要があるため、コンテナ内では実行できません。
 
+> **注:** `copy-credentials.sh` は `.sandbox/host-tools/` に移動し、DockMCP の `run_host_tool` MCPツール経由で実行できるようになりました。
+
 ```
 AIが run_script("init-host-env.sh") を呼び出すと:
 
@@ -453,7 +455,7 @@ AI アシスタントは `list_tools` でツールを発見し、`get_tool_info`
 
 | 環境 | 対象スクリプト |
 |---|---|
-| `host`（ホスト専用） | `copy-credentials.sh`, `init-host-env.sh` |
+| `host`（ホスト専用） | `init-host-env.sh` |
 | `container`（コンテナ専用） | `sync-secrets.sh`, `validate-secrets.sh`, `sync-compose-secrets.sh` |
 | `any`（どちらでも可） | 上記以外のすべて |
 

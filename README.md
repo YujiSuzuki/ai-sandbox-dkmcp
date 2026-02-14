@@ -29,6 +29,7 @@ This project is designed for local development environments and is not intended 
 - [Use Cases](#use-cases)
 - [Quick Start](#quick-start)
 - [Commands](#commands)
+- [DockMCP Host Access](#dockmcp-host-access)
 - [AI Sandbox Tools](#ai-sandbox-tools)
 - [Project Structure](#project-structure)
 - [Security Features](#security-features)
@@ -40,6 +41,7 @@ This project is designed for local development environments and is not intended 
 <summary>📚 Documentation Links (Click to expand)</summary>
 
 ### 📖 Getting Started
+- [Getting Started Guide](docs/getting-started.md) — Step-by-step setup from zero to a working environment
 - [Comparison with Existing Solutions](docs/comparison.md) — How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc.
 - [Hands-on Guide](docs/hands-on.md) — Hands-on exercises for security features
 
@@ -54,7 +56,8 @@ This project is designed for local development environments and is not intended 
 
 ### 📦 Components
 - [DockMCP Documentation](dkmcp/README.md) — MCP server details
-- [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) — Why DockMCP doesn't support container lifecycle operations
+- [DockMCP Host Access](docs/host-access.md) — Host tools, container lifecycle, and host command execution
+- [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) — Graduated access model and why build/recreate is human-only
 - [Plugin Guide](docs/plugins.md) — Claude Code plugins for multi-repo setups
 - [Demo App Guide](demo-apps/README.md) — Running the SecureNote demo
 - [CLI Sandbox Guide](cli_sandbox/README.md) — Terminal-based sandbox
@@ -192,8 +195,10 @@ If you also want AI to check logs and run tests in other containers:
 ```bash
 cd dkmcp
 make install        # Installs to ~/go/bin/
-dkmcp serve --config configs/dkmcp.example.yaml
+dkmcp serve --config configs/dkmcp.example.yaml --sync
 ```
+
+The `--sync` flag runs the [host tools approval workflow](#host-tools) on startup, so AI can use the bundled demo tools right away. You can omit it if you don't need host tools.
 
 > For Go setup, see [Go official site](https://go.dev/dl/). Use `make install`, not `make build`.
 
@@ -255,6 +260,9 @@ cd demo-apps
 docker-compose -f docker-compose.demo.yml up -d --build
 ```
 
+Or, if you approved host tools with `--sync` in Step 1, ask AI instead:
+- `Build and start the demo apps` — AI runs `demo-build.sh` and `demo-up.sh` via DockMCP
+
 **Access:**
 - Web: http://securenote.test:8000
 - API: http://api.securenote.test:8000/api/health
@@ -295,6 +303,47 @@ New versions are checked automatically on startup. When an update is available, 
 | `dkmcp client exec <container> "cmd"` | AI Sandbox | Execute command via HTTP |
 
 > For detailed command options, see [dkmcp/README.md](dkmcp/README.md#cli-commands)
+
+# DockMCP Host Access
+
+DockMCP can also give AI controlled access to the **host OS** itself — not just other containers. Three capabilities are available, all configurable in `dkmcp.yaml`:
+
+### Host Tools
+
+AI can discover and run scripts placed in `.sandbox/host-tools/`. New tools go through an **approval workflow** — you review them with `dkmcp tools sync` before they become executable.
+
+```
+.sandbox/host-tools/         ← AI proposes tools here (staging)
+~/.dkmcp/host-tools/<id>/    ← Only approved tools run from here
+```
+
+Three demo tools are included: `demo-build.sh`, `demo-up.sh`, `demo-down.sh` — letting AI manage demo app containers through approved scripts rather than raw Docker commands.
+
+### Container Lifecycle
+
+AI can start, stop, and restart containers using the Docker API directly. This is opt-in (`lifecycle: false` by default) and respects the `allowed_containers` policy.
+
+```yaml
+# In dkmcp.yaml
+security:
+  permissions:
+    lifecycle: true  # Enable start/stop/restart
+```
+
+### Host Commands
+
+AI can execute whitelisted CLI commands on the host OS (e.g., `git status`, `df -h`). Commands are restricted by base command + argument pattern matching, with deny lists and dangerous mode for sensitive operations.
+
+```yaml
+# In dkmcp.yaml
+host_access:
+  host_commands:
+    enabled: true
+    whitelist:
+      "git": ["status", "diff *", "log --oneline *"]
+```
+
+> For full configuration details, approval workflow, and security considerations, see [DockMCP Host Access](docs/host-access.md)
 
 # AI Sandbox Tools
 
@@ -460,7 +509,7 @@ A: No. It works as a regular sandbox without DockMCP. DockMCP enables cross-cont
 A: Docker socket access is essentially host admin privileges — AI could read secrets from any container, bypassing all hiding. DockMCP exists to provide only the operations AI needs (logs, tests) in a safe, controlled way. See [Architecture Details](docs/architecture.md#5-why-no-docker-socket-access) for details.
 
 **Q: Why can't I ask AI to run `docker-compose up/down`?**
-A: This is by design. AI handles "observation and suggestions" while humans handle "infrastructure operations". See [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) for details.
+A: DockMCP provides graduated access — AI can restart containers (opt-in), but image builds and `docker-compose up/down` remain human-only. This prevents AI from making infrastructure changes that are hard to undo. See [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) for details.
 
 **Q: Can I use a different secret management solution?**
 A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other tools. This project handles development-time protection; use dedicated tools for production.
@@ -471,6 +520,7 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 
 | Document | Description |
 |----------|-------------|
+| [Getting Started Guide](docs/getting-started.md) | Step-by-step setup from zero to a working environment |
 | [Comparison with Existing Solutions](docs/comparison.md) | How this compares to Claude Code Sandbox, Docker AI Sandboxes, etc. |
 | [Hands-on Guide](docs/hands-on.md) | Hands-on exercises for security features |
 | [Customization Guide](docs/customization.md) | How to adapt this template to your project |
@@ -478,7 +528,8 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 | [Architecture Details](docs/architecture.md) | Security mechanisms and architecture diagrams |
 | [Network Restrictions](docs/network-firewall.md) | How to add firewall to AI Sandbox |
 | [DockMCP Documentation](dkmcp/README.md) | MCP server details |
-| [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) | Why DockMCP doesn't support container lifecycle operations |
+| [DockMCP Host Access](docs/host-access.md) | Host tools, container lifecycle, and host command execution |
+| [DockMCP Design Philosophy](dkmcp/README.md#design-philosophy) | Graduated access model and why build/recreate is human-only |
 | [Plugin Guide](docs/plugins.md) | Claude Code plugins for multi-repo setups |
 | [Demo App Guide](demo-apps/README.md) | Running the SecureNote demo |
 | [CLI Sandbox Guide](cli_sandbox/README.md) | Terminal-based sandbox |

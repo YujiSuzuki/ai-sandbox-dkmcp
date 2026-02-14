@@ -76,7 +76,8 @@ This solves the common problem: "My API is in a separate container, how can AI h
 │   │   ├── security/       # Policy enforcement
 │   │   ├── config/         # Configuration management
 │   │   ├── cli/            # CLI commands
-│   │   └── client/         # DockMCP client
+│   │   ├── client/         # DockMCP client
+│   │   └── hosttools/      # Host tools management
 │   └── configs/            # Example configurations
 │
 ├── demo-apps/              # Demo Application (Server-side)
@@ -283,14 +284,36 @@ The SecureNote demo application demonstrates:
 
 #### 1. User asks: "Start the demo apps"
 
-You should respond:
-```
-I cannot run docker-compose from inside the AI Sandbox because I don't have
-access to the Docker socket. Please run this on your host OS:
+**If DockMCP host tools are available (synced with `--sync`):**
 
+Use the host tools to start the demo apps yourself — no need to ask the user:
+
+```
+# Check available host tools
+Use DockMCP MCP tool: list_host_tools
+# or: dkmcp client host-tools list
+
+# Build and start
+Use DockMCP MCP tool: run_host_tool (demo-build.sh)
+Use DockMCP MCP tool: run_host_tool (demo-up.sh)
+```
+
+`.sandbox/host-tools/` contains ready-made scripts for demo app operations:
+- `demo-build.sh` — Build demo app Docker images
+- `demo-up.sh` — Start demo apps
+- `demo-down.sh` — Stop demo apps
+
+These scripts run on the host OS via DockMCP, so they have Docker access.
+
+**If host tools are NOT available:**
+
+Ask the user to run on their host OS:
+```
 cd /path/to/workspace/demo-apps
 docker-compose -f docker-compose.demo.yml up -d
 ```
+
+Or suggest enabling host tools: `dkmcp serve --config configs/dkmcp.example.yaml --sync`
 
 Do NOT try to:
 - Run `docker-compose` inside AI Sandbox (will fail)
@@ -514,12 +537,14 @@ Understanding the separation between AI Sandbox and Host OS is critical:
 - ✅ `dkmcp serve` - Run DockMCP MCP server
 - ✅ Docker commands (`docker ps`, `docker logs`, etc.)
 
+> **Note:** With DockMCP host tools (`--sync`), AI can perform some of the above operations on behalf of the user. Check `.sandbox/host-tools/` via `list_host_tools`.
+
 ### In AI Sandbox (AI runs these):
 - ✅ Read/edit source code
 - ✅ Use DockMCP MCP tools (via HTTP to host)
 - ✅ Install Node packages (`npm install`)
 - ✅ Run linters, formatters
-- ❌ CANNOT run docker/docker-compose (no socket access)
+- ⚠️ CANNOT run docker/docker-compose directly (no socket access), but DockMCP host tools (`.sandbox/host-tools/`) may provide equivalent operations — check `list_host_tools` first before telling the user "I can't do this"
 
 ### Via DockMCP MCP (AI uses this):
 - ✅ Get container logs
@@ -624,6 +649,27 @@ dkmcp client logs --tail 50 securenote-api
 
 # Execute a whitelisted command
 dkmcp client exec securenote-api "npm test"
+
+# List host tools (if host_tools enabled)
+dkmcp client host-tools list
+
+# Get info about a host tool
+dkmcp client host-tools info my-tool.sh
+
+# Run a host tool
+dkmcp client host-tools run my-tool.sh arg1 arg2
+
+# Container lifecycle (if lifecycle permission enabled)
+dkmcp client restart securenote-api
+dkmcp client stop securenote-api
+dkmcp client start securenote-api
+dkmcp client restart securenote-api --timeout 30
+
+# Execute a host CLI command (if host_commands enabled)
+dkmcp client host-exec "git status"
+
+# Execute a dangerous host command
+dkmcp client host-exec --dangerously "git pull"
 ```
 
 > **Note on `--url`:** The default URL is `http://host.docker.internal:8080`. If the server port is changed in `dkmcp.yaml`, specify the URL explicitly via the `--url` flag or the `DOCKMCP_SERVER_URL` environment variable.
@@ -725,6 +771,13 @@ As an AI assistant, you have access to these DockMCP tools:
 | `list_files` | List files in container directory | "List files in /app" |
 | `read_file` | Read file from container | "Read /app/config.json" |
 | `get_blocked_paths` | Get blocked file paths | "Which paths are blocked?" |
+| `restart_container` | Restart a container (Docker API direct) | "Restart the API container" |
+| `stop_container` | Stop a running container (Docker API direct) | "Stop the web container" |
+| `start_container` | Start a stopped container (Docker API direct) | "Start the API container" |
+| `list_host_tools` | List available host tools | "What host tools are available?" |
+| `get_host_tool_info` | Get detailed info about a host tool | "How do I use my-tool.sh?" |
+| `run_host_tool` | Execute a host tool | "Run my-tool.sh with args" |
+| `exec_host_command` | Execute whitelisted host CLI command | "Run docker ps on the host" |
 
 **Security:** All operations are checked against the security policy in `dkmcp.yaml`. Output masking automatically hides sensitive data (passwords, API keys, tokens) in logs and command output.
 

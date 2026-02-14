@@ -674,30 +674,48 @@ Note: Commands with '*' wildcard match any suffix. Dangerous commands require da
 
 ## Design Philosophy
 
-**Why doesn't DockMCP support `docker-compose up/down` or container restart?**
+**Why doesn't DockMCP support `docker-compose up/down` or image rebuilds?**
 
-This is by design. DockMCP is built with a clear separation of responsibilities.
+DockMCP is built with a clear separation of responsibilities: AI observes and suggests, humans handle infrastructure changes. Access is granted in graduated levels, with each level opt-in.
 
 ### Core Design Principle
 
 ```
 AI = eyes and mouth (observe, suggest)
-Human = hands (execute)
+Human = hands (execute infrastructure changes)
 ```
 
-**What AI can do:**
+**What AI can do (by default):**
 - Read logs, stats, and container information
 - Execute whitelisted commands (tests, linting)
 - Read files (with `blocked_paths` protection)
 - Suggest changes and solutions
 
-**What humans do:**
-- Start/stop containers
-- Rebuild images
-- Make infrastructure changes
-- Execute destructive operations
+**What AI can do (opt-in):**
+- Start/stop/restart containers (`lifecycle: true`)
+- Run approved host tools (host_tools)
+- Execute whitelisted host commands (host_commands)
 
-### Why Is This Separation Necessary?
+**What humans do:**
+- Rebuild images (`docker-compose build`)
+- Recreate containers (`docker-compose up`)
+- Approve host tools (`dkmcp tools sync`)
+- Make infrastructure changes
+
+### Graduated Access Model
+
+DockMCP provides four levels of access, each more permissive than the last:
+
+| Level | Operations | Default | Risk |
+|-------|-----------|---------|------|
+| **Read** | Logs, stats, inspect, file listing | Enabled | None |
+| **Execute** | Whitelisted commands in containers | Enabled (moderate mode) | Low |
+| **Lifecycle** | Start/stop/restart containers | **Disabled** | Medium |
+| **Host access** | Host tools, host commands | **Disabled** | Medium-High |
+
+Higher levels are disabled by default and require explicit opt-in via `dkmcp.yaml`.
+
+### Why Build/Recreate Remains Human-Only
 
 #### 1. Dockerfile Changes Require Rebuilds
 
@@ -712,7 +730,7 @@ docker-compose build myapp
 docker-compose up -d myapp
 ```
 
-If DockMCP only supported `restart`, it would give a false sense of resolution without actually fixing the problem.
+Container restart is useful for recovering a crashed container or applying config changes, but it cannot replace a full rebuild. DockMCP intentionally does not support `docker-compose build` or `docker-compose up` to prevent the false assumption that restart solves everything.
 
 #### 2. Most Development Work Doesn't Need Container Operations
 
@@ -722,9 +740,10 @@ If DockMCP only supported `restart`, it would give a false sense of resolution w
 | Config file changes | App reload command | No |
 | Run tests | `exec npm test` | No |
 | Check logs | `get_logs` | No |
-| Dockerfile changes | Rebuild + recreate | **Yes, but by humans** |
+| Container crashed | `restart_container` (opt-in) | Yes |
+| Dockerfile changes | Rebuild + recreate | **Yes, by humans** |
 
-Cases that truly require container operations (Dockerfile changes, docker-compose.yml changes, environment variable changes) are **infrastructure changes** and should go through human review.
+Cases that truly require image rebuilds (Dockerfile changes, docker-compose.yml changes) are **infrastructure changes** and should go through human review.
 
 #### 3. Risk vs. Frequency Trade-off
 
@@ -735,19 +754,20 @@ Cases that truly require container operations (Dockerfile changes, docker-compos
 | Container restart | Medium | Low |
 | Build/recreate | High | Very low |
 
-Adding high-risk operations for low-frequency use cases is not justified.
+Container restart is available as opt-in for the cases where it's genuinely useful (recovering crashed containers, applying environment variable changes). Build/recreate remains human-only due to its high risk and low frequency.
 
-#### 4. AI Investigates, Humans Act
+#### 4. AI Investigates, Humans Act on Infrastructure
 
 **Good workflow:**
 1. AI investigates logs, stats, and error patterns
 2. AI identifies the problem and suggests a solution
-3. **Humans** decide whether to restart/rebuild and execute
+3. AI restarts the container if `lifecycle` is enabled and it's a simple recovery
+4. For infrastructure changes, **humans** decide and execute
 
 **Risky workflow:**
-1. AI detects an error and immediately restarts the container
-2. The problem isn't resolved (or gets worse)
-3. Humans can't understand what happened
+1. AI detects an error and immediately rebuilds/recreates the container
+2. The build takes minutes, and the problem isn't resolved
+3. Humans can't understand what changed
 
 ### About exec_command
 
@@ -773,13 +793,15 @@ Not allowed:
 
 ### Summary
 
-DockMCP's current design:
+DockMCP's design provides graduated access:
 - **Read-only access** to container information (logs, stats, inspect)
 - **Controlled command execution** via whitelists
 - **File access** with `blocked_paths` protection
-- **No container lifecycle operations** (start/stop/restart/build)
+- **Container lifecycle** (start/stop/restart) — opt-in, disabled by default
+- **Host access** (tools, commands) — opt-in, disabled by default
+- **No image build/recreate operations** — always human-only
 
-This maintains a clear boundary on what AI can affect while delivering the benefits of AI-assisted development.
+Each level can be enabled independently, letting you choose the right balance of AI autonomy and human control for your environment.
 
 ## Provided MCP Tools
 
@@ -796,6 +818,13 @@ This maintains a clear boundary on what AI can affect while delivering the benef
 | `list_files` | List files in a container directory (with blocking) |
 | `read_file` | Read a file from a container (with blocking) |
 | `get_blocked_paths` | Show blocked file paths |
+| `restart_container` | Restart a container (requires `lifecycle: true`) |
+| `stop_container` | Stop a running container (requires `lifecycle: true`) |
+| `start_container` | Start a stopped container (requires `lifecycle: true`) |
+| `list_host_tools` | List available host tools |
+| `get_host_tool_info` | Get detailed info about a host tool |
+| `run_host_tool` | Execute an approved host tool |
+| `exec_host_command` | Execute a whitelisted host CLI command |
 
 ## Troubleshooting
 
