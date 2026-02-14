@@ -538,6 +538,8 @@ A: はい！HashiCorp VaultやAWS Secrets Manager等と組み合わせられま�
 | [デモアプリガイド](demo-apps/README.ja.md) | SecureNoteデモの実行方法 |
 | [CLI Sandbox ガイド](cli_sandbox/README.ja.md) | ターミナルベースのサンドボックス |
 
+> **Note:** `docs/ai-guide.md` は AI アシスタント向けの参照ガイドです（CLAUDE.md・GEMINI.md から参照）。ユーザーが読む必要はありません。
+
 ## ライセンス
 
 MIT License - [LICENSE](LICENSE) を参照

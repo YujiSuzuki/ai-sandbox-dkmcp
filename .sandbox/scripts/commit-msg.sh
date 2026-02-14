@@ -54,6 +54,62 @@ warn()  { echo -e "${YELLOW}⚠️  $1${NC}"; }
 err()   { echo -e "${RED}❌ $1${NC}" >&2; }
 die()   { err "$1"; exit 1; }
 
+# ─── Language detection / 言語検出 ─────────────────────────────
+
+if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
+    MSG_TITLE="📝 コミットメッセージ ドラフト"
+    MSG_NO_STAGED="ステージ済みの変更がありません。先に 'git add <files>' を実行してください。"
+    MSG_STAGED_FILES="ステージ済みファイル数:"
+    MSG_MSG_NOT_FOUND="メッセージファイルが見つかりません:"
+    MSG_MSG_EMPTY="メッセージファイルが空です:"
+    MSG_ANALYSIS="📊 変更分析"
+    MSG_DETECTED="検出カテゴリ:"
+    MSG_STYLE_LABEL="スタイル:"
+    MSG_RECENT="📜 直近のコミット（スタイル参考用）"
+    MSG_DRAFT="📋 ドラフト"
+    MSG_WROTE="を出力しました。"
+    MSG_NEXT_STEPS="次のステップ:"
+    MSG_STEP1="1. プロジェクトのコミットスタイルを確認:"
+    MSG_STEP2="2. ドラフトをスタイルに合わせて推敲"
+    MSG_STEP3="3. 推敲が完了したらコミット実行:"
+    MSG_RECENT_TITLE="📜 直近 %s 件のコミット"
+    MSG_NO_COMMITS="コミットが見つかりません。"
+    MSG_COMMIT_TITLE="📋 コミットメッセージ"
+    MSG_STAGED_LABEL="ステージ済みファイル:"
+    MSG_CONFIRM="コミットしますか？"
+    MSG_CANCELLED="キャンセルしました。"
+    MSG_COMMITTED="コミット成功！"
+    MSG_EXTRACT_FAILED="コミットメッセージを抽出できません:"
+    MSG_DRAFT_SUBJECT_HINT="<変更内容を記述>"
+    MSG_DRAFT_BODY_HINT="<変更の詳細を記述>"
+else
+    MSG_TITLE="📝 Commit Message Draft"
+    MSG_NO_STAGED="No staged changes. Run 'git add <files>' first."
+    MSG_STAGED_FILES="Staged files:"
+    MSG_MSG_NOT_FOUND="Message file not found:"
+    MSG_MSG_EMPTY="Message file is empty:"
+    MSG_ANALYSIS="📊 Change Analysis"
+    MSG_DETECTED="Detected categories:"
+    MSG_STYLE_LABEL="Style:"
+    MSG_RECENT="📜 Recent commits (for style reference)"
+    MSG_DRAFT="📋 Draft"
+    MSG_WROTE="written."
+    MSG_NEXT_STEPS="Next steps:"
+    MSG_STEP1="1. Check the project's commit style:"
+    MSG_STEP2="2. Refine the draft to match the style"
+    MSG_STEP3="3. When refined, commit:"
+    MSG_RECENT_TITLE="📜 Recent %s commits"
+    MSG_NO_COMMITS="No commits found."
+    MSG_COMMIT_TITLE="📋 Commit Message"
+    MSG_STAGED_LABEL="Staged files:"
+    MSG_CONFIRM="Commit?"
+    MSG_CANCELLED="Cancelled."
+    MSG_COMMITTED="Committed successfully!"
+    MSG_EXTRACT_FAILED="Could not extract commit message from:"
+    MSG_DRAFT_SUBJECT_HINT="<describe change>"
+    MSG_DRAFT_BODY_HINT="<describe details>"
+fi
+
 # ─── Argument parsing / 引数のパース ────────────────────────────
 
 MSG_FILE=""
@@ -119,13 +175,15 @@ done
 
 if [[ "$SHOW_LOG" == true ]]; then
     echo ""
-    echo -e "${BOLD}📜 Recent ${LOG_COUNT} commits${NC}"
+    # shellcheck disable=SC2059
+    printf -v log_title "$MSG_RECENT_TITLE" "$LOG_COUNT"
+    echo -e "${BOLD}${log_title}${NC}"
     echo "──────────────────────────────────────"
     echo ""
 
     # Show commits with full message (subject + body) for style reference
     # スタイル参考用にコミットメッセージの全文を表示
-    git log -n "$LOG_COUNT" --format="  %C(dim)%h%C(reset) %s%n%w(0,4,4)%+b" 2>/dev/null || warn "No commits found."
+    git log -n "$LOG_COUNT" --format="  %C(dim)%h%C(reset) %s%n%w(0,4,4)%+b" 2>/dev/null || warn "$MSG_NO_COMMITS"
 
     echo "──────────────────────────────────────"
     echo ""
@@ -135,7 +193,7 @@ fi
 # ─── Pre-flight checks / 事前チェック ─────────────────────────
 
 echo ""
-echo -e "${BOLD}📝 Commit Message Draft${NC}"
+echo -e "${BOLD}${MSG_TITLE}${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -144,19 +202,19 @@ if [[ -z "$MSG_FILE" ]]; then
     # Draft mode: must have staged changes
     STAGED_COUNT=$(git diff --cached --name-only | wc -l)
     if [[ "$STAGED_COUNT" -eq 0 ]]; then
-        die "No staged changes. Run 'git add <files>' first."
+        die "$MSG_NO_STAGED"
     fi
-    ok "Staged files: ${STAGED_COUNT}"
+    ok "$MSG_STAGED_FILES ${STAGED_COUNT}"
     echo ""
 fi
 
 # Validate message file if specified / msg-file の検証
 if [[ -n "$MSG_FILE" ]]; then
     if [[ ! -f "$MSG_FILE" ]]; then
-        die "Message file not found: $MSG_FILE"
+        die "$MSG_MSG_NOT_FOUND $MSG_FILE"
     fi
     if [[ ! -s "$MSG_FILE" ]]; then
-        die "Message file is empty: $MSG_FILE"
+        die "$MSG_MSG_EMPTY $MSG_FILE"
     fi
 fi
 
@@ -346,7 +404,7 @@ generate_draft() {
             fi
         fi
 
-        subject_hint="${primary_prefix}${scope_part}: <describe change>"
+        subject_hint="${primary_prefix}${scope_part}: ${MSG_DRAFT_SUBJECT_HINT}"
         style_comment="<!-- Style: cc (Conventional Commits) | Prefixes: ${unique_prefixes} -->
 <!-- Format: <type>(<scope>): <description>  (scope is optional) -->"
     else
@@ -376,9 +434,9 @@ generate_draft() {
             local single_file basename_file
             single_file=$(git diff --cached --name-only)
             basename_file=$(basename "$single_file")
-            subject_hint="${primary_verb} <describe change> in ${basename_file}"
+            subject_hint="${primary_verb} ${MSG_DRAFT_SUBJECT_HINT} in ${basename_file}"
         else
-            subject_hint="${primary_verb} <describe change>${common_scope:+ in ${common_scope}}"
+            subject_hint="${primary_verb} ${MSG_DRAFT_SUBJECT_HINT}${common_scope:+ in ${common_scope}}"
         fi
 
         style_comment="<!-- Style: verb (imperative) | Verbs: ${unique_verbs} -->"
@@ -396,9 +454,9 @@ ${style_comment}
 ${subject_hint}
 
 ${bullet_hints}
-<日本語サブジェクト>
+${MSG_DRAFT_SUBJECT_HINT}
 
-<日本語の説明>
+${MSG_DRAFT_BODY_HINT}
 EOF
 }
 
@@ -406,7 +464,7 @@ EOF
 
 if [[ -z "$MSG_FILE" ]]; then
     # Show change analysis / 変更分析の表示
-    echo -e "${BOLD}📊 Change Analysis${NC}"
+    echo -e "${BOLD}${MSG_ANALYSIS}${NC}"
     echo "──────────────────────────────────────"
     echo ""
     analyze_changes
@@ -415,12 +473,12 @@ if [[ -z "$MSG_FILE" ]]; then
 
     # Show classification and style / 分類結果とスタイルの表示
     CATEGORIES=$(classify_changes)
-    echo -e "${DIM}Detected categories: $(echo "$CATEGORIES" | tr '\n' ', ' | sed 's/,$//')${NC}"
-    echo -e "${DIM}Style: ${STYLE}${NC}"
+    echo -e "${DIM}${MSG_DETECTED} $(echo "$CATEGORIES" | tr '\n' ', ' | sed 's/,$//')${NC}"
+    echo -e "${DIM}${MSG_STYLE_LABEL} ${STYLE}${NC}"
     echo ""
 
     # Show recent commits for style reference / スタイル参考の直近コミット
-    echo -e "${BOLD}📜 Recent commits (for style reference)${NC}"
+    echo -e "${BOLD}${MSG_RECENT}${NC}"
     echo "──────────────────────────────────────"
     echo ""
     git log -n 5 --format="  %C(dim)%h%C(reset) %s" 2>/dev/null || true
@@ -431,7 +489,7 @@ if [[ -z "$MSG_FILE" ]]; then
     # Generate and write draft / ドラフト生成・書き出し
     DRAFT=$(generate_draft)
 
-    echo -e "${BOLD}📋 Draft${NC}"
+    echo -e "${BOLD}${MSG_DRAFT}${NC}"
     echo "──────────────────────────────────────"
     echo ""
     echo "$DRAFT"
@@ -440,14 +498,14 @@ if [[ -z "$MSG_FILE" ]]; then
     echo "$DRAFT" > "$DRAFT_FILE"
 
     echo ""
-    ok "${DRAFT_FILE} を出力しました。"
+    ok "${DRAFT_FILE} ${MSG_WROTE}"
     echo ""
-    echo -e "  直近のコミットスタイルをもっと見たい場合:"
-    echo -e "    ${CYAN}.sandbox/scripts/commit-msg.sh --log${NC}"
-    echo ""
-    echo -e "  AI と相談してコミットメッセージを推敲することもできます。"
-    echo -e "  完了したら:"
-    echo -e "    ${CYAN}.sandbox/scripts/commit-msg.sh --msg-file ${DRAFT_FILE}${NC}"
+    echo -e "  ${BOLD}${MSG_NEXT_STEPS}${NC}"
+    echo -e "    ${MSG_STEP1}"
+    echo -e "      ${CYAN}.sandbox/scripts/commit-msg.sh --log${NC}"
+    echo -e "    ${MSG_STEP2}"
+    echo -e "    ${MSG_STEP3}"
+    echo -e "      ${CYAN}.sandbox/scripts/commit-msg.sh --msg-file ${DRAFT_FILE}${NC}"
     echo ""
     exit 0
 fi
@@ -484,11 +542,11 @@ parse_message() {
 COMMIT_MSG=$(parse_message "$MSG_FILE")
 
 if [[ -z "$COMMIT_MSG" ]]; then
-    die "Could not extract commit message from: $MSG_FILE"
+    die "$MSG_EXTRACT_FAILED $MSG_FILE"
 fi
 
 # Show the message / メッセージの表示
-echo -e "${BOLD}📋 Commit Message${NC}"
+echo -e "${BOLD}${MSG_COMMIT_TITLE}${NC}"
 echo "──────────────────────────────────────"
 echo ""
 echo "$COMMIT_MSG"
@@ -499,9 +557,13 @@ echo "────────────────────────�
 STAGED=$(git diff --cached --name-status)
 if [[ -n "$STAGED" ]]; then
     echo ""
-    echo -e "${DIM}Staged files:${NC}"
+    echo -e "${DIM}${MSG_STAGED_LABEL}${NC}"
     echo "$STAGED" | while IFS=$'\t' read -r status file rest; do
-        echo -e "  ${DIM}${status}  ${rest:+${file} → ${rest}}${rest:-${file}}${NC}"
+        if [[ -n "$rest" ]]; then
+            echo -e "  ${DIM}${status}  ${file} → ${rest}${NC}"
+        else
+            echo -e "  ${DIM}${status}  ${file}${NC}"
+        fi
     done
 fi
 
@@ -512,10 +574,10 @@ AMEND_LABEL=""
 if [[ "$AMEND" == true ]]; then
     AMEND_LABEL=" (amend)"
 fi
-echo -ne "${YELLOW}Commit${AMEND_LABEL}? [y/N]: ${NC}"
+echo -ne "${YELLOW}${MSG_CONFIRM}${AMEND_LABEL} [y/N]: ${NC}"
 read -r confirm
 if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-    info "Cancelled."
+    info "$MSG_CANCELLED"
     exit 0
 fi
 
@@ -535,7 +597,7 @@ fi
 git commit "${COMMIT_ARGS[@]}"
 
 echo ""
-ok "Committed successfully!"
+ok "$MSG_COMMITTED"
 echo ""
 
 # Show the result / 結果表示

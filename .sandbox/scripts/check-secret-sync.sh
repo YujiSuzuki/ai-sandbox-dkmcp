@@ -68,6 +68,9 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_ACTION3="  秘匿不要なら: .sandbox/config/sync-ignore にパターンを追加"
     MSG_NO_DENY="AI設定にファイルパターンがありません"
     MSG_NO_FILES="該当するファイルが見つかりませんでした"
+    MSG_QUIET_MISSING="⚠️  %d 個のファイルが docker-compose.yml に未設定です"
+    MSG_SUMMARY_OK="✓ Secret sync: 全件設定済み（%d 件チェック、%d 件無視）"
+    MSG_IGNORED_HEADER="無視されたファイル (sync-ignore パターンにマッチ):"
 else
     MSG_TITLE="🔄 Secret Config Sync Check"
     MSG_CHECKING="Checking..."
@@ -84,6 +87,9 @@ else
     MSG_ACTION3="  If not secret: add pattern to .sandbox/config/sync-ignore"
     MSG_NO_DENY="No file patterns in AI settings"
     MSG_NO_FILES="No matching files found"
+    MSG_QUIET_MISSING="⚠️  %d files missing from docker-compose.yml"
+    MSG_SUMMARY_OK="✓ Secret sync: all configured (%d checked, %d ignored)"
+    MSG_IGNORED_HEADER="Ignored files (matched sync-ignore patterns):"
 fi
 
 # Directories to ignore during file search
@@ -321,7 +327,8 @@ done <<< "$all_matching_files"
 # ============================================================
 if is_quiet; then
     if [ ${#missing_files[@]} -gt 0 ]; then
-        echo "⚠️  ${#missing_files[@]} files missing from docker-compose.yml"
+        # shellcheck disable=SC2059
+        printf "$MSG_QUIET_MISSING\n" "${#missing_files[@]}"
         for file in "${missing_files[@]}"; do
             rel_path="${file#$WORKSPACE/}"
             echo "   📄 $rel_path"
@@ -354,7 +361,8 @@ if is_summary; then
         echo ""
     else
         total_checked=$(echo "$all_matching_files" | grep -c . || true)
-        echo "✓ Secret sync: all configured (${total_checked} checked, ${#ignored_files[@]} ignored)"
+        # shellcheck disable=SC2059
+        printf "$MSG_SUMMARY_OK\n" "$total_checked" "${#ignored_files[@]}"
     fi
     exit 0
 fi
@@ -370,8 +378,7 @@ if [ ${#missing_files[@]} -eq 0 ]; then
     echo "$MSG_ALL_SYNCED"
     if [ ${#ignored_files[@]} -gt 0 ]; then
         echo ""
-        echo "Ignored files (matched sync-ignore patterns):"
-        echo "無視されたファイル (sync-ignore パターンにマッチ):"
+        echo "$MSG_IGNORED_HEADER"
         for file in "${ignored_files[@]}"; do
             rel_path="${file#$WORKSPACE/}"
             echo "   📄 $rel_path"
@@ -398,8 +405,7 @@ else
 
     if [ ${#ignored_files[@]} -gt 0 ]; then
         echo ""
-        echo "Ignored files (matched sync-ignore patterns):"
-        echo "無視されたファイル (sync-ignore パターンにマッチ):"
+        echo "$MSG_IGNORED_HEADER"
         for file in "${ignored_files[@]}"; do
             rel_path="${file#$WORKSPACE/}"
             echo "   📄 $rel_path"

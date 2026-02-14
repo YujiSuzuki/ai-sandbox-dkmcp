@@ -20,6 +20,20 @@ YELLOW='\033[1;33m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color / 色なし
 
+# Language detection based on locale
+# ロケールに基づく言語検出
+if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
+    MSG_TITLE="全テスト実行"
+    MSG_RESULTS="全体結果: %d/%d スクリプト成功"
+    MSG_FAILED_HEADER="失敗したスクリプト:"
+    MSG_ALL_PASSED="すべてのテストスクリプトが成功しました！"
+else
+    MSG_TITLE="All Tests Runner"
+    MSG_RESULTS="Overall Results: %d/%d scripts passed"
+    MSG_FAILED_HEADER="Failed scripts:"
+    MSG_ALL_PASSED="All test scripts passed!"
+fi
+
 TOTAL=0
 PASSED=0
 FAILED=0
@@ -27,7 +41,7 @@ FAILED_SCRIPTS=()
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${BOLD}  All Tests Runner${NC}"
+echo -e "${BOLD}  ${MSG_TITLE}${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 for test_script in "$SCRIPT_DIR"/test-*.sh; do
@@ -64,12 +78,14 @@ done
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${BOLD}  Overall Results: $PASSED/$TOTAL scripts passed${NC}"
+# shellcheck disable=SC2059
+printf -v results_msg "$MSG_RESULTS" "$PASSED" "$TOTAL"
+echo -e "${BOLD}  ${results_msg}${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 if [ "$FAILED" -gt 0 ]; then
     echo ""
-    echo -e "${RED}  Failed scripts:${NC}"
+    echo -e "${RED}  ${MSG_FAILED_HEADER}${NC}"
     for s in "${FAILED_SCRIPTS[@]}"; do
         echo -e "${RED}    ✗ $s${NC}"
     done
@@ -77,6 +93,6 @@ if [ "$FAILED" -gt 0 ]; then
     exit 1
 else
     echo ""
-    echo -e "${GREEN}  All test scripts passed!${NC}"
+    echo -e "${GREEN}  ${MSG_ALL_PASSED}${NC}"
     echo ""
 fi

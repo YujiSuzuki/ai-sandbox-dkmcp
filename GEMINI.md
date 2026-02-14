@@ -1,273 +1,177 @@
 # AI Sandbox Environment with DockMCP - Context for Gemini Code Assist
 
-This document provides essential context for Gemini Code Assist working with this project.
+This document provides essential behavioral rules for Gemini Code Assist. For detailed reference, see [docs/ai-guide.md](docs/ai-guide.md).
+
+## Essential Rules
+
+### Security Rules
+
+- Never bypass secret hiding
+- Never modify security files without user approval
+- Never access Docker socket directly
+- Explain when secrets are hidden (don't just say "file not found")
+- Check host tools (`list_host_tools`) before telling the user "I can't do this"
+
+### Hidden Files
+
+Files hidden by Docker volume mounts appear empty or missing. Before reporting "not found":
+1. Check if the path is in `.devcontainer/docker-compose.yml` volume/tmpfs mounts
+2. If it matches a hidden path, explain it's sandbox-hidden, not actually absent
+3. Ask the user to verify on the host OS if needed
+
+### User Questions
+
+Direct users to documentation:
+- Setup/installation → `README.md` or `README.ja.md`
+- Troubleshooting → `docs/reference.md`
+- Architecture → `docs/architecture.md`
+
+### Commits and Releases
+
+- **Commits:** Always use `commit-msg.sh` to draft commit messages collaboratively with the user:
+  ```
+  .sandbox/scripts/commit-msg.sh
+  ```
+  Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
+
+- **Releases:** Use `release.sh` to generate release notes:
+  ```
+  .sandbox/scripts/release.sh v0.5.0          # Generate draft
+  .sandbox/scripts/release.sh --prev           # Check previous release tone
+  .sandbox/scripts/release.sh v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
+  ```
+
+### Development Approach
+
+- **TDD:** Always write tests first. Bug fix → reproduce bug in test first. New feature → write expected behavior test first.
+- **Meaningful tests:** Tests must exercise real code paths, not duplicate logic. If unsure, ask the user first.
+
+---
 
 ## What This Project Is
 
-This is a **comprehensive AI development environment** that demonstrates:
+A secure AI development environment demonstrating:
+1. **Safe AI Usage** — AI coding assistants in isolated Docker containers
+2. **Secret Protection** — Hide sensitive files from AI via volume mounts
+3. **Cross-Container Access** — Interact with other containers via DockMCP
+4. **Multi-Project Workspaces** — Mobile, API, Web in one workspace
 
-1. **Safe AI Usage** - Run AI coding assistants in isolated Docker containers
-2. **Secret Protection** - Hide sensitive files from AI while maintaining full functionality
-3. **Cross-Container Access** - AI can interact with other containers via DockMCP MCP server
-4. **Multi-Project Workspaces** - Work on multiple related projects (mobile, API, web) simultaneously
+---
 
-## Key Innovation: DockMCP
+## What AI Can and Cannot Do
 
-**DockMCP** is an MCP (Model Context Protocol) server that runs on the host OS and provides controlled access to Docker containers. This allows AI assistants inside the AI Sandbox to:
+### Cannot Do
+- Run `docker` or `docker-compose` commands (no Docker socket)
+- Read files in `secrets/` directories (hidden by tmpfs)
+- Read `.env` files (hidden by /dev/null mount)
+- Start/stop containers directly
 
-- Check logs from other containers
-- Run tests in other containers
-- Inspect container stats
-- Cannot access secrets (they're hidden via volume mounts)
+**These operations MUST be done on the host OS by the user** (or via DockMCP host tools if available).
+
+### Can Do
+- Read/edit source code in `/workspace/`
+- Use DockMCP MCP tools to access other containers
+- Use `dkmcp client` commands as fallback when MCP is unavailable
+- Install packages (`npm install`)
+- Run linters, formatters
+
+---
+
+## Critical Files
+
+| File | Purpose |
+|------|---------|
+| `.devcontainer/docker-compose.yml` | Secret hiding configuration (requires user approval to modify) |
+| `cli_sandbox/docker-compose.yml` | Same for CLI environment |
+| `dkmcp/configs/dkmcp.example.yaml` | Container access policy |
+| `.devcontainer/devcontainer.json` | VS Code DevContainer settings |
+
+---
+
+## Common Tasks
+
+### "Start the demo apps"
+Check host tools first via `list_host_tools`. If available, use `run_host_tool` with `demo-build.sh` and `demo-up.sh`. If not, ask user to run on host OS.
+
+### "Check the API logs"
+Use DockMCP MCP: `get_logs` (container: `securenote-api`, tail: 100).
+
+### "Run the tests"
+Use DockMCP MCP: `exec_command` (container: `securenote-api`, command: `npm test`).
+
+### "Read the .env file"
+It will appear empty (hidden by volume mount). Explain: "This file is hidden for security. The API container has access to it, but I don't."
+
+---
+
+## DockMCP
+
+DockMCP runs on the host OS and provides controlled container access via MCP.
+
+### MCP Tools
+
+| Tool | What It Does |
+|------|--------------|
+| `list_containers` | List accessible containers |
+| `get_logs` | Get container logs |
+| `get_stats` | Get resource usage stats |
+| `exec_command` | Run whitelisted command |
+| `inspect_container` | Get detailed container info |
+| `get_allowed_commands` | List whitelisted commands |
+| `search_logs` | Search logs for a pattern |
+| `list_host_tools` | List available host tools |
+| `run_host_tool` | Execute a host tool |
+
+### Fallback: dkmcp client
+
+If MCP tools are unavailable, use `dkmcp client` commands via Bash. See [docs/ai-guide.md](docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
+
+If `dkmcp` command is not found, tell the user: `cd /workspace/dkmcp && make install`
+
+For DockMCP setup and troubleshooting, see [docs/ai-guide.md](docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
+
+---
 
 ## Project Structure
 
 ```
 /workspace/
-├── .sandbox/               # Shared sandbox infrastructure
-│   ├── Dockerfile          # Node.js base with limited sudo
-│   └── scripts/            # Shared scripts (validate-secrets, check-secret-sync)
-│
-├── .devcontainer/          # VS Code Dev Container (AI environment)
-│   ├── docker-compose.yml  # Secret hiding configuration
-│   └── devcontainer.json   # VS Code DevContainer settings
-│
-├── cli_sandbox/            # CLI environment (backup)
-│   ├── claude.sh           # Run Claude Code from terminal
-│   ├── gemini.sh           # Run Gemini CLI from terminal
-│   ├── ai_sandbox.sh       # Enter shell
-│   └── docker-compose.yml  # Secret hiding configuration
-│
-├── dkmcp/               # MCP Server (Go)
-│   ├── cmd/dkmcp/       # Main entry point
-│   ├── internal/          # Core implementation
-│   └── configs/           # Example configurations
-│
-├── demo-apps/              # Demo Application (Server-side)
-│   ├── securenote-api/     # Node.js API with secrets
-│   ├── securenote-web/     # React frontend
-│   └── docker-compose.demo.yml
-│
-└── demo-apps-ios/          # iOS Application
-    └── SecureNote/         # SwiftUI source code
+├── .sandbox/          # Infrastructure (scripts, tools, sandbox-mcp, host-tools)
+├── .devcontainer/     # VS Code DevContainer (secret hiding config)
+├── cli_sandbox/       # CLI environment (backup)
+├── dkmcp/             # DockMCP MCP Server (Go)
+├── demo-apps/         # Demo Application (securenote-api, securenote-web)
+└── demo-apps-ios/     # iOS Application (SecureNote)
 ```
 
-## Security Architecture
+For full structure, see [docs/ai-guide.md](docs/ai-guide.md#project-structure-full).
 
-### 1. Secret Hiding (Volume Mounts)
+---
 
-Secrets are hidden from AI using Docker volume mounts:
+## Reference
 
-```yaml
-# In .devcontainer/docker-compose.yml and cli_sandbox/docker-compose.yml
-volumes:
-  - /dev/null:/workspace/demo-apps/securenote-api/.env:ro
+| Topic | File |
+|-------|------|
+| DockMCP setup & troubleshooting | [docs/ai-guide.md → DockMCP Setup](docs/ai-guide.md#dockmcp-setup-and-troubleshooting) |
+| DockMCP client command reference | [docs/ai-guide.md → Client Fallback](docs/ai-guide.md#dockmcp-client-fallback) |
+| Template update procedure | [docs/ai-guide.md → Updating](docs/ai-guide.md#updating-this-template) |
+| Template customization workflow | [docs/ai-guide.md → Customization](docs/ai-guide.md#customization-workflow) |
+| Writing meaningful tests | [docs/ai-guide.md → Tests](docs/ai-guide.md#writing-meaningful-tests) |
+| Security architecture details | [docs/architecture.md](docs/architecture.md) |
+| Project customization guide | [docs/customization.md](docs/customization.md) |
 
-tmpfs:
-  - /workspace/demo-apps/securenote-api/secrets:ro
-```
+---
 
-**Result:**
-- AI sees empty files/directories
-- Real containers (demo-apps) access actual secrets
-- Functionality is preserved
+## Summary
 
-### 2. Controlled Container Access (DockMCP)
+**What you are:** An AI assistant inside a secure AI Sandbox
 
-DockMCP enforces security policies:
+**Your mission:**
+- Help users develop safely
+- Use DockMCP for cross-container access
+- Protect secrets (explain when hidden, never bypass)
 
-```yaml
-security:
-  mode: "moderate"  # strict | moderate | permissive
-  allowed_containers:
-    - "securenote-*"
-  exec_whitelist:
-    "securenote-api":
-      - "npm test"
-      - "npm run lint"
-```
-
-### 3. Sandbox Protection
-
-- **Non-root user**: Runs as `node` user
-- **Limited sudo**: Only `apt`, `npm`, `pip3` allowed
-- **No Docker socket**: AI cannot access `/var/run/docker.sock`
-
-## What AI Can and Cannot Do
-
-### CAN Do:
-- Read/edit source code in `/workspace/`
-- Use DockMCP MCP tools to access other containers
-- Install Node packages (`npm install`)
-- Run linters, formatters
-
-### CANNOT Do:
-- Run `docker` or `docker-compose` commands (no Docker socket access)
-- Read files in `secrets/` directories (they're hidden)
-- Read `.env` files (they're hidden)
-- Access Docker socket directly
-
-## Important Files
-
-### Security Configuration Files
-
-1. **`.devcontainer/docker-compose.yml`** - Defines which secrets are hidden from AI
-2. **`cli_sandbox/docker-compose.yml`** - Same as above for CLI environment
-3. **`dkmcp/configs/dkmcp.example.yaml`** - Defines which containers AI can access
-4. **`.devcontainer/devcontainer.json`** - VS Code DevContainer settings (extensions, port control)
-
-## Common Tasks
-
-### When user asks to start demo apps:
-Tell them to run on the host OS:
-```bash
-cd demo-apps
-docker-compose -f docker-compose.demo.yml up -d
-```
-You cannot run docker-compose inside DevContainer.
-
-### When user asks to check API logs:
-Use DockMCP MCP tool: `get_logs` with container `securenote-api`
-
-### When user asks to run tests:
-Use DockMCP MCP tool: `exec_command` with container `securenote-api` and command `npm test`
-
-### When user asks to read .env file:
-The file will appear empty. Explain that secrets are hidden for security.
-
-### When a file appears empty or missing:
-Files hidden by Docker volume mounts (`/dev/null`) or `tmpfs` will appear empty or non-existent inside the AI Sandbox, even though they exist on the host OS. Before reporting a file as missing:
-1. Check if the file path is listed in volume/tmpfs mounts in `.devcontainer/docker-compose.yml` or `cli_sandbox/docker-compose.yml`
-2. If it matches a hidden path, inform the user it is likely sandbox-hidden
-3. Ask the user to verify on the host OS, since you cannot see the real contents from inside the sandbox
-
-## When User Wants to Customize
-
-When a user wants to adapt this template for their own projects, **do the work yourself** — don't just list instructions.
-
-1. **Gather information** — Ask the user for:
-   - Project directories (e.g., `my-api/`, `my-web/`)
-   - Secret files/directories to hide (e.g., `.env`, `secrets/`)
-   - Container names for DockMCP (e.g., `my-api`, `my-web-*`)
-   - Allowed commands per container (e.g., `npm test`)
-
-2. **Edit configuration files:**
-   - `.devcontainer/docker-compose.yml` — Remove demo mounts, add user's secret hiding config
-   - `cli_sandbox/docker-compose.yml` — Same configuration (must match)
-   - `dkmcp.yaml` — Copy from `dkmcp/configs/dkmcp.example.yaml` and update
-   - `.aiexclude` / `.geminiignore` — Update secret patterns
-   - `GEMINI.md` — Rewrite project-specific sections, remove demo references
-
-3. **Run validation:**
-   - `.sandbox/scripts/validate-secrets.sh`
-   - `.sandbox/scripts/compare-secret-config.sh`
-   - `.sandbox/scripts/check-secret-sync.sh`
-
-4. **Tell user to:**
-   - Rebuild DevContainer (VS Code Command Palette → "Dev Containers: Rebuild Container")
-   - Start DockMCP on host OS (`cd dkmcp && make install && dkmcp serve`)
-   - Verify secrets are hidden and DockMCP is accessible
-
-You CANNOT rebuild the DevContainer or start DockMCP — the user must do these on the host OS.
-
-## DockMCP MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `list_containers` | List accessible containers |
-| `get_logs` | Get container logs |
-| `get_stats` | Get resource stats |
-| `exec_command` | Run whitelisted command |
-| `inspect_container` | Get detailed info |
-
-## Troubleshooting: DockMCP Connection Issues
-
-If DockMCP MCP tools are not available:
-
-1. **Verify DockMCP is running on host OS:** `curl http://localhost:8080/health`
-2. **Try MCP Reconnect:** Run `/mcp` in Gemini, then select "Reconnect"
-3. **Restart VS Code completely** (Cmd+Q / Alt+F4)
-
-**Note:** If the DockMCP server was restarted, SSE connections are dropped. Inform the user to run `/mcp` → "Reconnect" to re-establish the connection.
-
-### Fallback: Using DockMCP Client Commands
-
-If MCP tools are not available, **you can use `dkmcp client` commands directly** via Bash:
-
-```bash
-# List containers
-dkmcp client list --url http://host.docker.internal:8080
-
-# Get logs from a container
-dkmcp client logs --url http://host.docker.internal:8080 securenote-api
-
-# Get logs with tail option
-dkmcp client logs --url http://host.docker.internal:8080 --tail 50 securenote-api
-
-# Execute a whitelisted command
-dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm test"
-```
-
-**If `dkmcp` command is not found:**
-
-Tell the user:
-```
-The dkmcp command is not installed in this DevContainer. Please run:
-
-cd /workspace/dkmcp
-make install
-
-After installation, I can use dkmcp client commands to access container logs and run tests.
-```
-
-## Development Approach: Test-Driven Development (TDD)
-
-When fixing bugs or implementing features, **always follow TDD**:
-
-### TDD Workflow
-
-1. **Write test first** - Before implementing or fixing, write a test that detects the bug or verifies expected behavior
-2. **Verify test fails** - Run the test to confirm it fails (proves the bug exists or feature is missing)
-3. **Implement/Fix** - Write the minimum code to make the test pass
-4. **Verify test passes** - Confirm the fix/implementation works
-5. **Run all tests** - Ensure no regressions
-
-### Why TDD?
-
-- Proves the bug exists before fixing
-- Proves the fix works after implementation
-- Prevents regression in future changes
-- Documents expected behavior through tests
-
-### When to Apply
-
-- Bug fixes: Always write test that reproduces the bug first
-- New features: Write tests for expected behavior first
-- Refactoring: Ensure tests exist before changing code
-
-### Writing Meaningful Tests
-
-- Tests must exercise real code paths, not duplicate logic
-- Bad: Test that copies the same if-condition as the code
-- Good: Test that sends real requests through actual handlers
-- **If unsure whether a test is meaningful, ask the user first**
-
-## Best Practices
-
-### DO:
-- Use DockMCP MCP to access other containers
-- Explain when secrets are hidden (don't just say "file not found")
-- Read application code freely
-- Suggest changes to demo apps
-
-### DON'T:
-- Try to bypass secret hiding
-- Suggest removing security configurations without explanation
-- Attempt to access Docker socket directly
-- Modify security files without user approval
-
-## For More Details
-
-- [README.md](README.md) - User documentation
-- [dkmcp/README.md](dkmcp/README.md) - DockMCP details
-- [demo-apps/README.md](demo-apps/README.md) - Demo application guide
+For more details, see:
+- [README.md](README.md) — User documentation
+- [dkmcp/README.md](dkmcp/README.md) — DockMCP details
+- [docs/ai-guide.md](docs/ai-guide.md) — AI reference guide

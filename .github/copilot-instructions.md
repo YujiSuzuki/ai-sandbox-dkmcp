@@ -1,98 +1,72 @@
 # AI Sandbox Environment - GitHub Copilot Instructions
 
-## Project Context
-
-This is an AI sandbox environment with DockMCP for safe, multi-project AI development. You are running inside an AI Sandbox with security restrictions.
+This document provides essential behavioral rules for GitHub Copilot. For detailed reference, see [../docs/ai-guide.md](../docs/ai-guide.md).
 
 ## Security Constraints
 
 ### Hidden Files
-The following files/directories appear empty due to security measures:
+The following files/directories appear empty due to security measures (Docker volume mounts):
 - `demo-apps/securenote-api/.env`
 - `demo-apps/securenote-api/secrets/`
 
 This is intentional. The API containers have access to real secrets, but AI assistants don't.
 
-**Important:** If a file appears empty or missing, check whether its path is listed in the volume/tmpfs mounts in `.devcontainer/docker-compose.yml` or `cli_sandbox/docker-compose.yml`. If so, the file is sandbox-hidden and exists on the host OS. Ask the user to verify on the host side.
+**Important:** If a file appears empty or missing, check whether its path is listed in the volume/tmpfs mounts in `.devcontainer/docker-compose.yml` or `cli_sandbox/docker-compose.yml`. If so, the file is sandbox-hidden. Ask the user to verify on the host OS.
 
 ### No Docker Access
 You cannot run `docker` or `docker-compose` commands. Tell users to run these on the host OS.
+
+## What AI Can and Cannot Do
+
+### Cannot Do
+- Run `docker` or `docker-compose` commands (no Docker socket)
+- Read files in `secrets/` directories (hidden by tmpfs)
+- Read `.env` files (hidden by /dev/null mount)
+
+### Can Do
+- Read/edit source code in `/workspace/`
+- Use DockMCP MCP tools to access other containers
+- Use `dkmcp client` commands as fallback when MCP is unavailable
 
 ## Project Structure
 
 ```
 /workspace/
-├── .devcontainer/      # DevContainer config
-├── cli_sandbox/         # CLI backup environment
-├── dkmcp/            # MCP Server (Go)
-├── demo-apps/          # API + Web demo
-└── demo-apps-ios/      # iOS demo app
+├── .sandbox/          # Infrastructure (scripts, tools, sandbox-mcp, host-tools)
+├── .devcontainer/     # VS Code DevContainer (secret hiding config)
+├── cli_sandbox/       # CLI environment (backup)
+├── dkmcp/             # DockMCP MCP Server (Go)
+├── demo-apps/         # Demo Application (securenote-api, securenote-web)
+└── demo-apps-ios/     # iOS Application (SecureNote)
 ```
 
-## Cross-Container Access
+## Cross-Container Access (DockMCP)
 
-Use DockMCP MCP tools:
-- `list_containers` - List containers
-- `get_logs` - Get logs
-- `exec_command` - Run whitelisted commands
+Use DockMCP MCP tools: `list_containers`, `get_logs`, `exec_command`, `inspect_container`, `search_logs`, `list_host_tools`, `run_host_tool`.
 
-### Troubleshooting: DockMCP Connection Issues
+### Fallback: dkmcp client
 
-If MCP tools are not available:
+If MCP tools are unavailable, use `dkmcp client` commands via Bash. See [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-client-fallback) for the full command reference.
 
-1. Verify DockMCP is running: `curl http://localhost:8080/health` (on Host OS)
-2. Try MCP Reconnect: Run `/mcp`, then select "Reconnect"
-3. Restart VS Code completely (Cmd+Q / Alt+F4)
+If `dkmcp` not found, tell user: `cd /workspace/dkmcp && make install`
 
-**Note:** If the DockMCP server was restarted, SSE connections are dropped. Inform the user to run `/mcp` → "Reconnect" to re-establish the connection.
+For troubleshooting, see [../docs/ai-guide.md](../docs/ai-guide.md#dockmcp-setup-and-troubleshooting).
 
-### Fallback: DockMCP Client Commands
+## Critical Files
 
-If MCP tools are unavailable, use `dkmcp client` directly:
-
-```bash
-dkmcp client list --url http://host.docker.internal:8080
-dkmcp client logs --url http://host.docker.internal:8080 securenote-api
-dkmcp client exec --url http://host.docker.internal:8080 securenote-api "npm test"
-```
-
-If `dkmcp` not found, tell user to run: `cd /workspace/dkmcp && make install`
-
-## Code Conventions
-
-### Node.js (demo-apps)
-- ES6+ syntax
-- Express.js for API
-- React + Vite for frontend
-- Jest for testing
-
-### Go (dkmcp)
-- Standard Go project layout
-- Cobra for CLI
-- MCP implementation
-
-### Swift (demo-apps-ios)
-- SwiftUI
-- @Observable pattern
-- Async/await
-
-## Important Files
-
-- `.devcontainer/docker-compose.yml` - Secret hiding config
-- `cli_sandbox/docker-compose.yml` - CLI secret hiding
-- `dkmcp/configs/dkmcp.example.yaml` - Container access policy
+- `.devcontainer/docker-compose.yml` — Secret hiding config (requires user approval to modify)
+- `cli_sandbox/docker-compose.yml` — CLI secret hiding (must match above)
+- `dkmcp/configs/dkmcp.example.yaml` — Container access policy
 
 ## Development Approach: TDD
 
-When fixing bugs or implementing features, follow TDD (Test-Driven Development):
+1. **Write test first** — Before implementing, write a test that detects the bug or verifies expected behavior
+2. **Verify test fails** — Confirm the test fails (proves the bug exists)
+3. **Implement/Fix** — Write the code to make the test pass
+4. **Verify test passes** — Confirm the fix works
+5. **Run all tests** — Ensure no regressions
 
-1. **Write test first** - Before implementing, write a test that detects the bug or verifies expected behavior
-2. **Verify test fails** - Confirm the test fails (proves the bug exists)
-3. **Implement/Fix** - Write the code to make the test pass
-4. **Verify test passes** - Confirm the fix works
-5. **Run all tests** - Ensure no regressions
-
-**Writing meaningful tests:** Tests must call actual code, not duplicate logic. If unsure whether a test is meaningful, ask the user first.
+Tests must call actual code, not duplicate logic. If unsure whether a test is meaningful, ask the user first.
 
 ## Guidelines
 
@@ -101,3 +75,7 @@ When fixing bugs or implementing features, follow TDD (Test-Driven Development):
 3. Guide users to run Docker commands on host OS
 4. Use DockMCP tools for cross-container operations
 5. Follow existing code patterns in the project
+
+## Reference
+
+For detailed information, see [../docs/ai-guide.md](../docs/ai-guide.md).

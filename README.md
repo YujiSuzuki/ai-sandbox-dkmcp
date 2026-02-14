@@ -534,6 +534,8 @@ A: Yes! This can be combined with HashiCorp Vault, AWS Secrets Manager, or other
 | [Demo App Guide](demo-apps/README.md) | Running the SecureNote demo |
 | [CLI Sandbox Guide](cli_sandbox/README.md) | Terminal-based sandbox |
 
+> **Note:** `docs/ai-guide.md` is a reference guide for AI assistants (referenced from CLAUDE.md and GEMINI.md). Users don't need to read it.
+
 ## License
 
 MIT License - See [LICENSE](LICENSE)
