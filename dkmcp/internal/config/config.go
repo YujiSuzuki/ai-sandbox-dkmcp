@@ -926,6 +926,15 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	// WorkspaceRoot is required when host commands are enabled.
+	// Without it, commands would execute in the server's current directory.
+	//
+	// ホストコマンドが有効な場合、WorkspaceRootは必須です。
+	// これがないと、コマンドがサーバーのカレントディレクトリで実行されてしまいます。
+	if c.HostAccess.HostCommands.Enabled && c.HostAccess.WorkspaceRoot == "" {
+		return fmt.Errorf("host_access.workspace_root is required when host_commands is enabled")
+	}
+
 	return nil
 }
 

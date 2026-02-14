@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/docker"
+	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/hosttools"
+	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/security"
 )
 
 // Server represents the MCP server that handles communication between AI assistants
@@ -76,6 +78,28 @@ type Server struct {
 	// requestCounterはログ用の一意のリクエストIDを生成するためのアトミックカウンターです。
 	// ログが混在した際に、どのログ行が同じリクエストに属するかを識別するのに役立ちます。
 	requestCounter uint64
+
+	// hostToolsManager manages host-side tool discovery and execution.
+	// nil when host tools are not configured.
+	//
+	// hostToolsManagerはホスト側ツールの検出と実行を管理します。
+	// ホストツールが設定されていない場合はnilです。
+	hostToolsManager *hosttools.Manager
+
+	// hostCommandPolicy enforces security rules for host command execution.
+	// nil when host commands are not configured.
+	//
+	// hostCommandPolicyはホストコマンド実行のセキュリティルールを適用します。
+	// ホストコマンドが設定されていない場合はnilです。
+	hostCommandPolicy *security.HostCommandPolicy
+
+	// workspaceRoot is the host-side workspace root directory for host commands.
+	// workspaceRootはホストコマンド用のホスト側ワークスペースルートディレクトリです。
+	workspaceRoot string
+
+	// hostCommandTimeout is the timeout for host command execution.
+	// hostCommandTimeoutはホストコマンド実行のタイムアウトです。
+	hostCommandTimeout time.Duration
 }
 
 // client represents a connected MCP client session. Each client maintains its own
@@ -133,6 +157,24 @@ type ServerOption func(*Server)
 func WithVerbosity(level int) ServerOption {
 	return func(s *Server) {
 		s.verbosity = level
+	}
+}
+
+// WithHostToolsManager sets the host tools manager for host tool operations.
+// WithHostToolsManagerはホストツール操作のためのマネージャーを設定します。
+func WithHostToolsManager(manager *hosttools.Manager) ServerOption {
+	return func(s *Server) {
+		s.hostToolsManager = manager
+	}
+}
+
+// WithHostCommandPolicy sets the host command policy for host command execution.
+// WithHostCommandPolicyはホストコマンド実行のためのポリシーを設定します。
+func WithHostCommandPolicy(policy *security.HostCommandPolicy, workspaceRoot string, timeout time.Duration) ServerOption {
+	return func(s *Server) {
+		s.hostCommandPolicy = policy
+		s.workspaceRoot = workspaceRoot
+		s.hostCommandTimeout = timeout
 	}
 }
 

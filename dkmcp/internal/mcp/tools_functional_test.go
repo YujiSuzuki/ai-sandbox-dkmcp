@@ -11,23 +11,26 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/config"
+	configPkg "github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/config"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/docker"
+	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/hosttools"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/security"
 )
 
 // createTestPolicy creates a security policy for testing.
 // createTestPolicyはテスト用のセキュリティポリシーを作成します。
 func createTestPolicy() *security.Policy {
-	cfg := &config.SecurityConfig{
+	cfg := &configPkg.SecurityConfig{
 		Mode:              "moderate",
 		AllowedContainers: []string{"test-*", "demo-*"},
-		Permissions: config.SecurityPermissions{
+		Permissions: configPkg.SecurityPermissions{
 			Logs:    true,
 			Inspect: true,
 			Stats:   true,
@@ -769,10 +772,10 @@ func TestToolGetBlockedPaths_Functional(t *testing.T) {
 // createTestPolicyWithHostPathMasking creates a security policy with host path masking enabled.
 // createTestPolicyWithHostPathMaskingはホストパスマスキングが有効なセキュリティポリシーを作成します。
 func createTestPolicyWithHostPathMasking() *security.Policy {
-	cfg := &config.SecurityConfig{
+	cfg := &configPkg.SecurityConfig{
 		Mode:              "moderate",
 		AllowedContainers: []string{"test-*", "demo-*"},
-		Permissions: config.SecurityPermissions{
+		Permissions: configPkg.SecurityPermissions{
 			Logs:    true,
 			Inspect: true,
 			Stats:   true,
@@ -782,7 +785,7 @@ func createTestPolicyWithHostPathMasking() *security.Policy {
 			"test-api": {"npm test", "npm run lint"},
 			"*":        {"echo *"},
 		},
-		HostPathMasking: config.HostPathMaskingConfig{
+		HostPathMasking: configPkg.HostPathMaskingConfig{
 			Enabled:     true,
 			Replacement: "[HOST_PATH]",
 		},
@@ -1043,5 +1046,498 @@ func TestToolReadFile_HostPathMasking(t *testing.T) {
 
 	if !strings.Contains(text, "[HOST_PATH]") {
 		t.Errorf("expected '[HOST_PATH]' in result, got: %s", text)
+	}
+}
+
+// createTestPolicyWithLifecycle creates a security policy with lifecycle permission enabled.
+// createTestPolicyWithLifecycleはlifecycleパーミッションが有効なセキュリティポリシーを作成します。
+func createTestPolicyWithLifecycle() *security.Policy {
+	cfg := &configPkg.SecurityConfig{
+		Mode:              "moderate",
+		AllowedContainers: []string{"test-*", "demo-*"},
+		Permissions: configPkg.SecurityPermissions{
+			Logs:      true,
+			Inspect:   true,
+			Stats:     true,
+			Exec:      true,
+			Lifecycle: true,
+		},
+		ExecWhitelist: map[string][]string{
+			"test-api": {"npm test", "npm run lint"},
+			"*":        {"echo *"},
+		},
+	}
+	return security.NewPolicy(cfg)
+}
+
+// TestToolRestartContainer_Functional tests the restart_container tool handler.
+// TestToolRestartContainer_Functionalはrestart_containerツールハンドラーをテストします。
+func TestToolRestartContainer_Functional(t *testing.T) {
+	policy := createTestPolicyWithLifecycle()
+	mockClient := docker.NewMockClient(policy)
+	var calledContainer string
+	var calledTimeout *int
+	mockClient.RestartContainerFunc = func(ctx context.Context, containerName string, timeout *int) error {
+		calledContainer = containerName
+		calledTimeout = timeout
+		return nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	// Test without timeout
+	result, err := server.toolRestartContainer(ctx, map[string]any{
+		"container": "test-api",
+	})
+	if err != nil {
+		t.Fatalf("toolRestartContainer returned error: %v", err)
+	}
+	if calledContainer != "test-api" {
+		t.Errorf("expected container 'test-api', got '%s'", calledContainer)
+	}
+	if calledTimeout != nil {
+		t.Errorf("expected nil timeout, got %v", *calledTimeout)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	if !strings.Contains(text, "test-api") || !strings.Contains(text, "restarted") {
+		t.Errorf("expected success message with container name, got: %s", text)
+	}
+
+	// Test with timeout
+	_, err = server.toolRestartContainer(ctx, map[string]any{
+		"container": "test-api",
+		"timeout":   float64(30),
+	})
+	if err != nil {
+		t.Fatalf("toolRestartContainer with timeout returned error: %v", err)
+	}
+	if calledTimeout == nil || *calledTimeout != 30 {
+		t.Errorf("expected timeout 30, got %v", calledTimeout)
+	}
+}
+
+// TestToolStopContainer_Functional tests the stop_container tool handler.
+// TestToolStopContainer_Functionalはstop_containerツールハンドラーをテストします。
+func TestToolStopContainer_Functional(t *testing.T) {
+	policy := createTestPolicyWithLifecycle()
+	mockClient := docker.NewMockClient(policy)
+	var calledContainer string
+	mockClient.StopContainerFunc = func(ctx context.Context, containerName string, timeout *int) error {
+		calledContainer = containerName
+		return nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolStopContainer(ctx, map[string]any{
+		"container": "test-api",
+	})
+	if err != nil {
+		t.Fatalf("toolStopContainer returned error: %v", err)
+	}
+	if calledContainer != "test-api" {
+		t.Errorf("expected container 'test-api', got '%s'", calledContainer)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	if !strings.Contains(text, "test-api") || !strings.Contains(text, "stopped") {
+		t.Errorf("expected success message with container name, got: %s", text)
+	}
+}
+
+// TestToolStartContainer_Functional tests the start_container tool handler.
+// TestToolStartContainer_Functionalはstart_containerツールハンドラーをテストします。
+func TestToolStartContainer_Functional(t *testing.T) {
+	policy := createTestPolicyWithLifecycle()
+	mockClient := docker.NewMockClient(policy)
+	var calledContainer string
+	mockClient.StartContainerFunc = func(ctx context.Context, containerName string) error {
+		calledContainer = containerName
+		return nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	result, err := server.toolStartContainer(ctx, map[string]any{
+		"container": "test-api",
+	})
+	if err != nil {
+		t.Fatalf("toolStartContainer returned error: %v", err)
+	}
+	if calledContainer != "test-api" {
+		t.Errorf("expected container 'test-api', got '%s'", calledContainer)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	if !strings.Contains(text, "test-api") || !strings.Contains(text, "started") {
+		t.Errorf("expected success message with container name, got: %s", text)
+	}
+}
+
+// TestToolLifecycle_PermissionDenied tests lifecycle tools when permission is disabled.
+// TestToolLifecycle_PermissionDeniedはパーミッション無効時のlifecycleツールをテストします。
+func TestToolLifecycle_PermissionDenied(t *testing.T) {
+	// Use createTestPolicy() which does NOT have Lifecycle enabled
+	policy := createTestPolicy()
+	mockClient := docker.NewMockClient(policy)
+	mockClient.RestartContainerFunc = func(ctx context.Context, containerName string, timeout *int) error {
+		t.Error("RestartContainerFunc should not be called when permission denied")
+		return nil
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	_, err := server.toolRestartContainer(ctx, map[string]any{"container": "test-api"})
+	if err == nil {
+		t.Error("expected error for restart_container with lifecycle disabled")
+	}
+
+	_, err = server.toolStopContainer(ctx, map[string]any{"container": "test-api"})
+	if err == nil {
+		t.Error("expected error for stop_container with lifecycle disabled")
+	}
+
+	_, err = server.toolStartContainer(ctx, map[string]any{"container": "test-api"})
+	if err == nil {
+		t.Error("expected error for start_container with lifecycle disabled")
+	}
+}
+
+// TestToolLifecycle_DockerError tests lifecycle tools when Docker returns an error.
+// TestToolLifecycle_DockerErrorはDockerがエラーを返した場合のlifecycleツールをテストします。
+func TestToolLifecycle_DockerError(t *testing.T) {
+	policy := createTestPolicyWithLifecycle()
+	mockClient := docker.NewMockClient(policy)
+	mockClient.RestartContainerFunc = func(ctx context.Context, containerName string, timeout *int) error {
+		return errors.New("container not found")
+	}
+
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	_, err := server.toolRestartContainer(ctx, map[string]any{"container": "test-api"})
+	if err == nil {
+		t.Error("expected error when Docker returns error")
+	}
+	if !strings.Contains(err.Error(), "container not found") {
+		t.Errorf("expected 'container not found' in error, got: %v", err)
+	}
+}
+
+// --- Host Tool Handler Tests ---
+
+// TestToolListHostTools_Functional tests the list_host_tools tool handler.
+// TestToolListHostTools_Functionalはlist_host_tools MCPツールハンドラーをテストします。
+func TestToolListHostTools_Functional(t *testing.T) {
+	policy := createTestPolicy()
+	mockClient := docker.NewMockClient(policy)
+	server := createTestServer(mockClient)
+	ctx := context.Background()
+
+	// Test: nil manager returns error
+	// nilマネージャーはエラーを返す
+	_, err := server.toolListHostTools(ctx, map[string]any{})
+	if err == nil {
+		t.Error("expected error when hostToolsManager is nil")
+	}
+	if err != nil && !strings.Contains(err.Error(), "not configured") {
+		t.Errorf("expected 'not configured' error, got: %v", err)
+	}
+
+	// Test: with enabled manager
+	// 有効なマネージャーでのテスト
+	dir := t.TempDir()
+	toolsDir := dir + "/tools"
+	os.MkdirAll(toolsDir, 0755)
+	os.WriteFile(toolsDir+"/hello.sh", []byte("#!/bin/bash\n# hello.sh\n# Hello tool\n"), 0755)
+
+	htCfg := &configPkg.HostToolsConfig{
+		Enabled:           true,
+		Directories:       []string{"tools"},
+		AllowedExtensions: []string{".sh"},
+		Timeout:           30,
+	}
+	mgr := hosttools.NewManager(htCfg, dir)
+	server = NewServer(mockClient, 8080, WithHostToolsManager(mgr))
+
+	result, err := server.toolListHostTools(ctx, map[string]any{})
+	if err != nil {
+		t.Fatalf("toolListHostTools returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	if !strings.Contains(text, "hello.sh") {
+		t.Errorf("expected tool list to contain 'hello.sh', got: %s", text)
+	}
+}
+
+// TestToolGetHostToolInfo_Functional tests the get_host_tool_info tool handler.
+// TestToolGetHostToolInfo_Functionalはget_host_tool_info MCPツールハンドラーをテストします。
+func TestToolGetHostToolInfo_Functional(t *testing.T) {
+	policy := createTestPolicy()
+	mockClient := docker.NewMockClient(policy)
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	toolsDir := dir + "/tools"
+	os.MkdirAll(toolsDir, 0755)
+	os.WriteFile(toolsDir+"/info-test.sh", []byte("#!/bin/bash\n# info-test.sh\n# Info test tool\n"), 0755)
+
+	htCfg := &configPkg.HostToolsConfig{
+		Enabled:           true,
+		Directories:       []string{"tools"},
+		AllowedExtensions: []string{".sh"},
+		Timeout:           30,
+	}
+	mgr := hosttools.NewManager(htCfg, dir)
+	server := NewServer(mockClient, 8080, WithHostToolsManager(mgr))
+
+	// Test: missing name parameter
+	// nameパラメータが欠落している場合
+	_, err := server.toolGetHostToolInfo(ctx, map[string]any{})
+	if err == nil {
+		t.Error("expected error for missing name parameter")
+	}
+
+	// Test: valid name
+	// 有効な名前
+	result, err := server.toolGetHostToolInfo(ctx, map[string]any{"name": "info-test.sh"})
+	if err != nil {
+		t.Fatalf("toolGetHostToolInfo returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	if !strings.Contains(text, "info-test.sh") {
+		t.Errorf("expected info to contain 'info-test.sh', got: %s", text)
+	}
+
+	// Test: tool not found
+	// ツールが見つからない場合
+	_, err = server.toolGetHostToolInfo(ctx, map[string]any{"name": "nonexistent.sh"})
+	if err == nil {
+		t.Error("expected error for nonexistent tool")
+	}
+}
+
+// TestToolRunHostTool_Functional tests the run_host_tool tool handler.
+// TestToolRunHostTool_Functionalはrun_host_tool MCPツールハンドラーをテストします。
+func TestToolRunHostTool_Functional(t *testing.T) {
+	policy := createTestPolicy()
+	mockClient := docker.NewMockClient(policy)
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	toolsDir := dir + "/tools"
+	os.MkdirAll(toolsDir, 0755)
+	os.WriteFile(toolsDir+"/greet.sh", []byte("#!/bin/bash\n# greet.sh\n# Greet tool\necho \"Hello $1\"\n"), 0755)
+
+	htCfg := &configPkg.HostToolsConfig{
+		Enabled:           true,
+		Directories:       []string{"tools"},
+		AllowedExtensions: []string{".sh"},
+		Timeout:           30,
+	}
+	mgr := hosttools.NewManager(htCfg, dir)
+	server := NewServer(mockClient, 8080, WithHostToolsManager(mgr))
+
+	// Test: nil manager
+	// nilマネージャー
+	serverNil := createTestServer(mockClient)
+	_, err := serverNil.toolRunHostTool(ctx, map[string]any{"name": "greet.sh"})
+	if err == nil {
+		t.Error("expected error when hostToolsManager is nil")
+	}
+
+	// Test: missing name
+	// nameが欠落
+	_, err = server.toolRunHostTool(ctx, map[string]any{})
+	if err == nil {
+		t.Error("expected error for missing name parameter")
+	}
+
+	// Test: happy path
+	// 正常系
+	result, err := server.toolRunHostTool(ctx, map[string]any{
+		"name": "greet.sh",
+		"args": []any{"World"},
+	})
+	if err != nil {
+		t.Fatalf("toolRunHostTool returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	if !strings.Contains(text, "Hello World") {
+		t.Errorf("expected output to contain 'Hello World', got: %s", text)
+	}
+	if !strings.Contains(text, "Exit Code: 0") {
+		t.Errorf("expected exit code 0 in output, got: %s", text)
+	}
+
+	// Test: tool not found
+	// ツールが見つからない
+	_, err = server.toolRunHostTool(ctx, map[string]any{"name": "nonexistent.sh"})
+	if err == nil {
+		t.Error("expected error for nonexistent tool")
+	}
+}
+
+// TestToolExecHostCommand_Functional tests the exec_host_command tool handler.
+// TestToolExecHostCommand_Functionalはexec_host_command MCPツールハンドラーをテストします。
+func TestToolExecHostCommand_Functional(t *testing.T) {
+	policy := createTestPolicy()
+	mockClient := docker.NewMockClient(policy)
+	ctx := context.Background()
+
+	// Test: nil policy returns error
+	// nilポリシーはエラーを返す
+	serverNil := createTestServer(mockClient)
+	_, err := serverNil.toolExecHostCommand(ctx, map[string]any{"command": "echo hello"})
+	if err == nil {
+		t.Error("expected error when hostCommandPolicy is nil")
+	}
+
+	// Test: missing command parameter
+	// commandパラメータが欠落
+	hcCfg := &configPkg.HostCommandsConfig{
+		Enabled: true,
+		Whitelist: map[string][]string{
+			"echo": {"*"},
+		},
+		Deny:        map[string][]string{},
+		Dangerously: configPkg.HostCommandsDangerously{Commands: map[string][]string{}},
+	}
+	hcPolicy := security.NewHostCommandPolicy(hcCfg)
+	server := NewServer(mockClient, 8080,
+		WithHostCommandPolicy(hcPolicy, t.TempDir(), 30*time.Second),
+	)
+
+	_, err = server.toolExecHostCommand(ctx, map[string]any{})
+	if err == nil {
+		t.Error("expected error for missing command parameter")
+	}
+
+	// Test: whitelisted command executes successfully
+	// ホワイトリストに登録されたコマンドが正常に実行される
+	result, err := server.toolExecHostCommand(ctx, map[string]any{
+		"command": "echo hello from host",
+	})
+	if err != nil {
+		t.Fatalf("toolExecHostCommand returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	if !strings.Contains(text, "hello from host") {
+		t.Errorf("expected output to contain 'hello from host', got: %s", text)
+	}
+	if !strings.Contains(text, "Exit Code: 0") {
+		t.Errorf("expected exit code 0, got: %s", text)
+	}
+
+	// Test: non-whitelisted command is rejected
+	// ホワイトリスト外のコマンドが拒否される
+	_, err = server.toolExecHostCommand(ctx, map[string]any{
+		"command": "rm -rf /",
+	})
+	if err == nil {
+		t.Error("expected error for non-whitelisted command")
+	}
+
+	// Test: pipe in command is rejected
+	// コマンド内のパイプが拒否される
+	_, err = server.toolExecHostCommand(ctx, map[string]any{
+		"command": "echo hello | cat",
+	})
+	if err == nil {
+		t.Error("expected error for pipe in command")
+	}
+}
+
+// TestToolExecHostCommand_DangerousMode tests the dangerously flag behavior.
+// TestToolExecHostCommand_DangerousModeはdangerouslyフラグの動作をテストします。
+func TestToolExecHostCommand_DangerousMode(t *testing.T) {
+	policy := createTestPolicy()
+	mockClient := docker.NewMockClient(policy)
+	ctx := context.Background()
+
+	hcCfg := &configPkg.HostCommandsConfig{
+		Enabled: true,
+		Whitelist: map[string][]string{
+			"echo": {"*"},
+		},
+		Deny: map[string][]string{},
+		Dangerously: configPkg.HostCommandsDangerously{
+			Enabled: true,
+			Commands: map[string][]string{
+				"echo": {"danger *"},
+			},
+		},
+	}
+	hcPolicy := security.NewHostCommandPolicy(hcCfg)
+	server := NewServer(mockClient, 8080,
+		WithHostCommandPolicy(hcPolicy, t.TempDir(), 30*time.Second),
+	)
+
+	// Test: dangerously=true with allowed dangerous command
+	// dangerously=trueで許可された危険コマンド
+	result, err := server.toolExecHostCommand(ctx, map[string]any{
+		"command":     "echo danger test",
+		"dangerously": true,
+	})
+	if err != nil {
+		t.Fatalf("toolExecHostCommand (dangerous) returned error: %v", err)
+	}
+
+	resultMap := result.(map[string]any)
+	content := resultMap["content"].([]map[string]any)
+	text := content[0]["text"].(string)
+	// Should contain DANGEROUS MODE warning
+	// DANGEROUS MODEの警告を含むべき
+	if !strings.Contains(text, "DANGEROUS MODE") {
+		t.Errorf("expected dangerous mode warning, got: %s", text)
+	}
+
+	// Test: dangerously=false for dangerous-only command should fail
+	// dangerously=falseで危険専用コマンドは失敗すべき
+	hcCfg2 := &configPkg.HostCommandsConfig{
+		Enabled:   true,
+		Whitelist: map[string][]string{},
+		Deny:      map[string][]string{},
+		Dangerously: configPkg.HostCommandsDangerously{
+			Enabled: true,
+			Commands: map[string][]string{
+				"echo": {"danger *"},
+			},
+		},
+	}
+	hcPolicy2 := security.NewHostCommandPolicy(hcCfg2)
+	server2 := NewServer(mockClient, 8080,
+		WithHostCommandPolicy(hcPolicy2, t.TempDir(), 30*time.Second),
+	)
+
+	_, err = server2.toolExecHostCommand(ctx, map[string]any{
+		"command":     "echo danger test",
+		"dangerously": false,
+	})
+	if err == nil {
+		t.Error("expected error when dangerously=false for dangerous-only command")
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/config"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/docker"
+	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/hosttools"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/mcp"
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/security"
 )
@@ -83,6 +85,24 @@ var (
 	// 設定された場合、全コンテナがデフォルトコマンドリストで危険コマンドを使用できます。
 	flagDangerouslyAll bool
 
+	// flagWorkspace specifies the host-side workspace root directory.
+	// Used as the working directory for host commands and tool discovery base.
+	// Overrides host_access.workspace_root in config.
+	//
+	// flagWorkspaceはホスト側のワークスペースルートディレクトリを指定します。
+	// ホストコマンドの作業ディレクトリおよびツール検出の基点として使用されます。
+	// 設定ファイルのhost_access.workspace_rootを上書きします。
+	flagWorkspace string
+
+	// flagHostDangerously enables dangerous mode for host commands.
+	// When set, host commands in the dangerously list can be executed
+	// with the dangerously=true parameter.
+	//
+	// flagHostDangerouslyはホストコマンドの危険モードを有効にします。
+	// 設定された場合、dangerouslyリストのホストコマンドが
+	// dangerously=trueパラメータで実行可能になります。
+	flagHostDangerously bool
+
 	// flagVerbosity controls the verbosity level for logging.
 	// Level 0: Normal (INFO level, minimal output)
 	// Level 1 (-v): Verbose (INFO + JSON for initialized clients)
@@ -97,6 +117,26 @@ var (
 	// レベル3 (-vvv): フルデバッグ（DEBUG + 全JSON、ノイズも表示）
 	// レベル4 (-vvvv): フルデバッグ + HTTPヘッダー表示
 	flagVerbosity int
+
+	// flagSync enables tool sync check before starting the server.
+	// When set, compares staging directories with approved directory
+	// and prompts the user to approve new or updated tools.
+	//
+	// flagSyncはサーバー起動前のツール同期チェックを有効にします。
+	// 設定すると、ステージングディレクトリと承認済みディレクトリを比較し、
+	// 新しいまたは更新されたツールの承認をユーザーに求めます。
+	flagSync bool
+
+	// flagDev enables development mode for host tools.
+	// In dev mode, staging directories are included with highest priority,
+	// allowing tools under development to be tested without approval.
+	// Only effective in secure mode (approved_dir is set).
+	//
+	// flagDevはホストツールの開発モードを有効にします。
+	// 開発モードでは、ステージングディレクトリが最優先で読み込まれ、
+	// 承認なしで開発中のツールをテストできます。
+	// セキュアモード（approved_dirが設定済み）でのみ有効です。
+	flagDev bool
 )
 
 // serveCmd represents the 'serve' command that starts the MCP server.
@@ -142,6 +182,19 @@ func init() {
 	// Add verbosity flag for detailed logging (-v, -vv, -vvv)
 	// 詳細ログ用の詳細モードフラグを追加（-v, -vv, -vvv）
 	serveCmd.Flags().CountVarP(&flagVerbosity, "verbose", "v", "Increase verbosity level (-v: JSON output, -vv: debug level, -vvv: full debug with noise, -vvvv: + HTTP headers)")
+
+	// Add host access flags
+	// ホストアクセスフラグを追加
+	serveCmd.Flags().StringVar(&flagWorkspace, "workspace", "", "Host workspace root directory (overrides config host_access.workspace_root)")
+	serveCmd.Flags().BoolVar(&flagHostDangerously, "host-dangerously", false, "Enable dangerous mode for host commands")
+
+	// Add sync flag for host tools
+	// ホストツール用の同期フラグを追加
+	serveCmd.Flags().BoolVar(&flagSync, "sync", false, "Sync host tools from staging to approved directory before starting")
+
+	// Add dev flag for host tools development
+	// ホストツール開発用のdevフラグを追加
+	serveCmd.Flags().BoolVar(&flagDev, "dev", false, "Development mode: also load tools from staging directories (staging > approved > common)")
 }
 
 // runServe is the main entry point for the serve command.
@@ -236,6 +289,28 @@ func runServe(cmd *cobra.Command, args []string) error {
 		handler := NewColoredHandler(os.Stdout, logLevel)
 		logger := slog.New(handler)
 		slog.SetDefault(logger)
+	}
+
+	// Apply --workspace flag to override host_access.workspace_root
+	// --workspaceフラグでhost_access.workspace_rootを上書き
+	if flagWorkspace != "" {
+		cfg.HostAccess.WorkspaceRoot = flagWorkspace
+	}
+
+	// Resolve workspace root to absolute path for consistent logging and operations
+	// ログと操作の一貫性のためにワークスペースルートを絶対パスに変換
+	if cfg.HostAccess.WorkspaceRoot != "" {
+		absPath, err := filepath.Abs(cfg.HostAccess.WorkspaceRoot)
+		if err != nil {
+			return fmt.Errorf("failed to resolve workspace path %q: %w", cfg.HostAccess.WorkspaceRoot, err)
+		}
+		cfg.HostAccess.WorkspaceRoot = absPath
+	}
+
+	// Apply --host-dangerously flag to enable dangerous mode for host commands
+	// --host-dangerouslyフラグでホストコマンドの危険モードを有効化
+	if flagHostDangerously {
+		cfg.HostAccess.HostCommands.Dangerously.Enabled = true
 	}
 
 	// Parse and apply --allow-exec flags for temporary command whitelisting.
@@ -354,6 +429,72 @@ func runServe(cmd *cobra.Command, args []string) error {
 	if flagVerbosity > 0 {
 		serverOpts = append(serverOpts, mcp.WithVerbosity(flagVerbosity))
 	}
+
+	// Configure host tools if enabled
+	// ホストツールが有効な場合は設定
+	if cfg.HostAccess.HostTools.Enabled {
+		// Run sync if --sync flag is set and secure mode is configured
+		// --syncフラグが設定されていてセキュアモードが構成されている場合に同期を実行
+		if flagSync && cfg.HostAccess.HostTools.IsSecureMode() {
+			syncMgr := hosttools.NewSyncManager(&cfg.HostAccess.HostTools, cfg.HostAccess.WorkspaceRoot)
+			synced, err := syncMgr.RunInteractiveSync()
+			if err != nil {
+				return fmt.Errorf("host tools sync failed: %w", err)
+			}
+			if synced > 0 {
+				slog.Info("Host tools synced", "count", synced)
+			}
+		} else if flagSync && !cfg.HostAccess.HostTools.IsSecureMode() {
+			slog.Warn("--sync flag ignored: host_tools.approved_dir is not configured (legacy mode)")
+		}
+
+		htManager := hosttools.NewManager(&cfg.HostAccess.HostTools, cfg.HostAccess.WorkspaceRoot)
+
+		// Enable dev mode if --dev flag is set and secure mode is configured
+		// --devフラグが設定されていてセキュアモードが構成されている場合に開発モードを有効化
+		if flagDev && cfg.HostAccess.HostTools.IsSecureMode() {
+			htManager.SetDevMode(true)
+			slog.Warn("Development mode: staging tools are directly executable (not approved)",
+				"staging_dirs", cfg.HostAccess.HostTools.StagingDirs,
+			)
+		} else if flagDev && !cfg.HostAccess.HostTools.IsSecureMode() {
+			slog.Warn("--dev flag ignored: host_tools.approved_dir is not configured (legacy mode)")
+		}
+
+		serverOpts = append(serverOpts, mcp.WithHostToolsManager(htManager))
+
+		if cfg.HostAccess.HostTools.IsSecureMode() {
+			projectDir, _ := hosttools.ProjectApprovedDir(cfg.HostAccess.HostTools.ApprovedDir, cfg.HostAccess.WorkspaceRoot)
+			slog.Info("Host tools enabled (secure mode)",
+				"approved_dir", projectDir,
+				"staging_dirs", cfg.HostAccess.HostTools.StagingDirs,
+				"common", cfg.HostAccess.HostTools.Common,
+				"extensions", cfg.HostAccess.HostTools.AllowedExtensions,
+			)
+		} else {
+			slog.Info("Host tools enabled (legacy mode)",
+				"workspace", cfg.HostAccess.WorkspaceRoot,
+				"directories", cfg.HostAccess.HostTools.Directories,
+				"extensions", cfg.HostAccess.HostTools.AllowedExtensions,
+			)
+		}
+	}
+
+	// Configure host commands if enabled
+	// ホストコマンドが有効な場合は設定
+	if cfg.HostAccess.HostCommands.Enabled {
+		hcPolicy := security.NewHostCommandPolicy(&cfg.HostAccess.HostCommands)
+		timeout := time.Duration(cfg.HostAccess.HostTools.Timeout) * time.Second
+		if timeout <= 0 {
+			timeout = 60 * time.Second
+		}
+		serverOpts = append(serverOpts, mcp.WithHostCommandPolicy(hcPolicy, cfg.HostAccess.WorkspaceRoot, timeout))
+		slog.Info("Host commands enabled",
+			"workspace", cfg.HostAccess.WorkspaceRoot,
+			"dangerously", cfg.HostAccess.HostCommands.Dangerously.Enabled,
+		)
+	}
+
 	mcpServer := mcp.NewServer(dockerClient, cfg.Server.Port, serverOpts...)
 
 	// Start server in a goroutine for non-blocking operation.

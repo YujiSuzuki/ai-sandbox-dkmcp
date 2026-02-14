@@ -131,10 +131,11 @@ security:
   # Basic operation permissions
   # 基本操作の権限設定
   permissions:
-    logs: true      # Allow log retrieval / ログ取得を許可
-    inspect: true   # Allow container inspection / コンテナ検査を許可
-    stats: true     # Allow resource stats / リソース統計を許可
-    exec: true      # Allow exec (subject to whitelist) / exec実行を許可（ホワイトリスト対象）
+    logs: true       # Allow log retrieval / ログ取得を許可
+    inspect: true    # Allow container inspection / コンテナ検査を許可
+    stats: true      # Allow resource stats / リソース統計を許可
+    exec: true       # Allow exec (subject to whitelist) / exec実行を許可（ホワイトリスト対象）
+    lifecycle: false  # Allow container start/stop/restart (Docker API direct) / コンテナの起動/停止/再起動を許可（Docker API直接）
 
   # Blocked file paths configuration
   # ブロックするファイルパスの設定
@@ -430,3 +431,145 @@ cli:
     # （MCPを経由せずに）、カレントコンテナ機能を使用する可能性があり、
     # 予期しない動作につながる可能性があります。そのような場合はfalseに設定してください。
     enabled: true
+
+# Host Access Configuration
+# ホストアクセス設定
+#
+# These settings allow AI assistants to discover and run tools/commands on the host OS
+# through the DockMCP server. This extends DockMCP's capabilities beyond container access.
+#
+# これらの設定により、AIアシスタントがDockMCPサーバー経由でホストOS上のツール/コマンドを
+# 検出・実行できるようになります。DockMCPの機能をコンテナアクセス以外にも拡張します。
+#
+# CLI options:
+#   dkmcp serve --workspace /path/to/workspace    # Set workspace root
+#   dkmcp serve --host-dangerously                # Enable host command dangerous mode
+#
+# CLIオプション:
+#   dkmcp serve --workspace /path/to/workspace    # ワークスペースルートを設定
+#   dkmcp serve --host-dangerously                # ホストコマンド危険モードを有効化
+host_access:
+  # Workspace root directory for host tool/command operations
+  # ホストツール/コマンド操作のワークスペースルートディレクトリ
+  workspace_root: "."
+
+  # Host tools auto-discovery
+  # ホストツール自動発見
+  #
+  # Tools placed in staging directories (in workspace) must be approved
+  # before execution. Use `dkmcp tools sync` or `dkmcp serve --sync`
+  # to review and approve tools interactively.
+  #
+  # ステージングディレクトリ（ワークスペース内）に配置されたツールは、
+  # 実行前に承認が必要です。`dkmcp tools sync`または`dkmcp serve --sync`で
+  # インタラクティブにツールをレビュー・承認します。
+  #
+  # Directory layout:
+  #   ~/.dkmcp/host-tools/
+  #   ├── _common/                 # Shared across all projects
+  #   │   └── shared-tool.sh       # 全プロジェクト共通ツール
+  #   └── <project-id>/            # Per-project approved tools
+  #       ├── .project             # プロジェクトメタデータ
+  #       └── tool.sh              # 承認済みツール
+  #
+  # ディレクトリ構成:
+  #   ~/.dkmcp/host-tools/
+  #   ├── _common/                 # 全プロジェクト共通
+  #   └── <project-id>/            # プロジェクト固有の承認済みツール
+  #
+  host_tools:
+    enabled: true
+
+    # Approved tools directory (outside workspace, not writable by AI)
+    # Tools are organized per-project: <approved_dir>/<project-id>/
+    #
+    # 承認済みツールディレクトリ（ワークスペース外、AIから書き込み不可）
+    # ツールはプロジェクトごとに整理されます: <approved_dir>/<project-id>/
+    approved_dir: "~/.dkmcp/host-tools"
+
+    # Staging directories: where new tools are proposed (in workspace)
+    # Used with `dkmcp serve --sync` or `dkmcp tools sync`
+    #
+    # ステージングディレクトリ: 新しいツールが提案される場所（ワークスペース内）
+    # `dkmcp serve --sync`または`dkmcp tools sync`で使用
+    staging_dirs:
+      - ".sandbox/host-tools"
+
+    # Enable loading tools from _common/ subdirectory of approved_dir
+    # approved_dirの_common/サブディレクトリからのツール読み込みを有効化
+    common: true
+
+    allowed_extensions:
+      - ".sh"
+      - ".go"
+      - ".py"
+    timeout: 60  # seconds / 秒
+
+  # Host CLI command execution
+  # ホストCLIコマンド実行
+  #
+  # Allows whitelisted CLI commands to be executed on the host OS
+  # via the exec_host_command MCP tool.
+  #
+  # ホワイトリストに登録されたCLIコマンドをexec_host_command MCPツール経由で
+  # ホストOS上で実行できるようにします。
+  host_commands:
+    enabled: false
+
+    # Whitelisted commands (base command → allowed argument patterns)
+    # ホワイトリストコマンド（ベースコマンド → 許可された引数パターン）
+    #
+    # Use "*" suffix for prefix matching:
+    #   "diff *" matches "diff HEAD~1", "diff --stat", etc.
+    #
+    # "*"サフィックスでプレフィックスマッチング:
+    #   "diff *" は "diff HEAD~1", "diff --stat" 等にマッチ
+    #
+    # Note: docker/docker-compose commands are NOT needed here.
+    # DockMCP already provides equivalent MCP tools:
+    #   docker ps     → list_containers
+    #   docker logs   → get_logs
+    #   docker stats  → get_stats
+    #   docker inspect → inspect_container
+    #
+    # Similarly, git commands are available inside the AI Sandbox
+    # (workspace is mounted), so they don't need to be here either.
+    #
+    # 注意: docker/docker-compose コマンドはここでは不要です。
+    # DockMCPの既存MCPツールで同等の操作が可能です:
+    #   docker ps     → list_containers
+    #   docker logs   → get_logs
+    #   docker stats  → get_stats
+    #   docker inspect → inspect_container
+    #
+    # 同様に、gitコマンドもAI Sandbox内で利用可能です
+    # （ワークスペースがマウントされているため）。ここに登録する必要はありません。
+    whitelist:
+      "df":
+        - "-h"
+      "free":
+        - "-m"
+      "uptime":
+        - ""
+      "lsof":
+        - "-i *"
+
+    # Deny list (overrides whitelist)
+    # 拒否リスト（ホワイトリストを上書き）
+    # deny:
+    #   "some-command":
+    #     - "dangerous-subcommand *"
+
+    # Dangerous mode commands (requires dangerously=true parameter)
+    # 危険モードコマンド（dangerously=trueパラメータが必要）
+    #
+    # These commands are only allowed when exec_host_command is called with dangerously=true.
+    # Pipes, redirects, and path traversal are always blocked.
+    #
+    # これらのコマンドはexec_host_commandがdangerously=trueで呼ばれた場合のみ許可されます。
+    # パイプ、リダイレクト、パストラバーサルは常にブロックされます。
+    dangerously:
+      enabled: false
+      commands:
+        "kill":
+          - "*"

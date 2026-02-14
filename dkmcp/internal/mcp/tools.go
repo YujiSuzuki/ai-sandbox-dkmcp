@@ -70,6 +70,16 @@ type ToolProperty struct {
 	// Minimum sets the minimum value for numeric parameters
 	// Minimumは数値パラメータの最小値を設定します
 	Minimum *int `json:"minimum,omitempty"`
+
+	// Items defines the schema for array items (only used when Type is "array")
+	// Itemsは配列アイテムのスキーマを定義します（Typeが"array"の場合のみ使用）
+	Items *ToolPropertyItems `json:"items,omitempty"`
+}
+
+// ToolPropertyItems represents the schema for items in an array property.
+// ToolPropertyItemsは配列プロパティ内のアイテムのスキーマを表します。
+type ToolPropertyItems struct {
+	Type string `json:"type"`
 }
 
 // Tool represents an MCP tool that can be invoked by AI assistants.
@@ -388,17 +398,92 @@ func GetTools() []Tool {
 				},
 			},
 		},
+		// Container Lifecycle Operations
+		// コンテナライフサイクル操作
+		//
+		// restart_container: Restarts a container using Docker API directly
+		// restart_container: Docker APIを直接使用してコンテナを再起動
+		{
+			Name:        "restart_container",
+			Description: "Restart a container. Uses Docker API directly (no shell execution). Requires lifecycle permission to be enabled.",
+			InputSchema: ToolInputSchema{
+				Type: "object",
+				Properties: map[string]ToolProperty{
+					"container": {
+						Type:        "string",
+						Description: "Container name or ID",
+					},
+					"timeout": {
+						Type:        "integer",
+						Description: "Timeout in seconds to wait for the container to stop before killing it (default: 10)",
+					},
+				},
+				Required: []string{"container"},
+			},
+		},
+		// stop_container: Stops a running container using Docker API directly
+		// stop_container: Docker APIを直接使用して実行中のコンテナを停止
+		{
+			Name:        "stop_container",
+			Description: "Stop a running container. Uses Docker API directly (no shell execution). Requires lifecycle permission to be enabled.",
+			InputSchema: ToolInputSchema{
+				Type: "object",
+				Properties: map[string]ToolProperty{
+					"container": {
+						Type:        "string",
+						Description: "Container name or ID",
+					},
+					"timeout": {
+						Type:        "integer",
+						Description: "Timeout in seconds to wait for the container to stop before killing it (default: 10)",
+					},
+				},
+				Required: []string{"container"},
+			},
+		},
+		// start_container: Starts a stopped container using Docker API directly
+		// start_container: Docker APIを直接使用して停止中のコンテナを起動
+		{
+			Name:        "start_container",
+			Description: "Start a stopped container. Uses Docker API directly (no shell execution). Requires lifecycle permission to be enabled.",
+			InputSchema: ToolInputSchema{
+				Type: "object",
+				Properties: map[string]ToolProperty{
+					"container": {
+						Type:        "string",
+						Description: "Container name or ID",
+					},
+				},
+				Required: []string{"container"},
+			},
+		},
 	}
 }
 
 // listTools returns the list of available tools wrapped in the MCP response format.
 // This is called when an AI assistant sends a "tools/list" request.
+// It includes host tools and host command tools when they are configured.
 //
 // listToolsは利用可能なツールのリストをMCPレスポンス形式でラップして返します。
 // これはAIアシスタントが"tools/list"リクエストを送信したときに呼び出されます。
+// ホストツールとホストコマンドツールが設定されている場合はそれらも含みます。
 func (s *Server) listTools() (any, error) {
+	tools := GetTools()
+
+	// Append host tools if configured
+	// ホストツールが設定されている場合は追加
+	if s.hostToolsManager != nil && s.hostToolsManager.IsEnabled() {
+		tools = append(tools, GetHostTools()...)
+	}
+
+	// Append host command tools if configured
+	// ホストコマンドツールが設定されている場合は追加
+	if s.hostCommandPolicy != nil {
+		tools = append(tools, GetHostCommandTools()...)
+	}
+
 	return map[string]any{
-		"tools": GetTools(),
+		"tools": tools,
 	}, nil
 }
 
@@ -452,6 +537,26 @@ func (s *Server) callTool(ctx context.Context, params any) (any, error) {
 		return s.toolReadFile(ctx, arguments)
 	case "get_blocked_paths":
 		return s.toolGetBlockedPaths(ctx, arguments)
+	// Container lifecycle operations
+	// コンテナライフサイクル操作
+	case "restart_container":
+		return s.toolRestartContainer(ctx, arguments)
+	case "stop_container":
+		return s.toolStopContainer(ctx, arguments)
+	case "start_container":
+		return s.toolStartContainer(ctx, arguments)
+	// Host tool operations
+	// ホストツール操作
+	case "list_host_tools":
+		return s.toolListHostTools(ctx, arguments)
+	case "get_host_tool_info":
+		return s.toolGetHostToolInfo(ctx, arguments)
+	case "run_host_tool":
+		return s.toolRunHostTool(ctx, arguments)
+	// Host command operations
+	// ホストコマンド操作
+	case "exec_host_command":
+		return s.toolExecHostCommand(ctx, arguments)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
 	}
@@ -1072,6 +1177,92 @@ func (s *Server) toolGetBlockedPaths(ctx context.Context, args map[string]any) (
 	maskedJSON := s.docker.GetPolicy().MaskHostPaths(string(jsonBytes))
 
 	return textResponse(maskedJSON), nil
+}
+
+// toolRestartContainer implements the restart_container tool.
+// It restarts a container using Docker API directly (no shell execution).
+//
+// toolRestartContainerはrestart_containerツールを実装します。
+// Docker APIを直接使用してコンテナを再起動します（シェル実行なし）。
+func (s *Server) toolRestartContainer(ctx context.Context, args map[string]any) (any, error) {
+	container, ok := args["container"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid container parameter")
+	}
+
+	// Check lifecycle permission before executing
+	// 実行前にlifecycleパーミッションをチェック
+	if _, err := s.docker.GetPolicy().CanLifecycle(container); err != nil {
+		return nil, err
+	}
+
+	var timeout *int
+	if t, ok := args["timeout"].(float64); ok {
+		v := int(t)
+		timeout = &v
+	}
+
+	slog.Warn("Restarting container", "container", container)
+	if err := s.docker.RestartContainer(ctx, container, timeout); err != nil {
+		slog.Warn("Container restart failed", "container", container, "error", err.Error())
+		return nil, err
+	}
+
+	return textResponse(fmt.Sprintf("Container '%s' restarted successfully.", container)), nil
+}
+
+// toolStopContainer implements the stop_container tool.
+// It stops a running container using Docker API directly (no shell execution).
+//
+// toolStopContainerはstop_containerツールを実装します。
+// Docker APIを直接使用して実行中のコンテナを停止します（シェル実行なし）。
+func (s *Server) toolStopContainer(ctx context.Context, args map[string]any) (any, error) {
+	container, ok := args["container"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid container parameter")
+	}
+
+	if _, err := s.docker.GetPolicy().CanLifecycle(container); err != nil {
+		return nil, err
+	}
+
+	var timeout *int
+	if t, ok := args["timeout"].(float64); ok {
+		v := int(t)
+		timeout = &v
+	}
+
+	slog.Warn("Stopping container", "container", container)
+	if err := s.docker.StopContainer(ctx, container, timeout); err != nil {
+		slog.Warn("Container stop failed", "container", container, "error", err.Error())
+		return nil, err
+	}
+
+	return textResponse(fmt.Sprintf("Container '%s' stopped successfully.", container)), nil
+}
+
+// toolStartContainer implements the start_container tool.
+// It starts a stopped container using Docker API directly (no shell execution).
+//
+// toolStartContainerはstart_containerツールを実装します。
+// Docker APIを直接使用して停止中のコンテナを起動します（シェル実行なし）。
+func (s *Server) toolStartContainer(ctx context.Context, args map[string]any) (any, error) {
+	container, ok := args["container"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid container parameter")
+	}
+
+	if _, err := s.docker.GetPolicy().CanLifecycle(container); err != nil {
+		return nil, err
+	}
+
+	slog.Warn("Starting container", "container", container)
+	if err := s.docker.StartContainer(ctx, container); err != nil {
+		slog.Warn("Container start failed", "container", container, "error", err.Error())
+		return nil, err
+	}
+
+	return textResponse(fmt.Sprintf("Container '%s' started successfully.", container)), nil
 }
 
 // formatBlockedResponse formats a response for when a path is blocked by security policy.

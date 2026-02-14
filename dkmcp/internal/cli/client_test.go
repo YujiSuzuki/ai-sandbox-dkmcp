@@ -101,7 +101,7 @@ func TestClientURLFlag(t *testing.T) {
 func TestClientSubcommands(t *testing.T) {
 	// Define the list of expected subcommands.
 	// 期待されるサブコマンドのリストを定義します。
-	expectedSubcommands := []string{"list", "logs", "exec", "stats", "inspect"}
+	expectedSubcommands := []string{"list", "logs", "exec", "stats", "inspect", "restart", "stop", "start", "host-tools", "host-exec"}
 
 	// Get all registered subcommands under client.
 	// client配下のすべての登録されたサブコマンドを取得します。
@@ -553,5 +553,95 @@ Some footer text`,
 				t.Errorf("extractJSONFromMarkdown() = %q, want %q", result, tt.expected)
 			}
 		})
+	}
+}
+
+// TestClientLifecycleCommands verifies that lifecycle subcommands are registered with correct flags.
+// TestClientLifecycleCommandsはlifecycleサブコマンドが正しいフラグで登録されていることを確認します。
+func TestClientLifecycleCommands(t *testing.T) {
+	// Restart command
+	if clientRestartCmd == nil {
+		t.Fatal("clientRestartCmd is nil")
+	}
+	if clientRestartCmd.Use != "restart CONTAINER" {
+		t.Errorf("Expected Use 'restart CONTAINER', got %s", clientRestartCmd.Use)
+	}
+	flag := clientRestartCmd.Flags().Lookup("timeout")
+	if flag == nil {
+		t.Fatal("timeout flag not found on clientRestartCmd")
+	}
+	if flag.Value.Type() != "int" {
+		t.Errorf("Expected timeout flag type 'int', got %s", flag.Value.Type())
+	}
+
+	// Stop command
+	if clientStopCmd == nil {
+		t.Fatal("clientStopCmd is nil")
+	}
+	if clientStopCmd.Use != "stop CONTAINER" {
+		t.Errorf("Expected Use 'stop CONTAINER', got %s", clientStopCmd.Use)
+	}
+	flag = clientStopCmd.Flags().Lookup("timeout")
+	if flag == nil {
+		t.Fatal("timeout flag not found on clientStopCmd")
+	}
+
+	// Start command
+	if clientStartCmd == nil {
+		t.Fatal("clientStartCmd is nil")
+	}
+	if clientStartCmd.Use != "start CONTAINER" {
+		t.Errorf("Expected Use 'start CONTAINER', got %s", clientStartCmd.Use)
+	}
+}
+
+// TestClientHostToolsCommands verifies that host-tools subcommands are registered.
+// TestClientHostToolsCommandsはhost-toolsサブコマンドが登録されていることを確認します。
+func TestClientHostToolsCommands(t *testing.T) {
+	if clientHostToolsCmd == nil {
+		t.Fatal("clientHostToolsCmd is nil")
+	}
+	if clientHostToolsCmd.Use != "host-tools" {
+		t.Errorf("Expected Use 'host-tools', got %s", clientHostToolsCmd.Use)
+	}
+
+	// Verify sub-subcommands
+	// サブサブコマンドを確認
+	subCmds := clientHostToolsCmd.Commands()
+	subNames := make(map[string]bool)
+	for _, cmd := range subCmds {
+		use := cmd.Use
+		for i, ch := range use {
+			if ch == ' ' {
+				use = use[:i]
+				break
+			}
+		}
+		subNames[use] = true
+	}
+
+	for _, expected := range []string{"list", "info", "run"} {
+		if !subNames[expected] {
+			t.Errorf("Missing host-tools subcommand: %s", expected)
+		}
+	}
+}
+
+// TestClientHostExecCommand verifies that host-exec command is registered with correct flags.
+// TestClientHostExecCommandはhost-execコマンドが正しいフラグで登録されていることを確認します。
+func TestClientHostExecCommand(t *testing.T) {
+	if clientHostExecCmd == nil {
+		t.Fatal("clientHostExecCmd is nil")
+	}
+	if clientHostExecCmd.Use != "host-exec COMMAND" {
+		t.Errorf("Expected Use 'host-exec COMMAND', got %s", clientHostExecCmd.Use)
+	}
+
+	flag := clientHostExecCmd.Flags().Lookup("dangerously")
+	if flag == nil {
+		t.Fatal("dangerously flag not found on clientHostExecCmd")
+	}
+	if flag.DefValue != "false" {
+		t.Errorf("Expected dangerously default 'false', got %s", flag.DefValue)
 	}
 }

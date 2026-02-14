@@ -799,6 +799,30 @@ func TestHostAccessConfig_Validation(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "host_commands requires workspace_root",
+			modify: func(cfg *Config) {
+				cfg.HostAccess.HostCommands.Enabled = true
+				cfg.HostAccess.WorkspaceRoot = ""
+			},
+			wantErr: true,
+		},
+		{
+			name: "host_commands with workspace_root is valid",
+			modify: func(cfg *Config) {
+				cfg.HostAccess.HostCommands.Enabled = true
+				cfg.HostAccess.WorkspaceRoot = "/workspace"
+			},
+			wantErr: false,
+		},
+		{
+			name: "disabled host_commands skips workspace_root check",
+			modify: func(cfg *Config) {
+				cfg.HostAccess.HostCommands.Enabled = false
+				cfg.HostAccess.WorkspaceRoot = "" // empty but ignored when disabled
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

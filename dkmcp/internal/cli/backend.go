@@ -388,6 +388,134 @@ func (b *HTTPBackend) InspectContainer(ctx context.Context, container string) (s
 	return resp.Content[0].Text, nil
 }
 
+// ListHostTools lists available host tools via the MCP 'list_host_tools' tool.
+// Returns the raw text response from the server.
+//
+// ListHostToolsはMCPの'list_host_tools'ツール経由で利用可能なホストツールを一覧表示します。
+// サーバーからのテキストレスポンスを返します。
+func (b *HTTPBackend) ListHostTools(ctx context.Context) (string, error) {
+	resp, err := b.client.CallTool("list_host_tools", map[string]interface{}{})
+	if err != nil {
+		return "", fmt.Errorf("failed to list host tools: %w", err)
+	}
+	if len(resp.Content) == 0 {
+		return "", nil
+	}
+	return resp.Content[0].Text, nil
+}
+
+// GetHostToolInfo retrieves detailed info about a host tool via the MCP 'get_host_tool_info' tool.
+// Returns the raw text response from the server.
+//
+// GetHostToolInfoはMCPの'get_host_tool_info'ツール経由でホストツールの詳細情報を取得します。
+// サーバーからのテキストレスポンスを返します。
+func (b *HTTPBackend) GetHostToolInfo(ctx context.Context, name string) (string, error) {
+	arguments := map[string]interface{}{
+		"name": name,
+	}
+	resp, err := b.client.CallTool("get_host_tool_info", arguments)
+	if err != nil {
+		return "", fmt.Errorf("failed to get host tool info: %w", err)
+	}
+	if len(resp.Content) == 0 {
+		return "", nil
+	}
+	return resp.Content[0].Text, nil
+}
+
+// RunHostTool executes a host tool via the MCP 'run_host_tool' tool.
+// Returns the raw text response from the server.
+//
+// RunHostToolはMCPの'run_host_tool'ツール経由でホストツールを実行します。
+// サーバーからのテキストレスポンスを返します。
+func (b *HTTPBackend) RunHostTool(ctx context.Context, name string, args []string) (string, error) {
+	arguments := map[string]interface{}{
+		"name": name,
+	}
+	if len(args) > 0 {
+		arguments["args"] = args
+	}
+	resp, err := b.client.CallTool("run_host_tool", arguments)
+	if err != nil {
+		return "", fmt.Errorf("failed to run host tool: %w", err)
+	}
+	if len(resp.Content) == 0 {
+		return "", nil
+	}
+	return resp.Content[0].Text, nil
+}
+
+// ExecHostCommand executes a host CLI command via the MCP 'exec_host_command' tool.
+// Returns the raw text response from the server.
+//
+// ExecHostCommandはMCPの'exec_host_command'ツール経由でホストCLIコマンドを実行します。
+// サーバーからのテキストレスポンスを返します。
+func (b *HTTPBackend) ExecHostCommand(ctx context.Context, command string, dangerously bool) (string, error) {
+	arguments := map[string]interface{}{
+		"command":     command,
+		"dangerously": dangerously,
+	}
+	resp, err := b.client.CallTool("exec_host_command", arguments)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute host command: %w", err)
+	}
+	if len(resp.Content) == 0 {
+		return "", nil
+	}
+	return resp.Content[0].Text, nil
+}
+
+// RestartContainer restarts a container via the MCP 'restart_container' tool.
+//
+// RestartContainerはMCPの'restart_container'ツール経由でコンテナを再起動します。
+func (b *HTTPBackend) RestartContainer(ctx context.Context, container string, timeout *int) (string, error) {
+	arguments := map[string]interface{}{"container": container}
+	if timeout != nil {
+		arguments["timeout"] = *timeout
+	}
+	resp, err := b.client.CallTool("restart_container", arguments)
+	if err != nil {
+		return "", fmt.Errorf("failed to restart container: %w", err)
+	}
+	if len(resp.Content) == 0 {
+		return "", nil
+	}
+	return resp.Content[0].Text, nil
+}
+
+// StopContainer stops a container via the MCP 'stop_container' tool.
+//
+// StopContainerはMCPの'stop_container'ツール経由でコンテナを停止します。
+func (b *HTTPBackend) StopContainer(ctx context.Context, container string, timeout *int) (string, error) {
+	arguments := map[string]interface{}{"container": container}
+	if timeout != nil {
+		arguments["timeout"] = *timeout
+	}
+	resp, err := b.client.CallTool("stop_container", arguments)
+	if err != nil {
+		return "", fmt.Errorf("failed to stop container: %w", err)
+	}
+	if len(resp.Content) == 0 {
+		return "", nil
+	}
+	return resp.Content[0].Text, nil
+}
+
+// StartContainer starts a container via the MCP 'start_container' tool.
+//
+// StartContainerはMCPの'start_container'ツール経由でコンテナを起動します。
+func (b *HTTPBackend) StartContainer(ctx context.Context, container string) (string, error) {
+	arguments := map[string]interface{}{"container": container}
+	resp, err := b.client.CallTool("start_container", arguments)
+	if err != nil {
+		return "", fmt.Errorf("failed to start container: %w", err)
+	}
+	if len(resp.Content) == 0 {
+		return "", nil
+	}
+	return resp.Content[0].Text, nil
+}
+
 // parseJSON is a helper function to parse JSON string into a Go value.
 // It wraps json.Unmarshal for convenience.
 //

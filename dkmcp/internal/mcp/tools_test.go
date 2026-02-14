@@ -91,7 +91,7 @@ func TestGetTools(t *testing.T) {
 
 	// Verify the total number of tools
 	// ツールの総数を検証
-	expectedToolCount := 11
+	expectedToolCount := 14
 	if len(tools) != expectedToolCount {
 		t.Errorf("GetTools() returned %d tools, want %d", len(tools), expectedToolCount)
 	}
@@ -110,6 +110,9 @@ func TestGetTools(t *testing.T) {
 		"list_files":           false,
 		"read_file":            false,
 		"get_blocked_paths":    false,
+		"restart_container":    false,
+		"stop_container":       false,
+		"start_container":      false,
 	}
 
 	// Mark each found tool as present
