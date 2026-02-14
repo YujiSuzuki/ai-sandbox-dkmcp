@@ -368,6 +368,29 @@ However, I can still help develop because:
 - I can run tests via DockMCP
 - The actual containers have full access to secrets"
 
+#### 6. Committing changes
+
+Use `commit-msg.sh` to draft a commit message collaboratively with the user:
+
+```
+.sandbox/scripts/commit-msg.sh
+```
+
+This generates a draft from `git diff --staged`, which you and the user can refine together before committing. It keeps the commit message style consistent with the project's existing commits.
+
+Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
+
+#### 7. Creating a release
+
+Use `release.sh` to generate release notes and publish:
+
+```
+.sandbox/scripts/release.sh v0.5.0          # Generate draft
+.sandbox/scripts/release.sh --prev           # Check previous release tone
+# Refine ReleaseNotes-draft.md together
+.sandbox/scripts/release.sh v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
+```
+
 ### Updating This Template
 
 When a user asks you to update to the latest version, or when you detect an update is available, follow this procedure:
@@ -1144,6 +1167,9 @@ Edit `dkmcp.yaml`:
 - **`.claude/settings.json`** — Replace demo deny patterns with user's secret file patterns
 - **`.aiexclude` / `.geminiignore`** — Update secret patterns for Gemini
 - **`CLAUDE.md`** — Rewrite project-specific sections (Project Structure, Common Tasks examples), remove SecureNote demo references
+  - Ask the user about `commit-msg.sh` / `release.sh` (Common Tasks §6, §7):
+    1. Keep or remove? — These scripts follow a "draft → refine with AI → finalize" workflow. The user may prefer their own commit/release workflow.
+    2. If keeping, customize? — The current scripts reflect the template author's preferences (e.g., draft-refine cycle, specific output format). Ask if the user wants to adjust them to fit their project's conventions.
 - **`GEMINI.md`** — Same updates in shorter format
 
 #### Step 6: Run validation
