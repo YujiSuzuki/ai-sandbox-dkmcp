@@ -598,6 +598,27 @@ test_shutdown_timing() {
     fi
 }
 
+# Check if running inside a container (abort if so)
+# コンテナ内で実行されているかチェック（コンテナ内なら中止）
+check_host_os() {
+    if [ -f "/.dockerenv" ] || [ -n "${SANDBOX_ENV:-}" ]; then
+        echo -e "${RED}Error: This script must be run on the host OS, not inside a container.${NC}"
+        echo -e "${RED}エラー: このスクリプトはホストOS上で実行してください（コンテナ内では実行できません）。${NC}"
+        exit 1
+    fi
+}
+
+# Confirm before running tests
+# テスト実行前の確認
+confirm_run() {
+    read -p "Run tests? / テストを実行しますか？ [y/N] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Cancelled. / キャンセルしました。"
+        exit 0
+    fi
+}
+
 # Show pre-run information (impact, risk, recovery)
 # 実行前情報の表示（影響範囲、リスク、対処法）
 show_prerun_info() {
@@ -677,7 +698,9 @@ main() {
     echo "╚═══════════════════════════════════════════════╝"
     echo -e "${NC}"
 
+    check_host_os
     show_prerun_info
+    confirm_run
 
     build_dkmcp
     create_test_config
