@@ -441,4 +441,374 @@ security:
 	if !cfg.Security.Permissions.Stats {
 		t.Error("Security.Permissions.Stats should default to true")
 	}
+	if cfg.Security.Permissions.Lifecycle {
+		t.Error("Security.Permissions.Lifecycle should default to false")
+	}
+}
+
+// TestLoad_LifecyclePermission tests that lifecycle permission is correctly parsed.
+// Verifies both explicit true and default false behavior.
+//
+// TestLoad_LifecyclePermissionはlifecycleパーミッションが正しく解析されることをテストします。
+// 明示的なtrueとデフォルトのfalseの両方の動作を確認します。
+func TestLoad_LifecyclePermission(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Test 1: lifecycle: true is parsed correctly
+	configFile := filepath.Join(tmpDir, "lifecycle-true.yaml")
+	configContent := `
+security:
+  mode: "moderate"
+  permissions:
+    logs: true
+    inspect: true
+    stats: true
+    exec: true
+    lifecycle: true
+`
+	err := os.WriteFile(configFile, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test config file: %v", err)
+	}
+
+	cfg, err := Load(configFile)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.Security.Permissions.Lifecycle {
+		t.Error("Security.Permissions.Lifecycle should be true when set to true")
+	}
+
+	// Test 2: lifecycle defaults to false when omitted
+	configFile2 := filepath.Join(tmpDir, "lifecycle-default.yaml")
+	configContent2 := `
+security:
+  mode: "moderate"
+  permissions:
+    logs: true
+    exec: true
+`
+	err = os.WriteFile(configFile2, []byte(configContent2), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test config file: %v", err)
+	}
+
+	cfg2, err := Load(configFile2)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg2.Security.Permissions.Lifecycle {
+		t.Error("Security.Permissions.Lifecycle should default to false when omitted")
+	}
+}
+
+// TestHostAccessConfig_Defaults tests that HostAccessConfig has correct default values.
+// Both host_tools and host_commands should be disabled by default.
+//
+// TestHostAccessConfig_DefaultsはHostAccessConfigが正しいデフォルト値を持つことをテストします。
+// host_toolsとhost_commandsの両方がデフォルトで無効であるべきです。
+func TestHostAccessConfig_Defaults(t *testing.T) {
+	cfg := NewDefaultConfig()
+
+	// HostAccess should exist with empty workspace_root
+	// HostAccessは空のworkspace_rootで存在するべき
+	if cfg.HostAccess.WorkspaceRoot != "" {
+		t.Errorf("HostAccess.WorkspaceRoot = %q, want empty", cfg.HostAccess.WorkspaceRoot)
+	}
+
+	// HostTools should be disabled by default
+	// HostToolsはデフォルトで無効であるべき
+	if cfg.HostAccess.HostTools.Enabled {
+		t.Error("HostAccess.HostTools.Enabled should be false by default")
+	}
+	// Default directories (legacy)
+	if len(cfg.HostAccess.HostTools.Directories) != 1 || cfg.HostAccess.HostTools.Directories[0] != ".sandbox/host-tools" {
+		t.Errorf("HostAccess.HostTools.Directories = %v, want [\".sandbox/host-tools\"]", cfg.HostAccess.HostTools.Directories)
+	}
+	// Default staging dirs
+	if len(cfg.HostAccess.HostTools.StagingDirs) != 1 || cfg.HostAccess.HostTools.StagingDirs[0] != ".sandbox/host-tools" {
+		t.Errorf("HostAccess.HostTools.StagingDirs = %v, want [\".sandbox/host-tools\"]", cfg.HostAccess.HostTools.StagingDirs)
+	}
+	// ApprovedDir should be empty by default
+	if cfg.HostAccess.HostTools.ApprovedDir != "" {
+		t.Errorf("HostAccess.HostTools.ApprovedDir = %q, want empty", cfg.HostAccess.HostTools.ApprovedDir)
+	}
+	// Common should be true by default
+	if !cfg.HostAccess.HostTools.Common {
+		t.Error("HostAccess.HostTools.Common should be true by default")
+	}
+	// IsSecureMode should be false by default (no approved_dir)
+	if cfg.HostAccess.HostTools.IsSecureMode() {
+		t.Error("HostAccess.HostTools.IsSecureMode() should be false by default")
+	}
+	// Default allowed extensions
+	expectedExts := []string{".sh", ".go", ".py"}
+	if len(cfg.HostAccess.HostTools.AllowedExtensions) != len(expectedExts) {
+		t.Errorf("HostAccess.HostTools.AllowedExtensions length = %d, want %d",
+			len(cfg.HostAccess.HostTools.AllowedExtensions), len(expectedExts))
+	}
+	// Default timeout
+	if cfg.HostAccess.HostTools.Timeout != 60 {
+		t.Errorf("HostAccess.HostTools.Timeout = %d, want 60", cfg.HostAccess.HostTools.Timeout)
+	}
+
+	// HostCommands should be disabled by default
+	// HostCommandsはデフォルトで無効であるべき
+	if cfg.HostAccess.HostCommands.Enabled {
+		t.Error("HostAccess.HostCommands.Enabled should be false by default")
+	}
+	if cfg.HostAccess.HostCommands.Whitelist == nil {
+		t.Error("HostAccess.HostCommands.Whitelist should be initialized (empty map)")
+	}
+	if cfg.HostAccess.HostCommands.Deny == nil {
+		t.Error("HostAccess.HostCommands.Deny should be initialized (empty map)")
+	}
+	if cfg.HostAccess.HostCommands.Dangerously.Enabled {
+		t.Error("HostAccess.HostCommands.Dangerously.Enabled should be false by default")
+	}
+	if cfg.HostAccess.HostCommands.Dangerously.Commands == nil {
+		t.Error("HostAccess.HostCommands.Dangerously.Commands should be initialized (empty map)")
+	}
+}
+
+// TestHostAccessConfig_ParseYAML tests that HostAccessConfig is correctly parsed from YAML.
+//
+// TestHostAccessConfig_ParseYAMLはHostAccessConfigがYAMLから正しく解析されることをテストします。
+func TestHostAccessConfig_ParseYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "dkmcp.yaml")
+
+	configContent := `
+server:
+  port: 8080
+
+security:
+  mode: "moderate"
+
+logging:
+  level: "info"
+
+host_access:
+  workspace_root: "/home/user/project"
+
+  host_tools:
+    enabled: true
+    directories:
+      - ".sandbox/host-tools"
+      - "tools"
+    allowed_extensions:
+      - ".sh"
+      - ".go"
+    timeout: 120
+
+  host_commands:
+    enabled: true
+    allowed_containers: ["securenote-*", "demo-*"]
+    allowed_projects: ["demo-apps"]
+    whitelist:
+      "docker":
+        - "ps"
+        - "logs *"
+      "git":
+        - "status"
+        - "diff *"
+    deny:
+      "docker":
+        - "rm *"
+        - "rmi *"
+    dangerously:
+      enabled: true
+      commands:
+        "docker":
+          - "restart"
+          - "stop"
+        "git":
+          - "checkout"
+`
+
+	err := os.WriteFile(configFile, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test config file: %v", err)
+	}
+
+	cfg, err := Load(configFile)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Verify workspace_root
+	if cfg.HostAccess.WorkspaceRoot != "/home/user/project" {
+		t.Errorf("HostAccess.WorkspaceRoot = %q, want \"/home/user/project\"", cfg.HostAccess.WorkspaceRoot)
+	}
+
+	// Verify host_tools
+	if !cfg.HostAccess.HostTools.Enabled {
+		t.Error("HostAccess.HostTools.Enabled should be true")
+	}
+	if len(cfg.HostAccess.HostTools.Directories) != 2 {
+		t.Errorf("HostAccess.HostTools.Directories length = %d, want 2", len(cfg.HostAccess.HostTools.Directories))
+	}
+	if len(cfg.HostAccess.HostTools.AllowedExtensions) != 2 {
+		t.Errorf("HostAccess.HostTools.AllowedExtensions length = %d, want 2", len(cfg.HostAccess.HostTools.AllowedExtensions))
+	}
+	if cfg.HostAccess.HostTools.Timeout != 120 {
+		t.Errorf("HostAccess.HostTools.Timeout = %d, want 120", cfg.HostAccess.HostTools.Timeout)
+	}
+	// Legacy mode: no approved_dir set
+	if cfg.HostAccess.HostTools.IsSecureMode() {
+		t.Error("HostAccess.HostTools.IsSecureMode() should be false when approved_dir is not set")
+	}
+
+	// Verify host_commands
+	if !cfg.HostAccess.HostCommands.Enabled {
+		t.Error("HostAccess.HostCommands.Enabled should be true")
+	}
+	if len(cfg.HostAccess.HostCommands.AllowedContainers) != 2 {
+		t.Errorf("HostAccess.HostCommands.AllowedContainers length = %d, want 2", len(cfg.HostAccess.HostCommands.AllowedContainers))
+	}
+	if len(cfg.HostAccess.HostCommands.AllowedProjects) != 1 {
+		t.Errorf("HostAccess.HostCommands.AllowedProjects length = %d, want 1", len(cfg.HostAccess.HostCommands.AllowedProjects))
+	}
+
+	// Verify whitelist
+	dockerWhitelist := cfg.HostAccess.HostCommands.Whitelist["docker"]
+	if len(dockerWhitelist) != 2 {
+		t.Errorf("docker whitelist length = %d, want 2", len(dockerWhitelist))
+	}
+	gitWhitelist := cfg.HostAccess.HostCommands.Whitelist["git"]
+	if len(gitWhitelist) != 2 {
+		t.Errorf("git whitelist length = %d, want 2", len(gitWhitelist))
+	}
+
+	// Verify deny
+	dockerDeny := cfg.HostAccess.HostCommands.Deny["docker"]
+	if len(dockerDeny) != 2 {
+		t.Errorf("docker deny length = %d, want 2", len(dockerDeny))
+	}
+
+	// Verify dangerously
+	if !cfg.HostAccess.HostCommands.Dangerously.Enabled {
+		t.Error("HostAccess.HostCommands.Dangerously.Enabled should be true")
+	}
+	dockerDangerous := cfg.HostAccess.HostCommands.Dangerously.Commands["docker"]
+	if len(dockerDangerous) != 2 {
+		t.Errorf("docker dangerous commands length = %d, want 2", len(dockerDangerous))
+	}
+	gitDangerous := cfg.HostAccess.HostCommands.Dangerously.Commands["git"]
+	if len(gitDangerous) != 1 {
+		t.Errorf("git dangerous commands length = %d, want 1", len(gitDangerous))
+	}
+}
+
+// TestHostToolsConfig_SecureMode tests parsing of secure mode configuration.
+//
+// TestHostToolsConfig_SecureModeはセキュアモード設定の解析をテストします。
+func TestHostToolsConfig_SecureMode(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "dkmcp.yaml")
+
+	configContent := `
+server:
+  port: 8080
+
+security:
+  mode: "moderate"
+
+logging:
+  level: "info"
+
+host_access:
+  workspace_root: "/home/user/project"
+
+  host_tools:
+    enabled: true
+    approved_dir: "~/.dkmcp/host-tools"
+    staging_dirs:
+      - ".sandbox/host-tools"
+      - "tools"
+    common: true
+    allowed_extensions:
+      - ".sh"
+    timeout: 30
+`
+
+	err := os.WriteFile(configFile, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test config file: %v", err)
+	}
+
+	cfg, err := Load(configFile)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if !cfg.HostAccess.HostTools.IsSecureMode() {
+		t.Error("HostAccess.HostTools.IsSecureMode() should be true when approved_dir is set")
+	}
+	if cfg.HostAccess.HostTools.ApprovedDir != "~/.dkmcp/host-tools" {
+		t.Errorf("ApprovedDir = %q, want \"~/.dkmcp/host-tools\"", cfg.HostAccess.HostTools.ApprovedDir)
+	}
+	if len(cfg.HostAccess.HostTools.StagingDirs) != 2 {
+		t.Errorf("StagingDirs length = %d, want 2", len(cfg.HostAccess.HostTools.StagingDirs))
+	}
+	if !cfg.HostAccess.HostTools.Common {
+		t.Error("Common should be true")
+	}
+}
+
+// TestHostAccessConfig_Validation tests validation of HostAccessConfig.
+// Ensures invalid values like negative timeouts are rejected.
+//
+// TestHostAccessConfig_ValidationはHostAccessConfigの検証をテストします。
+// 負のタイムアウトのような無効な値が拒否されることを確認します。
+func TestHostAccessConfig_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		modify  func(cfg *Config)
+		wantErr bool
+	}{
+		{
+			name: "valid host_tools config",
+			modify: func(cfg *Config) {
+				cfg.HostAccess.HostTools.Enabled = true
+				cfg.HostAccess.HostTools.Timeout = 30
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative timeout rejected",
+			modify: func(cfg *Config) {
+				cfg.HostAccess.HostTools.Enabled = true
+				cfg.HostAccess.HostTools.Timeout = -1
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero timeout rejected",
+			modify: func(cfg *Config) {
+				cfg.HostAccess.HostTools.Enabled = true
+				cfg.HostAccess.HostTools.Timeout = 0
+			},
+			wantErr: true,
+		},
+		{
+			name: "disabled host_tools skips validation",
+			modify: func(cfg *Config) {
+				cfg.HostAccess.HostTools.Enabled = false
+				cfg.HostAccess.HostTools.Timeout = -1 // invalid but ignored when disabled
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewDefaultConfig()
+			tt.modify(cfg)
+			err := cfg.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

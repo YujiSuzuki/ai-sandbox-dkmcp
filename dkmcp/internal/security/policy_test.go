@@ -372,6 +372,103 @@ func TestCanStats_Permission(t *testing.T) {
 	}
 }
 
+// TestCanLifecycle_Permission tests the lifecycle permission check.
+// Lifecycle is a write operation that uses Docker API directly.
+// It should be denied in strict mode and when permission is disabled.
+//
+// TestCanLifecycle_Permissionはlifecycleパーミッションチェックをテストします。
+// LifecycleはDocker APIを直接使用する書き込み操作です。
+// strictモードおよびパーミッション無効時は拒否されるべきです。
+func TestCanLifecycle_Permission(t *testing.T) {
+	tests := []struct {
+		name      string
+		mode      string
+		lifecycle bool
+		container string
+		allowed   []string
+		want      bool
+		wantErr   bool
+	}{
+		{
+			name:      "enabled in moderate mode with accessible container",
+			mode:      "moderate",
+			lifecycle: true,
+			container: "demo-app",
+			allowed:   []string{"demo-app"},
+			want:      true,
+			wantErr:   false,
+		},
+		{
+			name:      "disabled permission",
+			mode:      "moderate",
+			lifecycle: false,
+			container: "demo-app",
+			allowed:   []string{"demo-app"},
+			want:      false,
+			wantErr:   true,
+		},
+		{
+			name:      "denied in strict mode even with permission",
+			mode:      "strict",
+			lifecycle: true,
+			container: "demo-app",
+			allowed:   []string{"demo-app"},
+			want:      false,
+			wantErr:   true,
+		},
+		{
+			name:      "container not in allowed list",
+			mode:      "moderate",
+			lifecycle: true,
+			container: "unknown-app",
+			allowed:   []string{"demo-app"},
+			want:      false,
+			wantErr:   true,
+		},
+		{
+			name:      "enabled in permissive mode",
+			mode:      "permissive",
+			lifecycle: true,
+			container: "demo-app",
+			allowed:   []string{"demo-*"},
+			want:      true,
+			wantErr:   false,
+		},
+		{
+			name:      "wildcard container match",
+			mode:      "moderate",
+			lifecycle: true,
+			container: "demo-web",
+			allowed:   []string{"demo-*"},
+			want:      true,
+			wantErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.SecurityConfig{
+				Mode:              tt.mode,
+				AllowedContainers: tt.allowed,
+				Permissions: config.SecurityPermissions{
+					Lifecycle: tt.lifecycle,
+				},
+			}
+
+			policy := NewPolicy(cfg)
+
+			got, err := policy.CanLifecycle(tt.container)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CanLifecycle() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("CanLifecycle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestIsCommandWhitelisted tests the internal whitelist matching logic.
 // Verifies exact matches, wildcard patterns, and container-specific vs global whitelists.
 //
@@ -753,6 +850,11 @@ func TestCanExecDangerously_Enabled(t *testing.T) {
 		{"blocked path absolute", "demo-app", "cat /secrets/key.pem", false, true},
 		{"pipe not allowed", "demo-app", "cat /etc/passwd | grep root", false, true},
 		{"redirect not allowed", "demo-app", "tail /var/log/app.log > /tmp/out", false, true},
+		{"semicolon not allowed", "demo-app", "cat /etc/config; rm -rf /", false, true},
+		{"ampersand not allowed", "demo-app", "cat /etc/config & echo done", false, true},
+		{"command substitution $() not allowed", "demo-app", "cat $(cat /etc/passwd)", false, true},
+		{"command substitution backtick not allowed", "demo-app", "cat `cat /etc/passwd`", false, true},
+		{"newline injection not allowed", "demo-app", "cat /etc/config\nrm -rf /", false, true},
 		{"path traversal", "demo-app", "cat ../secrets/key", false, true},
 		{"empty command", "demo-app", "", false, true},
 	}

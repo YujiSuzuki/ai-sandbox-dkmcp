@@ -61,6 +61,23 @@ type DockerClientInterface interface {
 	// InspectContainerはコンテナの詳細情報を取得します。
 	InspectContainer(ctx context.Context, containerName string) (*types.ContainerJSON, error)
 
+	// Container Lifecycle Operations
+	// コンテナライフサイクル操作
+
+	// RestartContainer restarts a container using Docker API directly.
+	// timeout is optional (nil = Docker default 10s).
+	// RestartContainerはDocker APIを直接使用してコンテナを再起動します。
+	RestartContainer(ctx context.Context, containerName string, timeout *int) error
+
+	// StopContainer stops a running container using Docker API directly.
+	// timeout is optional (nil = Docker default 10s).
+	// StopContainerはDocker APIを直接使用して実行中のコンテナを停止します。
+	StopContainer(ctx context.Context, containerName string, timeout *int) error
+
+	// StartContainer starts a stopped container using Docker API directly.
+	// StartContainerはDocker APIを直接使用して停止中のコンテナを起動します。
+	StartContainer(ctx context.Context, containerName string) error
+
 	// File Operations
 	// ファイル操作
 

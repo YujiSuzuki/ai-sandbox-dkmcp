@@ -498,6 +498,42 @@ func (c *Client) InspectContainer(ctx context.Context, containerName string) (*t
 	return &info, nil
 }
 
+// RestartContainer restarts a container using Docker API directly.
+// Checks lifecycle permission before executing.
+//
+// RestartContainerはDocker APIを直接使用してコンテナを再起動します。
+// 実行前にlifecycleパーミッションをチェックします。
+func (c *Client) RestartContainer(ctx context.Context, containerName string, timeout *int) error {
+	if _, err := c.policy.CanLifecycle(containerName); err != nil {
+		return err
+	}
+	return c.docker.ContainerRestart(ctx, containerName, container.StopOptions{Timeout: timeout})
+}
+
+// StopContainer stops a running container using Docker API directly.
+// Checks lifecycle permission before executing.
+//
+// StopContainerはDocker APIを直接使用して実行中のコンテナを停止します。
+// 実行前にlifecycleパーミッションをチェックします。
+func (c *Client) StopContainer(ctx context.Context, containerName string, timeout *int) error {
+	if _, err := c.policy.CanLifecycle(containerName); err != nil {
+		return err
+	}
+	return c.docker.ContainerStop(ctx, containerName, container.StopOptions{Timeout: timeout})
+}
+
+// StartContainer starts a stopped container using Docker API directly.
+// Checks lifecycle permission before executing.
+//
+// StartContainerはDocker APIを直接使用して停止中のコンテナを起動します。
+// 実行前にlifecycleパーミッションをチェックします。
+func (c *Client) StartContainer(ctx context.Context, containerName string) error {
+	if _, err := c.policy.CanLifecycle(containerName); err != nil {
+		return err
+	}
+	return c.docker.ContainerStart(ctx, containerName, container.StartOptions{})
+}
+
 // GetAllowedCommands returns the list of commands that are whitelisted
 // for execution in the specified container.
 //

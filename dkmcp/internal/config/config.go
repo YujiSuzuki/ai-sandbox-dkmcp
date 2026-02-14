@@ -45,6 +45,10 @@ type Config struct {
 	// CLI contains CLI-specific settings for human convenience features
 	// CLIはユーザーの利便性のためのCLI固有の設定を含みます
 	CLI CLIConfig `yaml:"cli"`
+
+	// HostAccess contains settings for host OS access features (tools and commands).
+	// HostAccessはホストOSアクセス機能（ツールとコマンド）の設定を含みます。
+	HostAccess HostAccessConfig `yaml:"host_access"`
 }
 
 // ServerConfig holds server-related configuration.
@@ -381,6 +385,17 @@ type SecurityPermissions struct {
 	// Execはexec_commandツールによるコンテナ内でのコマンド実行を許可します。
 	// 有効な場合でも、ホワイトリストに登録されたコマンドのみが許可されます。
 	Exec bool `yaml:"exec"`
+
+	// Lifecycle allows starting, stopping, and restarting containers via
+	// start_container, stop_container, and restart_container tools.
+	// Uses Docker API directly (no shell execution) for zero injection risk.
+	// Default: false (safe by default - only read operations allowed).
+	//
+	// Lifecycleはstart_container、stop_container、restart_containerツールによる
+	// コンテナの起動、停止、再起動を許可します。
+	// Docker APIを直接使用（シェル実行なし）するため、インジェクションリスクはゼロです。
+	// デフォルト: false（安全なデフォルト - 読み取り操作のみ許可）。
+	Lifecycle bool `yaml:"lifecycle"`
 }
 
 // LoggingConfig holds logging configuration.
@@ -510,6 +525,162 @@ type CurrentContainerConfig struct {
 	Enabled bool `yaml:"enabled"`
 }
 
+// HostAccessConfig contains settings for host OS access features.
+// This allows AI assistants to execute tools and commands on the host OS
+// through DockMCP, with security controls.
+//
+// HostAccessConfigはホストOSアクセス機能の設定を含みます。
+// これによりAIアシスタントがDockMCPを通じてホストOS上のツールやコマンドを
+// セキュリティ制御付きで実行できるようになります。
+type HostAccessConfig struct {
+	// WorkspaceRoot is the host-side workspace root directory.
+	// Used as the working directory for host commands and tool discovery base.
+	// Can be overridden by the --workspace CLI flag.
+	//
+	// WorkspaceRootはホスト側のワークスペースルートディレクトリです。
+	// ホストコマンドの作業ディレクトリおよびツール検出の基点として使用されます。
+	// --workspace CLIフラグで上書きできます。
+	WorkspaceRoot string `yaml:"workspace_root"`
+
+	// HostTools configures auto-discovery and execution of host-side tools.
+	// HostToolsはホスト側ツールの自動検出と実行を設定します。
+	HostTools HostToolsConfig `yaml:"host_tools"`
+
+	// HostCommands configures whitelisted host CLI command execution.
+	// HostCommandsはホワイトリスト方式のホストCLIコマンド実行を設定します。
+	HostCommands HostCommandsConfig `yaml:"host_commands"`
+}
+
+// HostToolsConfig configures auto-discovery and execution of host-side tools.
+// Tools are scripts or programs placed in specific directories that are
+// automatically discovered and exposed as MCP tools.
+//
+// Two modes are supported:
+//   - Legacy mode: Tools are executed directly from Directories (when ApprovedDir is empty)
+//   - Secure mode: Tools must be approved (synced) to ApprovedDir before execution
+//
+// HostToolsConfigはホスト側ツールの自動検出と実行を設定します。
+// ツールは特定のディレクトリに配置されたスクリプトやプログラムで、
+// 自動的に検出されMCPツールとして公開されます。
+//
+// 2つのモードをサポートします:
+//   - レガシーモード: Directoriesから直接ツールを実行（ApprovedDirが空の場合）
+//   - セキュアモード: 実行前にツールをApprovedDirに承認（同期）する必要があります
+type HostToolsConfig struct {
+	// Enabled activates the host tools feature.
+	// Enabledはホストツール機能を有効化します。
+	Enabled bool `yaml:"enabled"`
+
+	// Directories lists directories to scan for tools (relative to workspace_root).
+	// In legacy mode (ApprovedDir empty): tools are executed directly from these directories.
+	// In secure mode (ApprovedDir set): this field is ignored (use StagingDirs instead).
+	//
+	// Directoriesはツールをスキャンするディレクトリのリストです（workspace_rootからの相対パス）。
+	// レガシーモード（ApprovedDir空）: これらのディレクトリから直接ツールを実行します。
+	// セキュアモード（ApprovedDir設定済み）: このフィールドは無視されます（代わりにStagingDirsを使用）。
+	Directories []string `yaml:"directories"`
+
+	// ApprovedDir is the directory where approved tools are stored.
+	// When set, enables secure mode: only tools in this directory are executed.
+	// Supports ~ for home directory (e.g., "~/.dkmcp/host-tools").
+	// Tools are organized per-project: <approved_dir>/<project-id>/
+	//
+	// ApprovedDirは承認済みツールが格納されるディレクトリです。
+	// 設定すると、セキュアモードが有効になります: このディレクトリ内のツールのみ実行されます。
+	// ホームディレクトリの~をサポートします（例: "~/.dkmcp/host-tools"）。
+	// ツールはプロジェクトごとに整理されます: <approved_dir>/<project-id>/
+	ApprovedDir string `yaml:"approved_dir"`
+
+	// StagingDirs lists directories where new tools are proposed (relative to workspace_root).
+	// Used with `dkmcp serve --sync` or `dkmcp tools sync` to copy tools to ApprovedDir
+	// after user confirmation.
+	//
+	// StagingDirsは新しいツールが提案されるディレクトリのリストです（workspace_rootからの相対パス）。
+	// `dkmcp serve --sync`または`dkmcp tools sync`で、ユーザー確認後にApprovedDirにツールをコピーします。
+	StagingDirs []string `yaml:"staging_dirs"`
+
+	// Common enables loading tools from the _common subdirectory of ApprovedDir.
+	// Common tools are shared across all workspaces/projects.
+	//
+	// CommonはApprovedDirの_commonサブディレクトリからのツール読み込みを有効にします。
+	// 共通ツールはすべてのワークスペース/プロジェクトで共有されます。
+	Common bool `yaml:"common"`
+
+	// AllowedExtensions lists file extensions that are recognized as tools.
+	// AllowedExtensionsはツールとして認識されるファイル拡張子のリストです。
+	AllowedExtensions []string `yaml:"allowed_extensions"`
+
+	// Timeout is the maximum execution time in seconds for tool execution.
+	// Timeoutはツール実行の最大実行時間（秒）です。
+	Timeout int `yaml:"timeout"`
+}
+
+// IsSecureMode returns true if the secure mode is configured (ApprovedDir is set).
+// IsSecureModeはセキュアモードが設定されている場合（ApprovedDirが設定済み）にtrueを返します。
+func (c *HostToolsConfig) IsSecureMode() bool {
+	return c.ApprovedDir != ""
+}
+
+// HostCommandsConfig configures whitelisted host CLI command execution.
+// Commands are matched against whitelist patterns, with optional deny list
+// and dangerous mode for elevated operations.
+//
+// HostCommandsConfigはホワイトリスト方式のホストCLIコマンド実行を設定します。
+// コマンドはホワイトリストパターンに対してマッチされ、オプションの拒否リストと
+// 昇格された操作用の危険モードがあります。
+type HostCommandsConfig struct {
+	// Enabled activates the host commands feature.
+	// Enabledはホストコマンド機能を有効化します。
+	Enabled bool `yaml:"enabled"`
+
+	// AllowedContainers restricts which containers can be targeted by docker/compose commands.
+	// Supports glob patterns (e.g., "securenote-*"). Empty means no restriction.
+	//
+	// AllowedContainersはdocker/composeコマンドの対象となるコンテナを制限します。
+	// globパターンをサポートします（例: "securenote-*"）。空の場合は制限なし。
+	AllowedContainers []string `yaml:"allowed_containers"`
+
+	// AllowedProjects restricts which compose projects can be targeted.
+	// AllowedProjectsは対象となるcomposeプロジェクトを制限します。
+	AllowedProjects []string `yaml:"allowed_projects"`
+
+	// Whitelist defines allowed commands and their argument patterns.
+	// Key: base command name (e.g., "docker", "git"), Value: allowed argument patterns.
+	//
+	// Whitelistは許可されるコマンドとその引数パターンを定義します。
+	// キー: ベースコマンド名（例: "docker", "git"）、値: 許可される引数パターン。
+	Whitelist map[string][]string `yaml:"whitelist"`
+
+	// Deny defines commands that are explicitly denied (overrides whitelist).
+	// Key: base command name, Value: denied argument patterns.
+	//
+	// Denyは明示的に拒否されるコマンドを定義します（ホワイトリストを上書き）。
+	// キー: ベースコマンド名、値: 拒否される引数パターン。
+	Deny map[string][]string `yaml:"deny"`
+
+	// Dangerously configures the dangerous mode for host commands.
+	// Dangerouslyはホストコマンドの危険モードを設定します。
+	Dangerously HostCommandsDangerously `yaml:"dangerously"`
+}
+
+// HostCommandsDangerously configures dangerous mode for host commands.
+// When enabled, additional commands can be executed with the dangerously=true parameter.
+//
+// HostCommandsDangerouslyはホストコマンドの危険モードを設定します。
+// 有効にすると、dangerously=trueパラメータで追加のコマンドを実行できます。
+type HostCommandsDangerously struct {
+	// Enabled activates dangerous mode for host commands.
+	// Enabledはホストコマンドの危険モードを有効化します。
+	Enabled bool `yaml:"enabled"`
+
+	// Commands defines which commands are allowed in dangerous mode.
+	// Key: base command name, Value: allowed subcommands.
+	//
+	// Commandsは危険モードで許可されるコマンドを定義します。
+	// キー: ベースコマンド名、値: 許可されるサブコマンド。
+	Commands map[string][]string `yaml:"commands"`
+}
+
 // NewDefaultConfig returns a Config with sensible default values.
 // These defaults provide a balance between security and usability.
 //
@@ -524,10 +695,11 @@ func NewDefaultConfig() *Config {
 		Security: SecurityConfig{
 			Mode: "moderate",
 			Permissions: SecurityPermissions{
-				Logs:    true,
-				Inspect: true,
-				Stats:   true,
-				Exec:    true,
+				Logs:      true,
+				Inspect:   true,
+				Stats:     true,
+				Exec:      true,
+				Lifecycle: false,
 			},
 			BlockedPaths: BlockedPathsConfig{
 				Manual: make(map[string][]string),
@@ -615,6 +787,28 @@ func NewDefaultConfig() *Config {
 		CLI: CLIConfig{
 			CurrentContainer: CurrentContainerConfig{
 				Enabled: true, // Default: enabled (recommended for sandbox environments)
+			},
+		},
+		// HostAccess is disabled by default for security
+		// HostAccessはセキュリティのためデフォルトで無効
+		HostAccess: HostAccessConfig{
+			HostTools: HostToolsConfig{
+				Enabled:           false,
+				Directories:       []string{".sandbox/host-tools"},
+				ApprovedDir:       "",
+				StagingDirs:       []string{".sandbox/host-tools"},
+				Common:            true,
+				AllowedExtensions: []string{".sh", ".go", ".py"},
+				Timeout:           60,
+			},
+			HostCommands: HostCommandsConfig{
+				Enabled:    false,
+				Whitelist:  make(map[string][]string),
+				Deny:       make(map[string][]string),
+				Dangerously: HostCommandsDangerously{
+					Enabled:  false,
+					Commands: make(map[string][]string),
+				},
 			},
 		},
 	}
@@ -722,6 +916,14 @@ func (c *Config) Validate() error {
 	}
 	if !validLevels[c.Logging.Level] {
 		return fmt.Errorf("invalid log level: %s", c.Logging.Level)
+	}
+
+	// Validate HostAccess settings (only when enabled)
+	// HostAccess設定を検証（有効な場合のみ）
+	if c.HostAccess.HostTools.Enabled {
+		if c.HostAccess.HostTools.Timeout <= 0 {
+			return fmt.Errorf("invalid host_tools timeout: %d (must be > 0)", c.HostAccess.HostTools.Timeout)
+		}
 	}
 
 	return nil

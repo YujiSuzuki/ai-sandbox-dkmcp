@@ -166,6 +166,33 @@ func (p *Policy) CanGetStats() bool {
 	return p.config.Permissions.Stats
 }
 
+// CanLifecycle checks if container lifecycle operations (start/stop/restart) are allowed
+// for the specified container. Uses Docker API directly (no shell execution).
+//
+// This involves multiple checks:
+//   1. Is lifecycle globally enabled? (permissions.lifecycle)
+//   2. Is the container accessible? (allowed_containers)
+//   3. Does the security mode allow lifecycle? (denied in strict mode)
+//
+// CanLifecycleはコンテナのライフサイクル操作（start/stop/restart）が
+// 指定されたコンテナに対して許可されているかチェックします。
+// Docker APIを直接使用します（シェル実行なし）。
+func (p *Policy) CanLifecycle(containerName string) (bool, error) {
+	if !p.config.Permissions.Lifecycle {
+		return false, fmt.Errorf("lifecycle operations are disabled in security policy")
+	}
+
+	if !p.CanAccessContainer(containerName) {
+		return false, fmt.Errorf("container not in allowed list: %s", containerName)
+	}
+
+	if p.config.Mode == "strict" {
+		return false, fmt.Errorf("lifecycle operations are not allowed in strict mode")
+	}
+
+	return true, nil
+}
+
 // CanExec checks if executing a command in a container is allowed.
 // This involves multiple checks:
 //   1. Is exec globally enabled? (permissions.exec)
@@ -318,10 +345,11 @@ func (p *Policy) GetSecurityPolicy() map[string]any {
 		"mode":               p.config.Mode,
 		"allowed_containers": p.config.AllowedContainers,
 		"permissions": map[string]bool{
-			"logs":    p.config.Permissions.Logs,
-			"inspect": p.config.Permissions.Inspect,
-			"stats":   p.config.Permissions.Stats,
-			"exec":    p.config.Permissions.Exec,
+			"logs":      p.config.Permissions.Logs,
+			"inspect":   p.config.Permissions.Inspect,
+			"stats":     p.config.Permissions.Stats,
+			"exec":      p.config.Permissions.Exec,
+			"lifecycle": p.config.Permissions.Lifecycle,
 		},
 		"exec_whitelist": p.config.ExecWhitelist,
 	}
@@ -460,10 +488,12 @@ func (p *Policy) CanExecDangerously(containerName string, command string) (bool,
 		return false, fmt.Errorf("dangerous exec is not allowed in strict mode")
 	}
 
-	// Check for pipes and redirects (forbidden in dangerous mode)
-	// パイプとリダイレクトをチェック（危険モードでは禁止）
-	if strings.ContainsAny(command, "|><") {
-		return false, fmt.Errorf("pipes and redirects are not allowed in dangerous mode")
+	// Check for shell meta-characters: pipes, redirects, command chaining,
+	// command substitution ($(), backticks), and newlines (forbidden in dangerous mode)
+	// シェルメタ文字をチェック：パイプ、リダイレクト、コマンドチェーン、
+	// コマンド置換（$()、バッククォート）、改行（危険モードでは禁止）
+	if strings.ContainsAny(command, "|><;&`\n") || strings.Contains(command, "$(") {
+		return false, fmt.Errorf("shell meta-characters (pipes, redirects, command chaining, command substitution, newlines) are not allowed in dangerous mode")
 	}
 
 	// Check for path traversal (forbidden)

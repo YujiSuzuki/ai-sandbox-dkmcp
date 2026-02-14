@@ -47,6 +47,18 @@ type MockClient struct {
 	// InspectContainerFuncが設定されている場合、InspectContainerから呼び出されます。
 	InspectContainerFunc func(ctx context.Context, containerName string) (*types.ContainerJSON, error)
 
+	// RestartContainerFunc is called by RestartContainer if set.
+	// RestartContainerFuncが設定されている場合、RestartContainerから呼び出されます。
+	RestartContainerFunc func(ctx context.Context, containerName string, timeout *int) error
+
+	// StopContainerFunc is called by StopContainer if set.
+	// StopContainerFuncが設定されている場合、StopContainerから呼び出されます。
+	StopContainerFunc func(ctx context.Context, containerName string, timeout *int) error
+
+	// StartContainerFunc is called by StartContainer if set.
+	// StartContainerFuncが設定されている場合、StartContainerから呼び出されます。
+	StartContainerFunc func(ctx context.Context, containerName string) error
+
 	// ListFilesFunc is called by ListFiles if set.
 	// ListFilesFuncが設定されている場合、ListFilesから呼び出されます。
 	ListFilesFunc func(ctx context.Context, containerName string, path string) (*FileAccessResult, error)
@@ -129,6 +141,33 @@ func (m *MockClient) InspectContainer(ctx context.Context, containerName string)
 		return m.InspectContainerFunc(ctx, containerName)
 	}
 	return nil, fmt.Errorf("InspectContainer not implemented in mock")
+}
+
+// RestartContainer returns the result of RestartContainerFunc if set,
+// otherwise returns an error.
+func (m *MockClient) RestartContainer(ctx context.Context, containerName string, timeout *int) error {
+	if m.RestartContainerFunc != nil {
+		return m.RestartContainerFunc(ctx, containerName, timeout)
+	}
+	return fmt.Errorf("RestartContainer not implemented in mock")
+}
+
+// StopContainer returns the result of StopContainerFunc if set,
+// otherwise returns an error.
+func (m *MockClient) StopContainer(ctx context.Context, containerName string, timeout *int) error {
+	if m.StopContainerFunc != nil {
+		return m.StopContainerFunc(ctx, containerName, timeout)
+	}
+	return fmt.Errorf("StopContainer not implemented in mock")
+}
+
+// StartContainer returns the result of StartContainerFunc if set,
+// otherwise returns an error.
+func (m *MockClient) StartContainer(ctx context.Context, containerName string) error {
+	if m.StartContainerFunc != nil {
+		return m.StartContainerFunc(ctx, containerName)
+	}
+	return fmt.Errorf("StartContainer not implemented in mock")
 }
 
 // ListFiles returns the result of ListFilesFunc if set,
