@@ -30,7 +30,10 @@ Direct users to documentation:
 
 - **Commits:** Always use `commit-msg.sh` to draft commit messages collaboratively with the user:
   ```
-  .sandbox/scripts/commit-msg.sh
+  .sandbox/scripts/commit-msg.sh              # Generate draft
+  .sandbox/scripts/commit-msg.sh --log        # Check previous commit style
+  # Refine CommitMsg-draft.md together
+  .sandbox/scripts/commit-msg.sh --msg-file CommitMsg-draft.md  # Commit
   ```
   Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
 

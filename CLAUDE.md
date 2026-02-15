@@ -10,7 +10,10 @@ This document provides essential behavioral rules for AI assistants. For detaile
 
 - **Commits:** Always use `commit-msg.sh` to draft commit messages collaboratively with the user:
   ```
-  .sandbox/scripts/commit-msg.sh
+  .sandbox/scripts/commit-msg.sh              # Generate draft
+  .sandbox/scripts/commit-msg.sh --log        # Check previous commit style
+  # Refine CommitMsg-draft.md together
+  .sandbox/scripts/commit-msg.sh --msg-file CommitMsg-draft.md  # Commit
   ```
   Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
 
@@ -139,10 +142,13 @@ Explain: Secrets are hidden via Docker volume mounts. AI can still help because 
 Use `commit-msg.sh` to draft a commit message collaboratively with the user:
 
 ```
-.sandbox/scripts/commit-msg.sh
+.sandbox/scripts/commit-msg.sh              # Generate draft
+.sandbox/scripts/commit-msg.sh --log        # Check previous commit style
+# Refine CommitMsg-draft.md together
+.sandbox/scripts/commit-msg.sh --msg-file CommitMsg-draft.md  # Commit
 ```
 
-This generates a draft from `git diff --staged`, which you and the user can refine together before committing. It keeps the commit message style consistent with the project's existing commits.
+This generates a draft from `git diff --staged`, which you and the user can refine together before committing. Always check `--log` to match the project's existing commit style.
 
 Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
 
