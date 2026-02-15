@@ -1,11 +1,13 @@
 // serve_test.go contains unit tests for the serve command functionality.
-// It tests the applyAllowExecFlags and applyDangerouslyFlags functions.
+// It tests the applyAllowExecFlags, applyDangerouslyFlags, and writeSponsorMessage functions.
 //
 // serve_test.goはserveコマンドの機能のユニットテストを含みます。
-// applyAllowExecFlagsおよびapplyDangerouslyFlags関数をテストします。
+// applyAllowExecFlags、applyDangerouslyFlags、およびwriteSponsorMessage関数をテストします。
 package cli
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/YujiSuzuki/ai-sandbox-dkmcp/dkmcp/internal/config"
@@ -442,6 +444,139 @@ func TestApplyDangerouslyFlags(t *testing.T) {
 
 			if !tt.wantErr {
 				tt.validate(t, tt.initialConfig)
+			}
+		})
+	}
+}
+
+// TestWriteBanner tests the writeBanner function.
+// It verifies that the ASCII art banner contains the expected text.
+//
+// TestWriteBannerはwriteBanner関数をテストします。
+// ASCIIアートバナーに期待されるテキストが含まれていることを検証します。
+func TestWriteBanner(t *testing.T) {
+	var buf bytes.Buffer
+	writeBanner(&buf)
+	output := buf.String()
+
+	// Verify banner contains key elements.
+	// バナーにキー要素が含まれていることを確認します。
+	if !strings.Contains(output, "Sandbox") {
+		t.Error("Expected banner to contain 'Sandbox' in ASCII art")
+	}
+	if !strings.Contains(output, "DockMCP") {
+		t.Error("Expected banner to contain 'DockMCP'")
+	}
+	if !strings.Contains(output, "SandboxMCP") {
+		t.Error("Expected banner to contain 'SandboxMCP'")
+	}
+}
+
+// TestWriteSponsorMessage tests the writeSponsorMessage function.
+// It verifies sponsor message display behavior based on the --no-thanks flag
+// and LANG environment variable.
+//
+// TestWriteSponsorMessageはwriteSponsorMessage関数をテストします。
+// --no-thanksフラグとLANG環境変数に基づくスポンサーメッセージ表示動作を検証します。
+func TestWriteSponsorMessage(t *testing.T) {
+	tests := []struct {
+		name       string // Test case name / テストケース名
+		noThanks   bool   // --no-thanks flag value / --no-thanksフラグの値
+		lang       string // LANG environment variable / LANG環境変数
+		lcAll      string // LC_ALL environment variable / LC_ALL環境変数
+		wantOutput bool   // Whether output is expected / 出力が期待されるか
+		wantText   string // Expected text in output / 出力に含まれるべきテキスト
+	}{
+		{
+			name:       "default shows English message",
+			noThanks:   false,
+			lang:       "",
+			lcAll:      "",
+			wantOutput: true,
+			wantText:   "Support this project",
+		},
+		{
+			name:       "no-thanks suppresses message",
+			noThanks:   true,
+			lang:       "",
+			lcAll:      "",
+			wantOutput: false,
+		},
+		{
+			name:       "Japanese locale shows Japanese message",
+			noThanks:   false,
+			lang:       "ja_JP.UTF-8",
+			lcAll:      "",
+			wantOutput: true,
+			wantText:   "このプロジェクトを応援",
+		},
+		{
+			name:       "English locale shows English message",
+			noThanks:   false,
+			lang:       "en_US.UTF-8",
+			lcAll:      "",
+			wantOutput: true,
+			wantText:   "Support this project",
+		},
+		{
+			// LC_ALL fallback: when LANG is empty, LC_ALL should be used.
+			// LANGが空の場合、LC_ALLがフォールバックとして使用されること。
+			name:       "LC_ALL fallback when LANG is empty",
+			noThanks:   false,
+			lang:       "",
+			lcAll:      "ja_JP.UTF-8",
+			wantOutput: true,
+			wantText:   "このプロジェクトを応援",
+		},
+		{
+			// LC_ALL overrides LANG per POSIX precedence.
+			// POSIX優先順位に従い、LC_ALLがLANGを上書きすること。
+			name:       "LC_ALL overrides LANG",
+			noThanks:   false,
+			lang:       "en_US.UTF-8",
+			lcAll:      "ja_JP.UTF-8",
+			wantOutput: true,
+			wantText:   "このプロジェクトを応援",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore flag state.
+			// フラグの状態を保存して復元します。
+			origNoThanks := flagNoThanks
+			defer func() { flagNoThanks = origNoThanks }()
+			flagNoThanks = tt.noThanks
+
+			// Set locale environment variables.
+			// ロケール環境変数を設定します。
+			t.Setenv("LANG", tt.lang)
+			t.Setenv("LC_ALL", tt.lcAll)
+
+			var buf bytes.Buffer
+			wrote := writeSponsorMessage(&buf)
+			output := buf.String()
+
+			if tt.wantOutput {
+				if !wrote {
+					t.Error("Expected writeSponsorMessage to return true")
+				}
+				if !strings.Contains(output, tt.wantText) {
+					t.Errorf("Expected output to contain %q, got %q", tt.wantText, output)
+				}
+				if !strings.Contains(output, "github.com/sponsors/YujiSuzuki") {
+					t.Error("Expected output to contain sponsor URL")
+				}
+				if !strings.Contains(output, "--no-thanks") {
+					t.Error("Expected output to contain --no-thanks hint")
+				}
+			} else {
+				if wrote {
+					t.Error("Expected writeSponsorMessage to return false")
+				}
+				if output != "" {
+					t.Errorf("Expected no output, got %q", output)
+				}
 			}
 		})
 	}

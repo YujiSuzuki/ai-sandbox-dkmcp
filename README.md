@@ -1,4 +1,4 @@
-# AI Sandbox Environment + DockMCP
+# AI Sandbox Environment + DockMCP + SandboxMCP
 
 [日本語の README はこちら](README.ja.md)
 

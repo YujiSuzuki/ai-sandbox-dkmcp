@@ -8,6 +8,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -137,6 +138,11 @@ var (
 	// 承認なしで開発中のツールをテストできます。
 	// セキュアモード（approved_dirが設定済み）でのみ有効です。
 	flagDev bool
+
+	// flagNoThanks hides the sponsor message at server startup.
+	//
+	// flagNoThanksはサーバー起動時のスポンサーメッセージを非表示にします。
+	flagNoThanks bool
 )
 
 // serveCmd represents the 'serve' command that starts the MCP server.
@@ -195,6 +201,10 @@ func init() {
 	// Add dev flag for host tools development
 	// ホストツール開発用のdevフラグを追加
 	serveCmd.Flags().BoolVar(&flagDev, "dev", false, "Development mode: also load tools from staging directories (staging > approved > common)")
+
+	// Add sponsor message flag
+	// スポンサーメッセージ用フラグを追加
+	serveCmd.Flags().BoolVar(&flagNoThanks, "no-thanks", false, "Hide sponsor message at startup")
 }
 
 // runServe is the main entry point for the serve command.
@@ -203,6 +213,11 @@ func init() {
 // runServeはserveコマンドのメインエントリーポイントです。
 // すべてのコンポーネントを初期化し、MCPサーバーを起動します。
 func runServe(cmd *cobra.Command, args []string) error {
+	// Show banner and sponsor message before any log output so they appear first.
+	// ログ出力の前にバナーとスポンサーメッセージを表示し、最初に表示されるようにします。
+	showBanner()
+	showSponsorMessage()
+
 	// Load configuration from file (or use defaults if not specified).
 	// 設定ファイルから設定を読み込みます（指定がない場合はデフォルトを使用）。
 	cfg, err := config.Load(cfgFile)
@@ -551,6 +566,69 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// showBanner displays the ASCII art banner to stdout.
+//
+// showBannerはASCIIアートバナーをstdoutに表示します。
+func showBanner() {
+	writeBanner(os.Stdout)
+}
+
+// writeBanner writes the ASCII art banner to the given writer.
+//
+// writeBannerは指定されたwriterにASCIIアートバナーを書き込みます。
+func writeBanner(w io.Writer) {
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "   _   ___   ___               _ _")
+	fmt.Fprintln(w, `  /_\ |_ _| / __| __ _ _ _  _| | |__  _____ __`)
+	fmt.Fprintln(w, ` / _ \ | |  \__ \/ _`+"`"+` | ' \/ _`+"`"+` | '_ \/ _ \ \ /`)
+	fmt.Fprintln(w, `/_/ \_\___| |___/\__,_|_||_\__,_|_.__/\___/_\_\`)
+	fmt.Fprintf(w, "              + DockMCP + SandboxMCP  %s\n", Version)
+}
+
+// showSponsorMessage displays a GitHub Sponsors message to stdout.
+// Delegates to writeSponsorMessage which handles --no-thanks suppression.
+//
+// showSponsorMessageはGitHub Sponsorsメッセージをstdoutに表示します。
+// --no-thanksによる抑制はwriteSponsorMessageで処理されます。
+func showSponsorMessage() {
+	writeSponsorMessage(os.Stdout)
+}
+
+// writeSponsorMessage writes the sponsor message to the given writer.
+// Returns true if the message was written, false if suppressed by --no-thanks.
+//
+// writeSponsorMessageは指定されたwriterにスポンサーメッセージを書き込みます。
+// メッセージが書き込まれた場合はtrue、--no-thanksで抑制された場合はfalseを返します。
+func writeSponsorMessage(w io.Writer) bool {
+	if flagNoThanks {
+		return false
+	}
+
+	const sponsorURL = "https://github.com/sponsors/YujiSuzuki"
+
+	lang := os.Getenv("LC_ALL")
+	if lang == "" {
+		lang = os.Getenv("LANG")
+	}
+
+	fmt.Fprintln(w)
+	if strings.HasPrefix(lang, "ja_JP") {
+		fmt.Fprintln(w, "💖 このプロジェクトを応援")
+		fmt.Fprintln(w, "  AI Sandbox が役に立ったら、スポンサーになって応援してください！")
+		fmt.Fprintf(w, "  %s\n", sponsorURL)
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "  非表示にするには: dkmcp serve --no-thanks")
+	} else {
+		fmt.Fprintln(w, "💖 Support this project")
+		fmt.Fprintln(w, "  If you find AI Sandbox useful, consider sponsoring!")
+		fmt.Fprintf(w, "  %s\n", sponsorURL)
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "  To hide this message: dkmcp serve --no-thanks")
+	}
+	fmt.Fprintln(w)
+	return true
 }
 
 // applyAllowExecFlags parses and applies --allow-exec flags to the configuration.
