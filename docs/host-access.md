@@ -32,7 +32,7 @@ DockMCP Server (host OS)
   └── Host Commands        ← NEW: run whitelisted CLI commands on host
 ```
 
-All three features are **off by default** and configured in `dkmcp.yaml` under `host_access` and `security.permissions`.
+Host tools are enabled by default, while container lifecycle and host commands are disabled by default, both of which can be enabled in the configuration file.
 
 ---
 
@@ -40,7 +40,10 @@ All three features are **off by default** and configured in `dkmcp.yaml` under `
 
 ### What It Does
 
-AI can discover and execute scripts (`.sh`, `.go`, `.py`) placed in `.sandbox/host-tools/` on the host OS. This allows AI to perform host-side operations (like starting demo containers) through pre-written, reviewed scripts rather than raw shell commands.
+This feature allows AI to run scripts (`.sh`, `.go`, `.py`, etc.) placed in `.sandbox/host-tools/` through DockMCP.
+Rather than running scripts placed here as is, by approving them through interactive input when starting the DockMCP server, the script will be placed on the host OS, which is inaccessible from containers, and you will be able to perform host-side operations (such as launching a demo container) through DockMCP.
+
+This is a mechanism to prevent AI from arbitrarily modifying source code executed on the host from within a container.
 
 ### Approval Workflow
 
@@ -50,7 +53,7 @@ Tools proposed by AI or developers go through a two-stage process:
 1. Place script in .sandbox/host-tools/     (staging — inside workspace)
 2. Run: dkmcp tools sync                    (review & approve on host)
 3. Approved copy goes to ~/.dkmcp/host-tools/<project-id>/
-4. AI can now execute the approved version
+4. Only approved versions of AI can be run through DockMCP
 ```
 
 Only the approved copy is executed. If the staging version changes, `dkmcp tools sync` detects the difference and prompts for re-approval.
