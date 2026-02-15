@@ -11,6 +11,15 @@ if [[ -f "/workspace/.sandbox/scripts/_startup_common.sh" ]]; then
     source "/workspace/.sandbox/scripts/_startup_common.sh"
 fi
 
+# Parse arguments
+# 引数解析
+NO_SPONSOR=false
+for arg in "$@"; do
+    case "$arg" in
+        --no-sponsor) NO_SPONSOR=true ;;
+    esac
+done
+
 # Language detection based on locale
 # ロケールに基づく言語検出
 if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
@@ -81,7 +90,13 @@ echo ""
 # 上流更新チェック（情報提供のみ）
 /workspace/.sandbox/scripts/check-upstream-updates.sh || true
 
-# 6. Register SandboxMCP (if Go is available)
+# 6. Show sponsor message (informational only, skip with --no-sponsor)
+# スポンサーメッセージ表示（情報提供のみ、--no-sponsor でスキップ）
+if [ "$NO_SPONSOR" = "false" ]; then
+    /workspace/.sandbox/scripts/show-sponsor.sh || true
+fi
+
+# 7. Register SandboxMCP (if Go is available)
 # SandboxMCP 登録（Go がある場合）
 if command -v go >/dev/null 2>&1; then
     echo ""
