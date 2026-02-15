@@ -22,6 +22,9 @@ if [[ "${LANG:-}" == ja_JP* ]] || [[ "${LC_ALL:-}" == ja_JP* ]]; then
     MSG_REGISTERING="📦 SandboxMCP 登録"
     MSG_REGISTER_FAILED="⚠️  SandboxMCP 登録に失敗しましたが、続行します..."
     MSG_NO_GO="⚠️  Go がインストールされていないため、SandboxMCP 登録をスキップします"
+    MSG_DKMCP_REGISTER_FAILED="⚠️  DockMCP 登録に失敗しましたが、続行します..."
+    MSG_DKMCP_CONNECTED="🔗 DockMCP: ✅ registered, 接続OK"
+    MSG_DKMCP_OFFLINE="🔗 DockMCP: ⚠️ registered, 接続不可（ホスト OS で dkmcp serve を起動してください）"
     MSG_COMPLETE="✅ 起動完了"
 else
     MSG_TITLE="🚀 AI Sandbox Startup"
@@ -32,6 +35,9 @@ else
     MSG_REGISTERING="📦 Registering SandboxMCP"
     MSG_REGISTER_FAILED="⚠️  SandboxMCP registration failed, but continuing..."
     MSG_NO_GO="⚠️  Go not installed, skipping SandboxMCP registration"
+    MSG_DKMCP_REGISTER_FAILED="⚠️  DockMCP registration failed, but continuing..."
+    MSG_DKMCP_CONNECTED="🔗 DockMCP: ✅ registered, connected"
+    MSG_DKMCP_OFFLINE="🔗 DockMCP: ⚠️ registered, server not reachable (run 'dkmcp serve' on host OS)"
     MSG_COMPLETE="✅ Startup complete"
 fi
 
@@ -88,6 +94,30 @@ if command -v go >/dev/null 2>&1; then
 else
     echo ""
     echo "$MSG_NO_GO"
+fi
+
+# 7. Register DockMCP if not registered, or show one-liner status
+# DockMCP 登録（未登録なら登録、登録済みなら1行サマリー）
+dkmcp_check=0
+/workspace/.sandbox/scripts/setup-dkmcp.sh --check 2>/dev/null || dkmcp_check=$?
+if [ "$dkmcp_check" -eq 0 ]; then
+    # Registered + connected → one-liner
+    # 登録済み＋接続OK → 1行サマリー
+    echo ""
+    echo "$MSG_DKMCP_CONNECTED"
+elif [ "$dkmcp_check" -eq 2 ]; then
+    # Registered but offline → one-liner warning
+    # 登録済みだがオフライン → 1行警告
+    echo ""
+    echo "$MSG_DKMCP_OFFLINE"
+else
+    # Not registered → full registration
+    # 未登録 → フル登録出力
+    echo ""
+    /workspace/.sandbox/scripts/setup-dkmcp.sh || {
+        echo "$MSG_DKMCP_REGISTER_FAILED"
+        echo ""
+    }
 fi
 
 echo ""

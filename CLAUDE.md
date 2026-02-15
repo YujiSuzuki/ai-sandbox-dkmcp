@@ -146,7 +146,24 @@ This generates a draft from `git diff --staged`, which you and the user can refi
 
 Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
 
-### 7. Creating a release
+### 7. DockMCP not connected
+
+If DockMCP MCP tools (`mcp__dkmcp__*`) are not available, proactively check registration and offer setup:
+
+```
+.sandbox/scripts/setup-dkmcp.sh --check   # Silent check (exit: 0=ok, 1=not registered, 2=offline)
+.sandbox/scripts/setup-dkmcp.sh            # Register if needed + verify connectivity
+.sandbox/scripts/setup-dkmcp.sh --status   # Show detailed status
+```
+
+If `--check` returns 1 (not registered), offer to run `setup-dkmcp.sh` for the user.
+If `--check` returns 2 (registered but offline), troubleshoot in this order:
+1. **Check VS Code Ports panel** — stop forwarding port 8080 if listed (most common cause)
+2. **Verify DockMCP is running on host**: `curl http://localhost:8080/health`
+3. **Try `/mcp` → "Reconnect"** in Claude Code
+4. **Restart VS Code completely** (Cmd+Q → reopen)
+
+### 8. Creating a release
 
 Use `release.sh` to generate release notes and publish:
 

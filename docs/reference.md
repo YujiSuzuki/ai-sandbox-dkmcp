@@ -244,6 +244,30 @@ If Claude Code doesn't recognize DockMCP tools:
 3. **Try MCP reconnect** - In Claude Code, run `/mcp` and select "Reconnect"
 4. **Fully restart VS Code** (Cmd+Q / Alt+F4) - If Reconnect doesn't help
 
+### Auto-setup with setup-dkmcp.sh
+
+You can use the setup script inside AI Sandbox to check registration status and register DockMCP automatically:
+
+```bash
+# Check current status (silent, useful for scripting)
+.sandbox/scripts/setup-dkmcp.sh --check
+# Exit codes: 0 = connected, 1 = not registered, 2 = registered but offline
+
+# Show human-readable status
+.sandbox/scripts/setup-dkmcp.sh --status
+
+# Register DockMCP with detected AI tools + verify connectivity
+.sandbox/scripts/setup-dkmcp.sh
+
+# Use a custom URL (if DockMCP is on a non-default port)
+.sandbox/scripts/setup-dkmcp.sh --url http://host.docker.internal:9090/sse
+
+# Remove DockMCP registration from all AI tools
+.sandbox/scripts/setup-dkmcp.sh --unregister
+```
+
+The script automatically detects available AI tools (Claude Code, Gemini CLI) and registers DockMCP as an SSE MCP server. After registration, follow the "Next Steps" shown by the script (e.g., `/mcp` → Reconnect in Claude Code).
+
 ### Fallback: Using dkmcp client in AI Sandbox
 
 If the MCP protocol isn't working (Claude Code or Gemini can't connect), you can use `dkmcp client` commands directly in the AI Sandbox as a fallback.

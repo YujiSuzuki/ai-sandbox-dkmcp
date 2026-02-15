@@ -12,6 +12,7 @@ This template creates a Docker-based development environment where:
 - **Code is fully accessible** — AI can read and edit all source code across multiple projects
 - **Other containers are reachable** — With DockMCP, AI can check logs and run tests in other containers safely
 - **Helper scripts and tools are discoverable** — Via SandboxMCP, AI automatically discovers and runs scripts and tools in `.sandbox/`
+- **AI reaches beyond the sandbox** — Approve host tools once, and AI can run host operations like `docker compose up` on your behalf
 
 All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](docs/reference.md#two-environments).
 

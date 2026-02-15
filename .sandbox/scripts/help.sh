@@ -155,7 +155,7 @@ show_workflow_guide() {
     cd dkmcp && make install && dkmcp serve
 
   AI Sandbox 内から接続:
-    claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+    .sandbox/scripts/setup-dkmcp.sh
 
   接続後は AI がログ確認・テスト実行などを自動で行います。
 
@@ -197,7 +197,7 @@ GUIDE_JA
     cd dkmcp && make install && dkmcp serve
 
   Connect from AI Sandbox:
-    claude mcp add --transport sse --scope user dkmcp http://host.docker.internal:8080/sse
+    .sandbox/scripts/setup-dkmcp.sh
 
   Once connected, AI can check logs, run tests, etc. automatically.
 

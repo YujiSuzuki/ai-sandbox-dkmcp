@@ -244,6 +244,30 @@ Claude CodeがDockMCPツールを認識しない場合：
 3. **MCP再接続を試す** - Claude Codeで `/mcp` を実行し、「Reconnect」を選択
 4. **VS Codeを完全に再起動**（Cmd+Q / Alt+F4）- Reconnectで解決しない場合
 
+### setup-dkmcp.sh による自動セットアップ
+
+AI Sandbox 内でセットアップスクリプトを使うと、DockMCP の登録状態の確認や自動登録ができます：
+
+```bash
+# 現在の状態を確認（サイレント、スクリプト連携向き）
+.sandbox/scripts/setup-dkmcp.sh --check
+# 終了コード: 0 = 接続済み, 1 = 未登録, 2 = 登録済みだがオフライン
+
+# 人向けのステータス表示
+.sandbox/scripts/setup-dkmcp.sh --status
+
+# 検出した AI ツールに DockMCP を登録 + 接続確認
+.sandbox/scripts/setup-dkmcp.sh
+
+# カスタム URL を指定（DockMCP がデフォルト以外のポートの場合）
+.sandbox/scripts/setup-dkmcp.sh --url http://host.docker.internal:9090/sse
+
+# 全 AI ツールから DockMCP の登録を解除
+.sandbox/scripts/setup-dkmcp.sh --unregister
+```
+
+スクリプトは利用可能な AI ツール（Claude Code, Gemini CLI）を自動検出し、DockMCP を SSE MCP サーバーとして登録します。登録後は、スクリプトが表示する「次のステップ」に従ってください（例：Claude Code で `/mcp` → Reconnect）。
+
 ### フォールバック：AI Sandbox内でdkmcp clientを使用
 
 MCPプロトコルが動作しない場合（Claude CodeやGeminiが接続できない）、フォールバックとしてAI Sandbox内で `dkmcp client` コマンドを直接使用できます。
