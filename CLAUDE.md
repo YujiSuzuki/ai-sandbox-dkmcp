@@ -8,21 +8,8 @@ This document provides essential behavioral rules for AI assistants. For detaile
 
 ### Commits and Releases
 
-- **Commits:** Always use `commit-msg.sh` to draft commit messages collaboratively with the user:
-  ```
-  .sandbox/scripts/commit-msg.sh              # Generate draft
-  .sandbox/scripts/commit-msg.sh --log        # Check previous commit style
-  # Refine CommitMsg-draft.md together
-  .sandbox/scripts/commit-msg.sh --msg-file CommitMsg-draft.md  # Commit
-  ```
-  Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
-
-- **Releases:** Use `release.sh` to generate release notes:
-  ```
-  .sandbox/scripts/release.sh v0.5.0          # Generate draft
-  .sandbox/scripts/release.sh --prev           # Check previous release tone
-  .sandbox/scripts/release.sh v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
-  ```
+- **Commits:** Always use `.sandbox/scripts/commit-msg.sh` — do NOT use `git commit -m "..."` directly. Run `get_script_info("commit-msg.sh")` for usage details.
+- **Releases:** Always use `.sandbox/scripts/release.sh`. Run `get_script_info("release.sh")` for usage details.
 
 ### User Questions
 
@@ -139,18 +126,7 @@ Explain: Secrets are hidden via Docker volume mounts. AI can still help because 
 
 ### 6. Committing changes
 
-Use `commit-msg.sh` to draft a commit message collaboratively with the user:
-
-```
-.sandbox/scripts/commit-msg.sh              # Generate draft
-.sandbox/scripts/commit-msg.sh --log        # Check previous commit style
-# Refine CommitMsg-draft.md together
-.sandbox/scripts/commit-msg.sh --msg-file CommitMsg-draft.md  # Commit
-```
-
-This generates a draft from `git diff --staged`, which you and the user can refine together before committing. Always check `--log` to match the project's existing commit style.
-
-Do NOT use `git commit -m "..."` directly — use the script so the user can review and adjust the message.
+Use `.sandbox/scripts/commit-msg.sh` to draft and commit. Run `get_script_info("commit-msg.sh")` for usage. Do NOT use `git commit -m "..."` directly.
 
 ### 7. DockMCP not connected
 
@@ -171,14 +147,7 @@ If `--check` returns 2 (registered but offline), troubleshoot in this order:
 
 ### 8. Creating a release
 
-Use `release.sh` to generate release notes and publish:
-
-```
-.sandbox/scripts/release.sh v0.5.0          # Generate draft
-.sandbox/scripts/release.sh --prev           # Check previous release tone
-# Refine ReleaseNotes-draft.md together
-.sandbox/scripts/release.sh v0.5.0 --notes-file ReleaseNotes-draft.md  # Publish
-```
+Use `.sandbox/scripts/release.sh` to generate release notes and publish. Run `get_script_info("release.sh")` for usage.
 
 ---
 

@@ -13,6 +13,13 @@
 #   --prev               Show the latest GitHub Release notes for reference
 #   --help, -h           Show this help
 #
+# AI Workflow:
+#   1. Run release.sh <version> to generate draft (auto-categorizes commits)
+#   2. Run release.sh --prev to check the previous release tone
+#   3. Refine the draft in ReleaseNotes-draft.md to match the project's tone
+#   4. Show the draft to the user for approval
+#   5. Run release.sh <version> --notes-file ReleaseNotes-draft.md to publish
+#
 # Examples:
 #   .sandbox/scripts/release.sh v0.4.0                              # Generate draft
 #   .sandbox/scripts/release.sh --prev                               # Show previous release
@@ -30,6 +37,13 @@
 #   --notes-file <file>  推敲済みリリースノートを指定してタグ + GitHub Release を作成
 #   --prev               直近の GitHub Release のリリースノートを表示
 #   --help, -h           ヘルプ表示
+#
+# AI ワークフロー:
+#   1. release.sh <version> を実行してドラフトを生成（コミットを自動分類）
+#   2. release.sh --prev で直近リリースのトーンを確認する
+#   3. ReleaseNotes-draft.md のドラフトをプロジェクトのトーンに合わせて推敲する
+#   4. ユーザーにドラフトを提示して承認を得る
+#   5. release.sh <version> --notes-file ReleaseNotes-draft.md でリリース実行
 
 set -euo pipefail
 

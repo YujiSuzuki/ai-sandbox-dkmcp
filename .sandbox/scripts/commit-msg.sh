@@ -15,6 +15,13 @@
 # Environment:
 #   COMMIT_MSG_STYLE   Default style ("verb" or "cc"). Overridden by --style flag.
 #
+# AI Workflow:
+#   1. Run commit-msg.sh to generate a draft.
+#   2. Run commit-msg.sh --log to check the tone and structure of your commit message.
+#   3. Refine the draft in CommitMsg-draft.md to match the project's style
+#   4. Show the draft to the user for approval
+#   5. Run commit-msg.sh --msg-file CommitMsg-draft.md to commit
+#
 # Examples:
 #   .sandbox/scripts/commit-msg.sh                              # Generate draft
 #   .sandbox/scripts/commit-msg.sh --style cc                   # Conventional Commits style
@@ -32,6 +39,13 @@
 #   --style <style>    サブジェクトのスタイル: "verb" (Add ...) or "cc" (feat: ...) (デフォルト: verb)
 #   --amend            直前のコミットを修正（--msg-file と併用）
 #   --help, -h         ヘルプ表示
+#
+# AI ワークフロー:
+#   1. commit-msg.sh を実行してドラフトを生成
+#   2. commit-msg.sh --log でコミットメッセージのトーンや構成を確認する
+#   3. CommitMsg-draft.md のドラフトをプロジェクトのスタイルに合わせて推敲する
+#   4. ユーザーにドラフトを提示して承認を得る
+#   5. commit-msg.sh --msg-file CommitMsg-draft.md でコミット実行
 #
 # 環境変数:
 #   COMMIT_MSG_STYLE   デフォルトスタイル ("verb" or "cc")。--style フラグで上書き可能。
