@@ -137,13 +137,17 @@ The code-review plugin normally requires the gh (GitHub CLI) command. Here, we'l
    - Process locally without accessing GitHub or using gh
    ```
 
-   > **Sample file**: A sample command created with the above requirements is available.
-   > To use it, copy it to `.claude/commands/`:
+   > **Ready-to-use commands**: Commands built on the above requirements with additional improvements are available:
+   > - Works without a Git repository (Non-Git mode support)
+   > - 5 specialized review types (general / security / performance / architecture / prompt)
+   > - Two-stage verification (batch scoring + validation) to reduce false positives
+   >
+   > Use the install script to add them easily:
    > ```bash
-   > mkdir -p .claude/commands
-   > cp docs/samples/local-review.en.md .claude/commands/local-review.md
+   > .sandbox/scripts/install-commands.sh --list        # List available commands
+   > .sandbox/scripts/install-commands.sh ais-local-review   # Install ais-local-review
+   > .sandbox/scripts/install-commands.sh --all          # Install all commands
    > ```
-   > A Japanese version (`local-review.md`) is also available.
 
 3. After AI completes the custom command creation, restart AI to recognize the custom command.
 
@@ -161,14 +165,14 @@ $ claude  --allow-dangerously-skip-permissions
 
 ## Usage Example of Custom Command Created Above
 
-The command name in the example below refers to the sample file mentioned above.
+The command names in the examples below use the built-in commands installed via `install-commands.sh`.
 
 **Scenario: iOS app login feature not working**
 
-1. Run `/local-review` and select **your-apps-ios**
+1. Run `/ais-local-review` and select **your-apps-ios**
    → Review iOS login screen code
 
-2. Run `/local-review` and select **your-apps**
+2. Run `/ais-local-review` and select **your-apps**
    → Review API authentication endpoint
 
 3. Ask Claude Code to check logs via DockMCP

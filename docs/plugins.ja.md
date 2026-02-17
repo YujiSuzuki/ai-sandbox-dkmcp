@@ -137,13 +137,17 @@ code-review は通常 gh (GitHub CLI) コマンドが使える前提で動作し
    - github にはアクセスしないで、gh を使用しない方法で処理すること
    ```
 
-   > **サンプルファイル**: 上記の要件で作成したコマンドのサンプルを用意しています。
-   > 使用する場合は `.claude/commands/` にコピーしてください：
+   > **すぐ使えるコマンド**: 上記の要件に、さらに以下の改良を加えたコマンドを用意しています：
+   > - Git リポジトリがなくても動作（Non-Git モード対応）
+   > - 専門レビュー5種類（general / security / performance / architecture / prompt）
+   > - バッチスコアリング + Validation の2段階検証で偽陽性を削減
+   >
+   > インストールスクリプトで簡単に追加できます：
    > ```bash
-   > mkdir -p .claude/commands
-   > cp docs/samples/local-review.md .claude/commands/
+   > .sandbox/scripts/install-commands.sh --list       # 利用可能なコマンドを確認
+   > .sandbox/scripts/install-commands.sh ais-local-review  # ais-local-review をインストール
+   > .sandbox/scripts/install-commands.sh --all         # 全コマンドをインストール
    > ```
-   > 英語版 (`local-review.en.md`) もあります。
 
 3. AIのカスタムコマンドの作成作業が完了したら、AIを再起動しカスタムコマンドを認識させます。
 
@@ -163,14 +167,14 @@ $ claude  --allow-dangerously-skip-permissions
 
 ## 上記で作成したカスタムコマンドの活用例
 
-- 下記の例に出てくるコマンド名は上記のサンプルファイルです。
+- 下記の例では `install-commands.sh` でインストールした付属コマンドを使用しています。
 
 **シナリオ: iOS アプリのログイン機能がうまくいかない**
 
-1. `/local-review` を実行し、**your-apps-ios** を選択
+1. `/ais-local-review` を実行し、**your-apps-ios** を選択
    → iOS のログイン画面コードをレビュー
 
-2. `/local-review` を実行し、**your-apps** を選択
+2. `/ais-local-review` を実行し、**your-apps** を選択
    → API の認証エンドポイントをレビュー
 
 3. Claude Code に DockMCP でログを確認してもらう

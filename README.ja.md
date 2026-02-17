@@ -13,6 +13,7 @@ AIコーディングエージェントは、プロジェクトディレクトリ
 - **他のコンテナにもアクセスできる** — DockMCPを使えば、AIが別コンテナのログ確認やテスト実行を安全に行える
 - **ヘルパースクリプトやツールを自動発見** — SandboxMCPにより、`.sandbox/` のスクリプトやツールをAIが自動で認識・実行
 - **サンドボックスの外も操作できる** — ホストツールを承認すれば、`docker compose up` のようなホスト操作もAIに任せられる
+- **コードレビューやテスト生成もコマンドひとつで** — 付属のスラッシュコマンドで、レビュー・リファクタ・テスト生成をAIに任せられる（Claude Code）
 
 
 必要なものは **Docker** と **VS Code** だけ。[CLIだけでも使えます](docs/reference.ja.md#2つの環境)。
@@ -412,6 +413,39 @@ AI: ① ツールでトークン数を集計
     ② 公式サイトから最新価格を取得
     ③ コスト計算 + Pro/Max プランとの比較表を出力
 ```
+
+## 付属コマンド（Claude Code）
+
+スラッシュコマンドとして使えるコードレビュー・リファクタ・テスト生成コマンドが付属しています。Git リポジトリがなくても動作します。
+
+| コマンド | 用途 |
+|---------|------|
+| `/ais-local-review` | コードレビュー（バグ・CLAUDE.md準拠・回帰分析） |
+| `/ais-local-security-review` | セキュリティレビュー |
+| `/ais-local-performance-review` | パフォーマンスレビュー |
+| `/ais-local-architecture-review` | アーキテクチャレビュー |
+| `/ais-local-test-review` | テストの品質レビュー |
+| `/ais-local-doc-review` | ドキュメントレビュー |
+| `/ais-local-prompt-review` | AIコマンド／プロンプトファイルのレビュー |
+| `/ais-refactor` | リファクタリング提案 |
+| `/ais-test-gen` | テスト自動生成 |
+
+**特徴:**
+- Git リポジトリがなくても動作（ファイル指定でレビュー可能）
+- 複数の専門エージェントが並列でレビューし、バッチスコアリング + 再検証の2段階で偽陽性を削減
+- Confidence 75 以上の問題だけを報告するため、ノイズが少ない
+
+**インストール:**
+
+```bash
+.sandbox/scripts/install-commands.sh --list   # 利用可能なコマンドを確認
+.sandbox/scripts/install-commands.sh --all    # 全コマンドをインストール
+```
+
+インストール後、Claude Code を再起動すると `/ais-local-review` のように使えます。
+
+> [!TIP]
+> コマンドの作成経緯や自作コマンドの作り方は [プラグインガイド](docs/plugins.ja.md) を参照
 
 ## 自作ツール・スクリプトの追加
 

@@ -1,5 +1,6 @@
 ---
 description: Run local code review (works even without a Git repository)
+description-ja: ローカルコードレビューを実行（Git リポジトリがなくても動作）
 argument-hint: [project-path] [change summary]
 allowed-tools: [Read, Glob, Grep, Bash(git:*), Bash(ls:*), Bash(find:*), Task, AskUserQuestion, TodoWrite]
 ---
@@ -7,6 +8,10 @@ allowed-tools: [Read, Glob, Grep, Bash(git:*), Bash(ls:*), Bash(find:*), Task, A
 # Local Code Review
 
 Performs code review on local code. If a Git repository exists, it reviews the diff between branches; otherwise, it reviews the specified files/directories.
+
+## Language
+
+Detect the user's language from their previous messages in the conversation. Output all review results, issue descriptions, and recommendations in the same language the user uses. If uncertain, default to English.
 
 ## Arguments
 
@@ -55,7 +60,7 @@ Follow these steps precisely:
 
 1. Check the file structure within the project:
    ```bash
-   find <project-path> -type f -name "*.go" -o -name "*.js" -o -name "*.ts" -o -name "*.py" -o -name "*.rs" 2>/dev/null | head -50
+   find <project-path> -type f \( -name "*.go" -o -name "*.js" -o -name "*.ts" -o -name "*.py" -o -name "*.rs" \) 2>/dev/null | head -50
    ```
 
 2. Use the AskUserQuestion tool to confirm:
@@ -101,8 +106,8 @@ Only if the 2nd argument is not provided, use the AskUserQuestion tool to get:
 
 ### Step 5: Parallel Review Execution
 
-**For Git mode**: Launch 5 parallel Sonnet agents
-**For Non-Git mode**: Launch 3 parallel Sonnet agents (skip Git history related ones)
+**For Git mode**: Launch 4 parallel Sonnet agents
+**For Non-Git mode**: Launch 3 parallel Sonnet agents (skip Agent #3 which requires Git history)
 
 Pass the following to each agent:
 - Review target file contents (Git mode: diff, Non-Git mode: full files)
@@ -117,20 +122,18 @@ Pass the following to each agent:
 - Look for obvious bugs in the review target code
 - Focus on significant bugs, avoid minor nitpicks
 
-**Agent #3: History Context Analysis** (Git mode only)
+**Agent #3: Regression & History Analysis** (Git mode only)
 - Check git blame and history of changed files:
   ```bash
-  git -C <project-path> log -p --follow -- <file>
+  git -C <project-path> log -p --follow --max-count=20 -- <file>
   git -C <project-path> blame <file>
   ```
+  where `<file>` refers to each file from the changed files list in Step 4
 - Check for conflicts with past changes
 - Verify previously fixed bugs aren't being reintroduced
+- Extract relevant context from past commit messages that may affect the current changes
 
-**Agent #4: Past Commit Analysis** (Git mode only)
-- Review past commits on the same files
-- Extract relevant notes from past commit messages
-
-**Agent #5: Code Comment Check**
+**Agent #4: Code Comment Check**
 - Review comments in target files
 - Verify code follows guidance in comments
 - Check handling of TODO and FIXME comments
@@ -140,12 +143,18 @@ Each agent reports issues in the following format:
 - File: <file-path>
 - Line: <line-number>
 - Issue: <description>
-- Reason: <reason> (CLAUDE.md violation / Bug / History context / Comment violation)
+- Impact: Critical / High / Medium / Low
+- Category: CLAUDE.md / Bug / History / Comment
 ```
 
-### Step 6: Confidence Scoring
+### Step 6: Confidence Scoring (Batch)
 
-For each issue found in Step 5, launch a Haiku agent for scoring:
+Collect ALL issues from Step 5 and pass them to a **single Haiku agent** for batch scoring.
+
+Provide the agent with:
+- The full list of issues from all agents
+- The review target code (diff or full files)
+- The scoring criteria below
 
 Scoring criteria (pass these criteria directly to the agent):
 - **0**: No confidence. False positive that falls apart under light scrutiny, or existing issue
@@ -154,9 +163,27 @@ Scoring criteria (pass these criteria directly to the agent):
 - **75**: Quite confident. Re-verified the issue and confirmed it's likely to occur. Existing approach is insufficient. Directly affects functionality or explicitly stated in CLAUDE.md
 - **100**: Absolutely confident. Re-verified the issue and confirmed it will definitely occur. Occurs frequently
 
-### Step 7: Filtering and Report Generation
+The agent returns a confidence score (0/25/50/75/100) for each issue.
 
-1. Filter out issues with scores below 80
+### Step 7: Validation
+
+For each issue that scored >= 75 in Step 6, launch a **single Sonnet agent** to re-verify.
+
+The validation agent receives:
+- The filtered list of issues (those scoring >= 75)
+- The relevant source code for each issue
+- The original agent's reasoning
+
+For each issue, the validation agent must:
+1. Re-read the cited code location
+2. Confirm the issue is real (not a false positive from the examples in the False Positive section)
+3. Return: **CONFIRMED** or **REJECTED** with a one-line reason
+
+Remove REJECTED issues from the final report.
+
+### Step 8: Filtering and Report Generation
+
+1. Filter out issues that were REJECTED in Step 7 or scored below 75 in Step 6
 
 2. Output final report in the following format:
 
@@ -178,7 +205,8 @@ If issues were found:
 **Issue 1**: <Brief description of the issue>
 - File: `<file-path>`
 - Line: L<start>-L<end>
-- Reason: <CLAUDE.md / Bug / History context / Comment>
+- Impact: <Critical / High / Medium / Low>
+- Category: <CLAUDE.md / Bug / History / Comment>
 - Confidence: <score>/100
 
 ```diff

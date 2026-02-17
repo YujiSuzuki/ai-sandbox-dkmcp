@@ -13,6 +13,7 @@ This template creates a Docker-based development environment where:
 - **Other containers are reachable** — With DockMCP, AI can check logs and run tests in other containers safely
 - **Helper scripts and tools are discoverable** — Via SandboxMCP, AI automatically discovers and runs scripts and tools in `.sandbox/`
 - **AI reaches beyond the sandbox** — Approve host tools once, and AI can run host operations like `docker compose up` on your behalf
+- **Code review and test generation in one command** — Built-in slash commands let AI handle reviews, refactoring, and test generation (Claude Code)
 
 All you need is **Docker** and **VS Code**. [CLI-only usage is also supported](docs/reference.md#two-environments).
 
@@ -408,6 +409,39 @@ AI: ① Runs the tool to aggregate token counts
     ② Fetches current pricing from docs.anthropic.com
     ③ Outputs cost breakdown + Pro/Max plan comparison
 ```
+
+## Built-in Commands (Claude Code)
+
+Slash commands for code review, refactoring, and test generation are included. They work even without a Git repository.
+
+| Command | Purpose |
+|---------|---------|
+| `/ais-local-review` | Code review (bugs, CLAUDE.md compliance, regression analysis) |
+| `/ais-local-security-review` | Security review |
+| `/ais-local-performance-review` | Performance review |
+| `/ais-local-architecture-review` | Architecture review |
+| `/ais-local-test-review` | Test quality review |
+| `/ais-local-doc-review` | Documentation review |
+| `/ais-local-prompt-review` | AI command / prompt file review |
+| `/ais-refactor` | Refactoring suggestions |
+| `/ais-test-gen` | Automated test generation |
+
+**Key features:**
+- Works without a Git repository (review by specifying files directly)
+- Multiple specialized agents review in parallel, with batch scoring + re-validation to reduce false positives
+- Only reports issues with confidence >= 75, keeping noise low
+
+**Installation:**
+
+```bash
+.sandbox/scripts/install-commands.sh --list   # List available commands
+.sandbox/scripts/install-commands.sh --all    # Install all commands
+```
+
+After installation, restart Claude Code and use them as `/ais-local-review`, etc.
+
+> [!TIP]
+> For background on how these commands were created and how to build your own, see [Plugin Guide](docs/plugins.md)
 
 ## Adding Your Own Tools and Scripts
 
