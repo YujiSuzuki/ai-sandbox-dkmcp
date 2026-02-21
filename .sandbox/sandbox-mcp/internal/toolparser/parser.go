@@ -27,7 +27,7 @@ func ListTools(dir string) ([]ToolInfo, error) {
 	var tools []ToolInfo
 	for _, e := range entries {
 		name := e.Name()
-		if !strings.HasSuffix(name, ".go") {
+		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
 

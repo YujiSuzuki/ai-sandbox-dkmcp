@@ -132,6 +132,27 @@ func TestListToolsSkipsNonGo(t *testing.T) {
 	}
 }
 
+// TestListToolsSkipsTestFiles verifies that _test.go files are excluded from tool listing.
+// TestListToolsSkipsTestFiles は _test.go ファイルがツール一覧から除外されることを検証する。
+func TestListToolsSkipsTestFiles(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "tool.go"), []byte("// a tool\npackage main\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "tool_test.go"), []byte("// test file\npackage main\n"), 0644)
+
+	tools, err := ListTools(dir)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	for _, tool := range tools {
+		if tool.Name == "tool_test.go" {
+			t.Error("_test.go file should be excluded from tools")
+		}
+	}
+	if len(tools) != 1 {
+		t.Errorf("Expected 1 tool, got %d", len(tools))
+	}
+}
+
 func TestParseGoHeaderSeparatorStopsParser(t *testing.T) {
 	dir := t.TempDir()
 	tool := filepath.Join(dir, "bilingual.go")
