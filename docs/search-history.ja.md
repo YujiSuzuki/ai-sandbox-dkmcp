@@ -73,13 +73,14 @@ AI:     Bash の実行履歴を検索
 
 AI に頼まなくても、直接実行できます。
 
-### 3つのモード
+### モード一覧
 
 | モード | コマンド | 説明 |
 |--------|----------|------|
 | キーワード検索 | `go run .sandbox/tools/search-history.go "検索語"` | 正規表現にも対応 |
 | セッション一覧 | `go run .sandbox/tools/search-history.go -list` | 最終活動日順 |
 | セッション閲覧 | `go run .sandbox/tools/search-history.go -session <id>` | ID は先頭数文字でOK |
+| 統計表示 | `go run .sandbox/tools/search-history.go -stats` | メッセージ種別の内訳を集計 |
 
 ### フィルタオプション
 
@@ -90,7 +91,9 @@ AI に頼まなくても、直接実行できます。
 | `-after <date>` | 指定日以降 | `-after 2026-02-01` |
 | `-before <date>` | 指定日以前 | `-before 2026-02-07` |
 | `-i` | 大文字小文字を無視 | `-i "dockmcp"` |
+| `-human` | 実際のユーザー入力のみ（tool_result・IDE操作・system-reminder を除外） | `-human -role user ".*"` |
 | `-project <name>` | プロジェクト指定（デフォルト: workspace） | `-project all` |
+| `-dir <path>` | 追加の JSONL ディレクトリ（バックアップデータ等を統合） | `-dir /path/to/backup/` |
 
 ### 表示オプション
 
@@ -99,6 +102,16 @@ AI に頼まなくても、直接実行できます。
 | `-max <n>` | 最大表示件数 | 50（0 = 無制限） |
 | `-context <n>` | 1エントリの表示文字数 | 200（0 = 全文） |
 | `-no-color` | カラー出力を無効化 | — |
+
+### 統計モードのオプション（`-stats` と組み合わせる）
+
+| オプション | 説明 |
+|------------|------|
+| `-daily` | 日別内訳を表示 |
+| `-csv` | CSV形式で出力 |
+| `-tsv` | TSV形式（タブ区切り）で出力 |
+
+ラベルは `LANG` 環境変数が `ja` を含む場合、自動的に日本語になります。
 
 ### 使用例
 
@@ -123,6 +136,19 @@ go run .sandbox/tools/search-history.go -list -after 2026-02-08 -before 2026-02-
 
 # セッションの全文を表示（文字数制限なし・件数制限なし）
 go run .sandbox/tools/search-history.go -session c01514d6 -context 0 -max 0
+
+# 実際のユーザー入力だけを検索
+go run .sandbox/tools/search-history.go -human -role user -max 0 ".*"
+
+# メッセージ種別の統計を表示
+go run .sandbox/tools/search-history.go -stats
+
+# 日別内訳を CSV で出力
+go run .sandbox/tools/search-history.go -stats -daily -csv
+
+# バックアップデータも統合して集計
+go run .sandbox/tools/search-history.go -stats -daily \
+  -dir /path/to/backup/.claude/projects/-workspace/
 ```
 
 ## 日付フィルタの動作
